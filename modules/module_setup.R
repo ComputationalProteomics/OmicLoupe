@@ -15,9 +15,15 @@ setup_panel_ui <- function(id) {
             ),
             fluidRow(
                 column(4,
-                       sample_input_well(ns("data_file_1"), ns("data_selected_columns_1")),
+                       # sample_input_well(ns("data_file_1"), ns("data_selected_columns_1")),
                        conditionalPanel(
-                           sprintf("input['%s'] == 1", ns("toggle_dataset2")),
+                           sprintf("input['%s'] == 1", ns("select_dataset")),
+                           h3("Dataset 1"),
+                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"))
+                       ),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 2", ns("select_dataset")),
+                           h3("Dataset 2"),
                            sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"))
                        )
                 ),  
@@ -26,14 +32,17 @@ setup_panel_ui <- function(id) {
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           select_button_row("Select samples 2", ns("sample_select_button_2"), ns("sample_deselect_button_2")),
-                           select_button_row("Select stat groups 2", ns("stat_select_button_2"), ns("stat_deselect_button_2")),
+                           # select_button_row("Select samples 2", ns("sample_select_button_2"), ns("sample_deselect_button_2")),
+                           # select_button_row("Select stat groups 2", ns("stat_select_button_2"), ns("stat_deselect_button_2")),
                            action_button_row(ns("autodetect_stat_cols"), "Autodetect"),
+                           textInput(ns("sample_pattern"), "Sample pattern"),
+                           action_button_row(ns("autodetect_sample_cols"), "Autodetect samples"),
                            action_button_row(ns("selection_clear_button"), "Clear selection"),
                            fluidRow(
                                class = "button_row",
                                column(6,
-                                      checkboxInput(ns("toggle_dataset2"), label = "Toggle dataset 2", value = TRUE)
+                                      checkboxInput(ns("toggle_dataset2"), label = "Toggle dataset 2", value = FALSE),
+                                      selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Sample 1"=1,"Sample 2"=2), selected = 1)
                                ),
                                column(6,
                                       checkboxInput(ns("autodetect_statcols_toggle"), label = "Autodetect", value = FALSE)
@@ -42,24 +51,23 @@ setup_panel_ui <- function(id) {
                        ),
                        wellPanel(
                            textOutput(ns("perform_map_status"))
-                           # hr(),
-                           # textInput(ns("pattern_pval"), "P-value pattern", value="P.Value"),
-                           # textInput(ns("pattern_fdr"), "FDR pattern", value="adj.P.Val"),
-                           # textInput(ns("pattern_fold"), "Log2-fold pattern", value="log2FC"),
-                           # textInput(ns("pattern_aveexpr"), "Expression pattern", value="AveExpr"),
-                           # checkboxInput(ns("joint_aveexpr"), "Joint average express", value=FALSE)
                        ),
                        informative_text()
                 ),
                 column(5,
-                       selected_sample_well(
-                           ns("sample_selected_1"),
-                           ns("statcols_selected_1"),
-                           ns("feature_col_1"),
-                           ns("found_stat_patterns_1")
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1", ns("select_dataset")),
+                           h3("Dataset 1"),
+                           selected_sample_well(
+                               ns("sample_selected_1"),
+                               ns("statcols_selected_1"),
+                               ns("feature_col_1"),
+                               ns("found_stat_patterns_1")
+                           )
                        ),
                        conditionalPanel(
-                           sprintf("input['%s'] == 1", ns("toggle_dataset2")),
+                           sprintf("input['%s'] == 2", ns("select_dataset")),
+                           h3("Dataset 2"),
                            selected_sample_well(
                                ns("sample_selected_2"),
                                ns("statcols_selected_2"),
@@ -138,42 +146,49 @@ module_setup_server <- function(input, output, session) {
         }
     }
     
-    # ------------------- Sample 1 Management --------------------
-
+    # ------------------- Sample Management --------------------
+    
     observeEvent(input$sample_select_button_1, {
         
+        data_nbr <- input$select_dataset
+        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+        
         selected_samples <- column_selection_action(
-            input$data_selected_columns_1,
-            rv$selected_cols_obj()[[rv$filename_1()]]$samples
+            input[[sprintf("data_selected_columns_%s", data_nbr)]],
+            rv$selected_cols_obj()[[filename]]$samples
         )
 
-        rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
+        rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
 
         sync_select_inputs(
-            session, 
-            "data_selected_columns_1", 
-            "sample_selected_1", 
-            rv$filedata_1, 
+            session,
+            sprintf("data_selected_columns_%s", data_nbr),
+            sprintf("sample_selected_%s", data_nbr),
+            rv[[sprintf("filedata_%s", data_nbr)]],
             selected_samples
         )
     })
-
+    
     observeEvent(input$sample_deselect_button_1, {
+        
+        data_nbr <- input$select_dataset
+        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+        
         selected_samples <- column_selection_action(
-            input$sample_selected_1,
+            input[[sprintf("sample_selected_%s", data_nbr)]],            
             rv$selected_cols_obj()[[rv$filename_1()]]$samples, 
             is_deselect = TRUE
         )
         rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
         sync_select_inputs(
             session, 
-            "data_selected_columns_1", 
-            "sample_selected_1", 
+            sprintf("data_selected_columns_%s", data_nbr),
+            sprintf("sample_selected_%s", data_nbr),
             rv$filedata_1, 
             selected_samples
         )
     })
-
+    
     update_statpatterns_display <- function(statpatterns, target_out) {
         # found_stat_patterns_1/2
         if (!is.null(statpatterns)) {
@@ -188,38 +203,53 @@ module_setup_server <- function(input, output, session) {
     }
     
     observeEvent(input$stat_select_button_1, {
+        
+        data_nbr <- input$select_dataset
+        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+        
         selected_statcols <- column_selection_action(
-            input$data_selected_columns_1, 
-            rv$selected_cols_obj()[[rv$filename_1()]]$statcols 
+            input[[sprintf("data_selected_columns_%s", data_nbr)]],
+            rv$selected_cols_obj()[[filename]]$statcols
         )
-        rv <- update_selcol_obj(rv, rv$filename_1(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
+        
+        rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
         sync_select_inputs(
             session, 
-            "data_selected_columns_1", 
-            "statcols_selected_1", 
-            rv$filedata_1, 
+            sprintf("data_selected_columns_%s", data_nbr),
+            sprintf("statcols_selected_%s", data_nbr),
+            rv[[sprintf("filedata_%s", data_nbr)]],
             selected_statcols
         )
-        update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_1()]]$statpatterns, "found_stat_patterns_1")
+        update_statpatterns_display(
+            rv$selected_cols_obj()[[filename]]$statpatterns, 
+            sprintf("found_stat_patterns_%s", data_nbr)
+        )
     })
-
+    
     observeEvent(input$stat_deselect_button_1, {
+        data_nbr <- input$select_dataset
+        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+        
         selected_statcols <- column_selection_action(
-            input$statcols_selected_1, 
-            rv$selected_cols_obj()[[rv$filename_1()]]$statcols,
+            input[[sprintf("statcols_selected_%s", data_nbr)]],
+            rv$selected_cols_obj()[[filename]]$statcols,
             is_deselect = TRUE
         )
-        rv <- update_selcol_obj(rv, rv$filename_1(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
+        
+        rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
         sync_select_inputs(
             session, 
-            "data_selected_columns_1", 
-            "statcols_selected_1", 
-            rv$filedata_1, 
+            sprintf("data_selected_columns_%s", data_nbr),
+            sprintf("statcols_selected_%s", data_nbr),
+            rv[[sprintf("filedata_%s", data_nbr)]],
             selected_statcols
         )
-        update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_1()]]$statpatterns, "found_stat_patterns_1")
+        update_statpatterns_display(
+            rv$selected_cols_obj()[[filename]]$statpatterns, 
+            sprintf("found_stat_patterns_%s", data_nbr)
+        )
     })
-
+    
     observeEvent(input$feature_col_1, {
         if (!is.null(rv$filename_1()) && !is.null(rv$mapping_obj())) {
             rv <- update_selcol_obj(rv, rv$filename_1(), "feature_col", input$feature_col_1)
@@ -228,69 +258,69 @@ module_setup_server <- function(input, output, session) {
     # --------------------------- End ----------------------------
     
     # ------------------- Sample 2 Management --------------------
-    observeEvent(input$sample_select_button_2, {
-        selected_samples <- column_selection_action(
-            input$data_selected_columns_2, 
-            rv$selected_cols_obj()[[rv$filename_2()]]$samples
-        )
-        rv <- update_selcol_obj(rv, rv$filename_2(), "samples", selected_samples)
-        sync_select_inputs(
-            session, 
-            "data_selected_columns_2", 
-            "sample_selected_2", 
-            rv$filedata_2, 
-            selected_samples
-        )
-    })
-    
-    observeEvent(input$sample_deselect_button_2, {
-        selected_samples <- column_selection_action(
-            input$sample_selected_2, 
-            rv$selected_cols_obj()[[rv$filename_2()]]$samples,
-            is_deselect = TRUE
-        )
-        rv <- update_selcol_obj(rv, rv$filename_2(), "samples", selected_samples)
-        sync_select_inputs(
-            session, 
-            "data_selected_columns_2", 
-            "sample_selected_2", 
-            rv$filedata_2, 
-            selected_samples
-        )
-    })
-    
-    observeEvent(input$stat_select_button_2, {
-        selected_statcols <- column_selection_action(
-            input$data_selected_columns_2, 
-            rv$selected_cols_obj()[[rv$filename_2()]]$statcols
-        )
-        rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
-        sync_select_inputs(
-            session, 
-            "data_selected_columns_2", 
-            "statcols_selected_2", 
-            rv$filedata_2, 
-            selected_statcols
-        )
-        update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
-    })
-    
-    observeEvent(input$stat_deselect_button_2, {
-        selected_statcols <- column_selection_action(
-            input$statcols_selected_2,
-            rv$selected_cols_obj()[[rv$filename_2()]]$statcols,
-            is_deselect = TRUE
-        )
-        rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
-        sync_select_inputs(
-            session, 
-            "data_selected_columns_2", 
-            "statcols_selected_2", 
-            rv$filedata_2, 
-            selected_statcols
-        )
-        update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
-    })
+    # observeEvent(input$sample_select_button_2, {
+    #     selected_samples <- column_selection_action(
+    #         input$data_selected_columns_2, 
+    #         rv$selected_cols_obj()[[rv$filename_2()]]$samples
+    #     )
+    #     rv <- update_selcol_obj(rv, rv$filename_2(), "samples", selected_samples)
+    #     sync_select_inputs(
+    #         session, 
+    #         "data_selected_columns_2", 
+    #         "sample_selected_2", 
+    #         rv$filedata_2, 
+    #         selected_samples
+    #     )
+    # })
+    # 
+    # observeEvent(input$sample_deselect_button_2, {
+    #     selected_samples <- column_selection_action(
+    #         input$sample_selected_2,
+    #         rv$selected_cols_obj()[[rv$filename_2()]]$samples,
+    #         is_deselect = TRUE
+    #     )
+    #     rv <- update_selcol_obj(rv, rv$filename_2(), "samples", selected_samples)
+    #     sync_select_inputs(
+    #         session,
+    #         "data_selected_columns_2",
+    #         "sample_selected_2",
+    #         rv$filedata_2,
+    #         selected_samples
+    #     )
+    # })
+
+    # observeEvent(input$stat_select_button_2, {
+    #     selected_statcols <- column_selection_action(
+    #         input$data_selected_columns_2,
+    #         rv$selected_cols_obj()[[rv$filename_2()]]$statcols
+    #     )
+    #     rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
+    #     sync_select_inputs(
+    #         session,
+    #         "data_selected_columns_2",
+    #         "statcols_selected_2",
+    #         rv$filedata_2,
+    #         selected_statcols
+    #     )
+    #     update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
+    # })
+    # 
+    # observeEvent(input$stat_deselect_button_2, {
+    #     selected_statcols <- column_selection_action(
+    #         input$statcols_selected_2,
+    #         rv$selected_cols_obj()[[rv$filename_2()]]$statcols,
+    #         is_deselect = TRUE
+    #     )
+    #     rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
+    #     sync_select_inputs(
+    #         session,
+    #         "data_selected_columns_2",
+    #         "statcols_selected_2",
+    #         rv$filedata_2,
+    #         selected_statcols
+    #     )
+    #     update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
+    # })
     
     observeEvent(input$feature_col_2, {
         if (!is.null(input$dataset_2) && !is.null(rv$mapping_obj())) {
@@ -331,7 +361,7 @@ module_setup_server <- function(input, output, session) {
     })
     
     output$found_stat_patterns_2 <- renderText({
-
+        
         if (selcol_obj_has_statpatterns(rv$selected_col_obj, input$dataset_2)) {
             stat_patterns <- rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns
             if (length(statpatterns) > 0) {
@@ -347,7 +377,7 @@ module_setup_server <- function(input, output, session) {
         }
     })
     
-        
+    
     observeEvent(rv$filedata_1(), {
         clear_fields(session, rv$filedata_1, c("sample_selected_1", "statcols_selected_1"))
         clear_file_fields(session, rv$filedata_1, c("data_selected_columns_1", "feature_col_1"))

@@ -9,6 +9,8 @@ options(shiny.maxRequestSize=100*1024^2)
 source("modules/module_setup.R")
 source("modules/module_vis.R")
 source("modules/module_plotly.R")
+source("modules/module_pca.R")
+
 source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
 
@@ -18,15 +20,16 @@ ui <- navbarPage(
     id="navbar",
     setup_panel_ui("Setup"),
     setup_visual_ui("Visual"),
-    setup_plotly_ui("Plotly")
+    setup_plotly_ui("Plotly"),
+    setup_pca_ui("PCA")
 )
-
 
 server <- shinyServer(function(session, input, output) {
     
     reactive_values <- callModule(module_setup_server, id="Setup")
     callModule(module_visual_server, id="Visual", reactive_values)
     callModule(module_plotly_server, id="Plotly", reactive_values)
+    callModule(module_pca_server, id="PCA", reactive_values)
 })
 
 shinyApp(ui = ui, server = server)

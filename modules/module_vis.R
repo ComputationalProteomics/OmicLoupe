@@ -29,9 +29,6 @@ setup_visual_ui <- function(id) {
     )
 }
 
-
-
-
 module_visual_server <- function(input, output, session, reactive_vals) {
     
     reactive_ref_statcols <- reactive({
