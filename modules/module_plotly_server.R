@@ -1,0 +1,245 @@
+
+library(ggplot2)
+theme_set(theme_classic())
+library(ggpubr)
+
+source("R/vis_server_utils.R")
+source("R/vis_server_plots.R")
+
+module_plotly_server <- function(input, output, session, reactive_vals) {
+    
+    reactive_plot_df <- reactive({
+        stat_cols <- reactive_ref_statcols()
+        get_pass_thres_annot_data(
+            reactive_vals$mapping_obj()$get_combined_dataset(),
+            stat_cols,
+            input$pvalue_cutoff,
+            input$fold_cutoff,
+            input$pvalue_type_select
+        )
+    })
+    
+    get_plot_df <- function(target_statcols, feature_col="target_col1") {
+        
+        # browser()
+        
+        plot_df <- data.frame(
+            fold = reactive_plot_df()[[target_statcols()$logFC]],
+            sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
+            lab = reactive_vals$mapping_obj()[[feature_col]],
+            expr = reactive_plot_df()[[target_statcols()$AveExpr]],
+            pval = reactive_plot_df()[[target_statcols()$P.Value]],
+            pass_thres = reactive_plot_df()$pass_threshold_data,
+            hover_text = paste0("ProteinID: ", reactive_plot_df()$d1.Protein)
+        )
+        plot_df$key <- row.names(plot_df)
+        plot_df
+    }
+    
+    plot_ref_df <- reactive({
+        get_plot_df(reactive_ref_statcols)
+    })
+    
+    plot_comp_df <- reactive({
+        get_plot_df(reactive_comp_statcols)
+    })
+    
+    reactive_ref_statcols <- reactive({
+        if (input$dataset1 != "" && input$stat_base1 != "") {
+            parse_stat_cols_for_visuals(
+                reactive_vals$filename_1(), 
+                reactive_vals$filename_2(), 
+                reactive_vals$selected_cols_obj(), 
+                input$dataset1, 
+                input$stat_base1
+            )
+        }
+    })
+    
+    reactive_comp_statcols <- reactive({
+        if (input$dataset2 != "" && input$stat_base2 != "") {
+            parse_stat_cols_for_visuals(
+                reactive_vals$filename_1(), 
+                reactive_vals$filename_2(), 
+                reactive_vals$selected_cols_obj(), 
+                input$dataset2, 
+                input$stat_base2
+            )
+        }
+    })
+    
+    observe(
+        if (input$dataset1 != "" && input$stat_base1 != "") {
+            reactive_comp_statcols()
+        }
+    )
+    
+    observeEvent(input$pvalue_type_select, {
+        updateSliderInput(session, inputId="pvalue_cutoff", label=sprintf("%s cutoff", input$pvalue_type_select), 
+                          value=input$pvalue_cutoff, min=0, max=1, step=0.01)
+    })
+    
+    observeEvent({
+        reactive_vals$selected_cols_obj() 
+        input$dataset1 
+        input$dataset2}, {
+            update_stat_inputs(session, reactive_vals, input$dataset1, input$dataset2)
+        })
+    
+    observeEvent(reactive_vals$filedata_1(), {
+        choices <- get_dataset_choices(reactive_vals)
+        updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
+        updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+    })
+    
+    observeEvent(reactive_vals$filedata_2(), {
+        choices <- get_dataset_choices(reactive_vals)
+        updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
+        updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+    })
+    
+    ########## Plotly functions #############
+    
+    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="") {
+        ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
+            geom_point(alpha=0.5) + 
+            ggtitle(title) +
+            scale_color_manual(values=c("grey50", "blue", "red"))
+    }
+    
+    make_histogram <- function(plot_df, x_col, fill_col, key_vals, title="") {
+        plot_ly(
+            plot_df,
+            x = ~get(x_col),
+            color = ~get(fill_col),
+            type = "histogram", 
+            colors = c("grey50", "blue"), 
+            alpha = 0.6,
+            nbinsx = 50,
+            source = "subset",
+            key = key_vals
+        ) %>% layout(title = title, xaxis=list(title="P.Value"))
+    }
+    
+    output$plotly_volc1 <- renderPlotly({
+        
+        plot_df <- plot_ref_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            color_col <- "selected"
+        }
+        else {
+            color_col <- "pass_thres"
+        }
+        
+        make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", title="Volcano: Reference dataset") %>% 
+            ggplotly(source="subset") %>%
+            layout(dragmode="select") %>%
+            toWebGL()
+    })
+    
+    output$plotly_volc2 <- renderPlotly({
+        
+        plot_df <- plot_comp_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            color_col <- "selected"
+        }
+        else {
+            color_col <- "pass_thres"
+        }
+        make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", title="Volcano: Compare dataset") %>% 
+            ggplotly(source="subset") %>% 
+            layout(dragmode="select") %>%
+            toWebGL()
+    })
+    
+    output$plotly_ma1 <- renderPlotly({
+        
+        plot_df <- plot_ref_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            color_col <- "selected"
+        }
+        else {
+            color_col <- "pass_thres"
+        }
+        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", title="MA: Reference dataset") %>% 
+            ggplotly(source="subset") %>% 
+            layout(dragmode="select") %>%
+            toWebGL()
+    })
+    
+    output$plotly_ma2 <- renderPlotly({
+        
+        plot_df <- plot_comp_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        
+        if (!is.null(event.data) == TRUE) {
+            print("Event data triggered!")
+            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            color_col <- "selected"
+        }
+        else {
+            color_col <- "pass_thres"
+        }
+        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", title="MA: Compare dataset") %>% 
+            ggplotly(source="subset") %>% 
+            layout(dragmode="select") %>%
+            toWebGL()
+    })
+    
+    output$plotly_hist1 <- renderPlotly({
+        
+        plot_df <- plot_ref_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            color_col <- "selected"
+        }
+        else {
+            color_col <- "pass_thres"
+        }
+        make_histogram(plot_df, x_col="pval", fill_col=color_col, key_vals=plot_df$key, title="P-value histogram: Reference dataset") %>% 
+            layout(dragmode="none", barmode="stack") %>% 
+            toWebGL()
+    })
+    
+    output$plotly_hist2 <- renderPlotly({
+        
+        plot_df <- plot_comp_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            color_col <- "selected"
+        }
+        else {
+            color_col <- "pass_thres"
+        }
+        make_histogram(plot_df, x_col="pval", fill_col=color_col, key_vals=plot_df$key, title="P-value histogram: Compare dataset") %>% 
+            layout(dragmode="none", barmode="stack") %>% 
+            toWebGL()
+    })
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

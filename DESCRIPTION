@@ -1,0 +1,21 @@
+Package: OmicLoupe
+Title: Taking a closer look at omics
+Version: 0.1.0
+Maintainer: Jakob Willforss <jakob.willforss@immun.lth.se>
+Author: Jakob Willforss
+Authors@R: c(person("Jakob", "Willforss", email="jakob.willforss@hotmail.com", role=c("aut", "cre")))
+Description: 
+    OmicLoupe inspects your Omics data
+Imports:
+    tidyverse,
+    ggpubr,
+    shiny
+Suggests:
+    knitr,
+    testthat
+VignetteBuilder: knitr
+License: Artistic-2.0
+Encoding: UTF-8
+RoxygenNote: 6.1.1
+URL: ""
+Depends: R (>= 3.6)
