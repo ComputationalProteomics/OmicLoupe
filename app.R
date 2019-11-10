@@ -1,0 +1,32 @@
+library(shiny)
+library(R6)
+library(plotly)
+library(tidyverse)
+
+print("UI")
+options(shiny.maxRequestSize=100*1024^2)
+
+source("modules/module_setup.R")
+source("modules/module_vis.R")
+source("modules/module_plotly.R")
+source("R/MapObject.R")
+source("R/shared_visualization_setup.R")
+
+ui <- navbarPage(
+    theme = shinythemes::shinytheme("flatly"),
+    "OmicLoupe",
+    id="navbar",
+    setup_panel_ui("Setup"),
+    setup_visual_ui("Visual"),
+    setup_plotly_ui("Plotly")
+)
+
+
+server <- shinyServer(function(session, input, output) {
+    
+    reactive_values <- callModule(module_setup_server, id="Setup")
+    callModule(module_visual_server, id="Visual", reactive_values)
+    callModule(module_plotly_server, id="Plotly", reactive_values)
+})
+
+shinyApp(ui = ui, server = server)
