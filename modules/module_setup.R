@@ -15,16 +15,18 @@ setup_panel_ui <- function(id) {
             ),
             fluidRow(
                 column(4,
-                       # sample_input_well(ns("data_file_1"), ns("data_selected_columns_1")),
+                       selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Sample 1"=1,"Sample 2"=2), selected = 1),
                        conditionalPanel(
                            sprintf("input['%s'] == 1", ns("select_dataset")),
                            h3("Dataset 1"),
-                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"))
+                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1")),
+                           design_input_well(ns("design_file_1"), ns("design_sample_col_1"))
                        ),
                        conditionalPanel(
                            sprintf("input['%s'] == 2", ns("select_dataset")),
                            h3("Dataset 2"),
-                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"))
+                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2")),
+                           design_input_well(ns("design_file_2"), ns("design_sample_col_2"))
                        )
                 ),  
                 column(3,
@@ -32,18 +34,12 @@ setup_panel_ui <- function(id) {
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           # select_button_row("Select samples 2", ns("sample_select_button_2"), ns("sample_deselect_button_2")),
-                           # select_button_row("Select stat groups 2", ns("stat_select_button_2"), ns("stat_deselect_button_2")),
                            action_button_row(ns("autodetect_stat_cols"), "Autodetect"),
                            textInput(ns("sample_pattern"), "Sample pattern"),
                            action_button_row(ns("autodetect_sample_cols"), "Autodetect samples"),
                            action_button_row(ns("selection_clear_button"), "Clear selection"),
                            fluidRow(
                                class = "button_row",
-                               column(6,
-                                      checkboxInput(ns("toggle_dataset2"), label = "Toggle dataset 2", value = FALSE),
-                                      selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Sample 1"=1,"Sample 2"=2), selected = 1)
-                               ),
                                column(6,
                                       checkboxInput(ns("autodetect_statcols_toggle"), label = "Autodetect", value = FALSE)
                                )
@@ -83,42 +79,30 @@ setup_panel_ui <- function(id) {
 
 module_setup_server <- function(input, output, session) {
     
+    load_data <- function(in_file) {
+        infile <- in_file
+        if (is.null(infile)) {
+            return(NULL)
+        }
+        read_tsv(infile$datapath, col_types = cols())
+    }
+    
+    get_filename <- function(in_file) {
+        infile <- in_file
+        if (is.null(infile)) {
+            return(NULL)
+        }
+        stringi::stri_extract_first(str = infile$name, regex = ".*")
+    }
+    
     rv <- list()
-    rv$filedata_1 <- reactive({
-        infile <- input$data_file_1
-        if (is.null(infile)) {
-            return(NULL)
-        }
-        read_tsv(infile$datapath, col_types = cols())
-    })
-    rv$filedata_2 <- reactive({
-        infile <- input$data_file_2
-        if (is.null(infile)) {
-            return(NULL)
-        }
-        read_tsv(infile$datapath, col_types = cols())
-    })
-    
-    rv$selected_cols_obj <- reactiveVal({
-        list()
-    })
-    
-    rv$filename_1 <- reactive({
-        infile <- input$data_file_1
-        if (is.null(infile)) {
-            return(NULL)
-        }
-        stringi::stri_extract_first(str = infile$name, regex = ".*")
-    })
-    
-    rv$filename_2 <- reactive({
-        infile <- input$data_file_2
-        if (is.null(infile)) {
-            return(NULL)
-        }
-        stringi::stri_extract_first(str = infile$name, regex = ".*")
-    })
-    
+    rv$filedata_1 <- reactive(load_data(input$data_file_1))
+    rv$filedata_2 <- reactive(load_data(input$data_file_2))
+    rv$design_1 <- reactive(load_data(input$design_file_1))
+    rv$design_2 <- reactive(load_data(input$design_file_2))
+    rv$selected_cols_obj <- reactiveVal(list())
+    rv$filename_1 <- reactive(get_filename(input$data_file_1))
+    rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
     rv$test_react <- reactiveVal(NULL)
     
@@ -157,9 +141,9 @@ module_setup_server <- function(input, output, session) {
             input[[sprintf("data_selected_columns_%s", data_nbr)]],
             rv$selected_cols_obj()[[filename]]$samples
         )
-
+        
         rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
-
+        
         sync_select_inputs(
             session,
             sprintf("data_selected_columns_%s", data_nbr),
@@ -288,7 +272,7 @@ module_setup_server <- function(input, output, session) {
     #         selected_samples
     #     )
     # })
-
+    
     # observeEvent(input$stat_select_button_2, {
     #     selected_statcols <- column_selection_action(
     #         input$data_selected_columns_2,

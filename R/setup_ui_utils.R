@@ -17,6 +17,24 @@ sample_input_well <- function(upload_id, select_col_id, select_size=12) {
     )
 }
 
+design_input_well <- function(design_upload_id, sample_col_id) {
+    wellPanel(
+        fileInput(
+            design_upload_id, 
+            "Choose design file (TSV) (optional)",
+            multiple = FALSE,
+            accept = c("test/tsv", ".tsv")
+        ),
+        selectInput(
+            sample_col_id,
+            "Select sample column",
+            choices = c(""),
+            multiple = FALSE,
+            selectize = FALSE
+        )
+    )
+}
+
 select_button_row <- function(title, select_button_id, deselect_button_id) {
     fluidRow(
         class = "button_row",

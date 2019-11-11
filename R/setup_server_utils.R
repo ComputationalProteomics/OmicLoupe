@@ -46,9 +46,4 @@ clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
 }
 
-# parse_dataset_ids <- function(dataset1, target_col1, dataset2=NULL, target_col2=NULL) {
-#     
-#     map_obj <- MapObject$new(dataset1, target_col1, dataset2, target_col2)
-#     map_obj
-# }
 
