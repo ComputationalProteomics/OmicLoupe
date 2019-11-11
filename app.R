@@ -3,7 +3,6 @@ library(R6)
 library(plotly)
 library(tidyverse)
 
-print("UI")
 options(shiny.maxRequestSize=100*1024^2)
 
 source("modules/module_setup.R")
