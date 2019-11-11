@@ -10,6 +10,7 @@ source("modules/module_setup.R")
 source("modules/module_vis.R")
 source("modules/module_plotly.R")
 source("modules/module_pca.R")
+source("modules/module_help.R")
 
 source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
@@ -21,7 +22,8 @@ ui <- navbarPage(
     setup_panel_ui("Setup"),
     setup_visual_ui("Visual"),
     setup_plotly_ui("Plotly"),
-    setup_pca_ui("PCA")
+    setup_pca_ui("PCA"),
+    setup_help_ui("Help")
 )
 
 server <- shinyServer(function(session, input, output) {
@@ -30,6 +32,7 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_visual_server, id="Visual", reactive_values)
     callModule(module_plotly_server, id="Plotly", reactive_values)
     callModule(module_pca_server, id="PCA", reactive_values)
+    callModule(module_help_server, id="Help")
 })
 
 shinyApp(ui = ui, server = server)
