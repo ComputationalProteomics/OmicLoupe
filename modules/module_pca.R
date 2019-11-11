@@ -29,7 +29,13 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     output$pca_plot <- renderPlot({
         
         rdf <- reactive_vals$filedata_1()
+        ddf <- reactive_vals$design_1()
+        
+        # browser()
+        
         warning("Update sample selection here with reference dataset (if applied)")
+        
+        # 1 -> reference dataset
         samples <- reactive_vals$selected_cols_obj()[[1]]$samples
         sdf <- rdf[, samples]
         sdf_complete <- sdf[complete.cases(sdf), ] %>% t()

@@ -236,14 +236,6 @@ module_setup_server <- function(input, output, session) {
     })
     # --------------------------- End ----------------------------
     
-    # observeEvent(input$selection_clear_button, {
-    #     clear_fields(session, rv$filedata_1, c("sample_selected", "statcols_selected"))
-    #     clear_file_fields(session, rv$filedata_1, c("data1_selected_columns", "feature_col"))
-    #     clear_fields(session, rv$filedata_2, c("sample_selected", "statcols_selected"))
-    #     clear_file_fields(session, rv$filedata_2, c("data2_selected_columns", "feature_col"))
-    #     rv <- reset_reactive_cols(rv)
-    # })
-    
     autodetect_stat_cols <- function() {
         selected_statcols <- autoselect_statpatterns(colnames(rv$filedata_1()))
         if (!is.null(rv$filename_1())) {
@@ -262,7 +254,7 @@ module_setup_server <- function(input, output, session) {
         }
     }
     
-    autodetect_sample_cols <- function(ddf, sample_col, rdf, data_nbr) {
+    autodetect_sample_cols <- function(ddf, sample_col, rdf, data_nbr, rv, filename) {
         samples_from_ddf <- ddf[[sample_col]]
         if (all(samples_from_ddf %in% colnames(rdf))) {
             message("All samples found!")
@@ -273,6 +265,7 @@ module_setup_server <- function(input, output, session) {
                 rv[[sprintf("filedata_%s", data_nbr)]], 
                 samples_from_ddf
             )
+            rv <- update_selcol_obj(rv, filename, "samples", samples_from_ddf)
         }
         else {
             if (length(which(samples_from_ddf %in% colnames(rdf))) == 0) {
@@ -292,7 +285,9 @@ module_setup_server <- function(input, output, session) {
                 rv$design_1(),
                 input$design_sample_col_1,
                 rv$filedata_1(),
-                data_nbr = 1
+                data_nbr = 1, 
+                rv, 
+                rv$filename_1()
             )
         }
         if (input$design_sample_col_2 != "") {
@@ -300,7 +295,9 @@ module_setup_server <- function(input, output, session) {
                 rv$design_2(),
                 input$design_sample_col_2,
                 rv$filedata_2(),
-                data_nbr = 2
+                data_nbr = 2,
+                rv, 
+                rv$filename_1()
             )
         }
     })
