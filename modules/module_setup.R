@@ -297,7 +297,7 @@ module_setup_server <- function(input, output, session) {
                 rv$filedata_2(),
                 data_nbr = 2,
                 rv, 
-                rv$filename_1()
+                rv$filename_2()
             )
         }
     })
