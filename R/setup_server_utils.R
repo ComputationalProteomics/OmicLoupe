@@ -46,4 +46,32 @@ clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
 }
 
+do_dataset_mapping <- function(rv, input, output) {
+    if (is.null(rv$filedata_1()) && is.null(rv$filedata_2())) {
+        output$perform_map_status <- renderText({
+            sprintf("Both datasets needs to be present, missing both")
+        })
+    }
+    else if (is.null(rv$filedata_2())) {
+        print("Performing new map")
+        rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1))
+        output$perform_map_status <- renderText({
+            sprintf("Dataset1 present and mapped, %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
+        })
+    }
+    else if (is.null(rv$filedata_1())) {
+        rv$mapping_obj(MapObject$new(rv$filedata_2(), input$feature_col_2))
+        output$perform_map_status <- renderText({
+            sprintf("Dataset2 present and mapped, %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
+        })
+    }
+    else {
+        rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1, rv$filedata_2(), input$feature_col_2))
+        output$perform_map_status <- renderText({
+            sprintf("Both datasets present and mapped! %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
+        })
+    }
+    rv
+}
+
 

@@ -34,21 +34,12 @@ setup_panel_ui <- function(id) {
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           action_button_row(ns("autodetect_stat_cols"), "Autodetect"),
-                           textInput(ns("sample_pattern"), "Sample pattern"),
-                           action_button_row(ns("autodetect_sample_cols"), "Autodetect samples"),
-                           action_button_row(ns("selection_clear_button"), "Clear selection"),
-                           fluidRow(
-                               class = "button_row",
-                               column(6,
-                                      checkboxInput(ns("autodetect_statcols_toggle"), label = "Autodetect", value = FALSE)
-                               )
-                           )
+                           action_button_row(ns("autodetect_cols"), "Autodetect")
                        ),
                        wellPanel(
                            textOutput(ns("perform_map_status"))
-                       ),
-                       informative_text()
+                       )
+                       # informative_text()
                 ),
                 column(5,
                        conditionalPanel(
@@ -122,12 +113,9 @@ module_setup_server <- function(input, output, session) {
     }
     
     selcol_obj_has_statpatterns <- function(selcol_obj, dataset) {
-        if (!is.null(selcol_obj) && !is.null(selcol_obj[[dataset]]) && !is.null(selcol_obj[[dataset]][["statpatterns"]])) {
-            TRUE
-        }
-        else {
-            FALSE
-        }
+        !is.null(selcol_obj) && 
+            !is.null(selcol_obj[[dataset]]) && 
+            !is.null(selcol_obj[[dataset]][["statpatterns"]])
     }
     
     # ------------------- Sample Management --------------------
@@ -235,92 +223,26 @@ module_setup_server <- function(input, output, session) {
     })
     
     observeEvent(input$feature_col_1, {
-        if (!is.null(rv$filename_1()) && !is.null(rv$mapping_obj())) {
-            rv <- update_selcol_obj(rv, rv$filename_1(), "feature_col", input$feature_col_1)
+        data_nbr <- input$select_dataset
+        if (!is.null(rv[[sprintf("filename_%s", data_nbr)]]()) && !is.null(rv$mapping_obj())) {
+            rv[[sprintf("selected_cols_", data_nbr)]]$feature_col <- input[[sprintf("feature_col_%s", data_nbr)]]
+            rv <- update_selcol_obj(
+                rv, 
+                rv[[sprintf("filename_%s", data_nbr)]](), 
+                "feature_col", 
+                input[[sprintf("feature_col_%s", data_nbr)]]
+            )
         }
     })
     # --------------------------- End ----------------------------
     
-    # ------------------- Sample 2 Management --------------------
-    # observeEvent(input$sample_select_button_2, {
-    #     selected_samples <- column_selection_action(
-    #         input$data_selected_columns_2, 
-    #         rv$selected_cols_obj()[[rv$filename_2()]]$samples
-    #     )
-    #     rv <- update_selcol_obj(rv, rv$filename_2(), "samples", selected_samples)
-    #     sync_select_inputs(
-    #         session, 
-    #         "data_selected_columns_2", 
-    #         "sample_selected_2", 
-    #         rv$filedata_2, 
-    #         selected_samples
-    #     )
+    # observeEvent(input$selection_clear_button, {
+    #     clear_fields(session, rv$filedata_1, c("sample_selected", "statcols_selected"))
+    #     clear_file_fields(session, rv$filedata_1, c("data1_selected_columns", "feature_col"))
+    #     clear_fields(session, rv$filedata_2, c("sample_selected", "statcols_selected"))
+    #     clear_file_fields(session, rv$filedata_2, c("data2_selected_columns", "feature_col"))
+    #     rv <- reset_reactive_cols(rv)
     # })
-    # 
-    # observeEvent(input$sample_deselect_button_2, {
-    #     selected_samples <- column_selection_action(
-    #         input$sample_selected_2,
-    #         rv$selected_cols_obj()[[rv$filename_2()]]$samples,
-    #         is_deselect = TRUE
-    #     )
-    #     rv <- update_selcol_obj(rv, rv$filename_2(), "samples", selected_samples)
-    #     sync_select_inputs(
-    #         session,
-    #         "data_selected_columns_2",
-    #         "sample_selected_2",
-    #         rv$filedata_2,
-    #         selected_samples
-    #     )
-    # })
-    
-    # observeEvent(input$stat_select_button_2, {
-    #     selected_statcols <- column_selection_action(
-    #         input$data_selected_columns_2,
-    #         rv$selected_cols_obj()[[rv$filename_2()]]$statcols
-    #     )
-    #     rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
-    #     sync_select_inputs(
-    #         session,
-    #         "data_selected_columns_2",
-    #         "statcols_selected_2",
-    #         rv$filedata_2,
-    #         selected_statcols
-    #     )
-    #     update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
-    # })
-    # 
-    # observeEvent(input$stat_deselect_button_2, {
-    #     selected_statcols <- column_selection_action(
-    #         input$statcols_selected_2,
-    #         rv$selected_cols_obj()[[rv$filename_2()]]$statcols,
-    #         is_deselect = TRUE
-    #     )
-    #     rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
-    #     sync_select_inputs(
-    #         session,
-    #         "data_selected_columns_2",
-    #         "statcols_selected_2",
-    #         rv$filedata_2,
-    #         selected_statcols
-    #     )
-    #     update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
-    # })
-    
-    observeEvent(input$feature_col_2, {
-        if (!is.null(input$dataset_2) && !is.null(rv$mapping_obj())) {
-            rv$selected_cols_2$feature_col <- input$feature_col_2
-            rv <- update_selcol_obj(rv, rv$filename_2(), "feature_col", input$feature_col_2)
-        }
-    })
-    # --------------------------- End ----------------------------
-    
-    observeEvent(input$selection_clear_button, {
-        clear_fields(session, rv$filedata_1, c("sample_selected", "statcols_selected"))
-        clear_file_fields(session, rv$filedata_1, c("data1_selected_columns", "feature_col"))
-        clear_fields(session, rv$filedata_1, c("sample_selected", "statcols_selected"))
-        clear_file_fields(session, rv$filedata_1, c("data1_selected_columns", "feature_col"))
-        rv <- reset_reactive_cols(rv)
-    })
     
     autodetect_stat_cols <- function() {
         selected_statcols <- autoselect_statpatterns(colnames(rv$filedata_1()))
@@ -340,8 +262,47 @@ module_setup_server <- function(input, output, session) {
         }
     }
     
-    observeEvent(input$autodetect_stat_cols, {
+    autodetect_sample_cols <- function(ddf, sample_col, rdf, data_nbr) {
+        samples_from_ddf <- ddf[[sample_col]]
+        if (all(samples_from_ddf %in% colnames(rdf))) {
+            message("All samples found!")
+            sync_select_inputs(
+                session, 
+                sprintf("data_selected_columns_%s", data_nbr),
+                sprintf("sample_selected_%s", data_nbr),
+                rv[[sprintf("filedata_%s", data_nbr)]], 
+                samples_from_ddf
+            )
+        }
+        else {
+            if (length(which(samples_from_ddf %in% colnames(rdf))) == 0) {
+                message("No samples from design matched to data, something is wrong!")
+            }
+            else {
+                missing <- colnames(rdf)[!samples_from_ddf %in% colnames(rdf)]
+                message("Not all samples matched, non-missing: ", paste(missing, collapse=", "))
+            }
+        }
+    }
+    
+    observeEvent(input$autodetect_cols, {
         autodetect_stat_cols()
+        if (input$design_sample_col_1 != "") {
+            autodetect_sample_cols(
+                rv$design_1(),
+                input$design_sample_col_1,
+                rv$filedata_1(),
+                data_nbr = 1
+            )
+        }
+        if (input$design_sample_col_2 != "") {
+            autodetect_sample_cols(
+                rv$design_2(),
+                input$design_sample_col_2,
+                rv$filedata_2(),
+                data_nbr = 2
+            )
+        }
     })
     
     output$found_stat_patterns_2 <- renderText({
@@ -368,9 +329,6 @@ module_setup_server <- function(input, output, session) {
         rv$selected_cols_obj(
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_1()))
         )
-        if (input$autodetect_statcols_toggle) {
-            autodetect_stat_cols()
-        }
     })
     
     observeEvent(rv$filedata_2(), {
@@ -379,44 +337,22 @@ module_setup_server <- function(input, output, session) {
         rv$selected_cols_obj(
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_2()))
         )
-        if (input$autodetect_statcols_toggle) {
-            autodetect_stat_cols()
-        }
     })
     
-    do_dataset_mapping <- function() {
-        if (is.null(rv$filedata_1()) && is.null(rv$filedata_2())) {
-            output$perform_map_status <- renderText({
-                sprintf("Both datasets needs to be present, missing both")
-            })
-        }
-        else if (is.null(rv$filedata_2())) {
-            print("Performing new map")
-            rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1))
-            output$perform_map_status <- renderText({
-                sprintf("Dataset1 present and mapped, %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
-            })
-        }
-        else if (is.null(rv$filedata_1())) {
-            rv$mapping_obj(MapObject$new(rv$filedata_2(), input$feature_col_2))
-            output$perform_map_status <- renderText({
-                sprintf("Dataset2 present and mapped, %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
-            })
-        }
-        else {
-            rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1, rv$filedata_2(), input$feature_col_2))
-            output$perform_map_status <- renderText({
-                sprintf("Both datasets present and mapped! %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
-            })
-        }
-    }
+    observeEvent(rv$design_1(), {
+        updateSelectInput(session, "design_sample_col_1", choices=colnames(rv$design_1()))
+    })
+    
+    observeEvent(rv$design_2(), {
+        updateSelectInput(session, "design_sample_col_2", choices=colnames(rv$design_2()))
+    })
     
     observeEvent({
         input$perform_map_button
         input$feature_col_1
         input$feature_col_2
     }, {
-        do_dataset_mapping()
+        rv <- do_dataset_mapping(rv, input, output)
     })
     
     observeEvent(rv$mapping_obj, {
