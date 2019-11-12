@@ -130,13 +130,18 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3) {
         
-        pc1 <- sprintf("PC%s", pc1)
-        pc2 <- sprintf("PC%s", pc2)
+        pc1_lab <- sprintf("PC%s", pc1)
+        pc2_lab <- sprintf("PC%s", pc2)
+        
+        pc1_var <- pca_obj$sdev[pc1] ** 2 / sum(pca_obj$sdev ** 2)
+        pc2_var <- pca_obj$sdev[pc2] ** 2 / sum(pca_obj$sdev ** 2)
         
         plt_df <- cbind(pca_obj$x, ddf)
-        ggplot(plt_df, aes_string(x=pc1, y=pc2, color=color, shape=shape, text=sample)) + 
+        ggplot(plt_df, aes_string(x=pc1_lab, y=pc2_lab, color=color, shape=shape, text=sample)) + 
             geom_point(size=dot_size) + 
-            ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", ")))
+            ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", "))) +
+            xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
+            ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
     }
         
     output$pca_plot1 <- renderPlotly({
