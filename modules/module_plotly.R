@@ -125,15 +125,25 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     reactive_plot_df <- reactive({
 
+        base_df <- get_pass_thres_annot_data(
+            reactive_vals$mapping_obj()$get_combined_dataset(),
+            reactive_ref_statcols(),
+            reactive_comp_statcols(),
+            input$pvalue_cutoff,
+            input$fold_cutoff,
+            input$pvalue_type_select
+        )
+        
         if (input$color_type == "Threshold") {
-            get_pass_thres_annot_data(
-                reactive_vals$mapping_obj()$get_combined_dataset(),
-                reactive_ref_statcols(),
-                reactive_comp_statcols(),
-                input$pvalue_cutoff,
-                input$fold_cutoff,
-                input$pvalue_type_select
-            )
+            base_df
+            # get_pass_thres_annot_data(
+            #     reactive_vals$mapping_obj()$get_combined_dataset(),
+            #     reactive_ref_statcols(),
+            #     reactive_comp_statcols(),
+            #     input$pvalue_cutoff,
+            #     input$fold_cutoff,
+            #     input$pvalue_type_select
+            # )
         }
         else if (input$color_type == "PCA") {
             
@@ -157,17 +167,19 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             )
             colnames(comp_pca_df) <- paste0("d2.", colnames(comp_pca_df))
             
-            cbind(ref_pca_df, comp_pca_df)
+            pca_df <- cbind(ref_pca_df, comp_pca_df)
+            warning("Temporary pass_threshold_data")
+            pca_df$pass_threshold_data <- TRUE
         }
         else if (input$color_type == "Column") {
-            base_df <- get_pass_thres_annot_data(
-                reactive_vals$mapping_obj()$get_combined_dataset(),
-                reactive_ref_statcols(),
-                reactive_comp_statcols(),
-                input$pvalue_cutoff,
-                input$fold_cutoff,
-                input$pvalue_type_select
-            )
+            # base_df <- get_pass_thres_annot_data(
+            #     reactive_vals$mapping_obj()$get_combined_dataset(),
+            #     reactive_ref_statcols(),
+            #     reactive_comp_statcols(),
+            #     input$pvalue_cutoff,
+            #     input$fold_cutoff,
+            #     input$pvalue_type_select
+            # )
             base_df$d1.color_col <- dataset_ref()[[input$color_col_1]]
             base_df$d2.color_col <- dataset_comp()[[input$color_col_2]]
             base_df
@@ -179,18 +191,25 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
         
+        # browser()
+        
+        warning("Hover text is taken as d1.Protein, not the Setup input!")
+        
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
             sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
             lab = reactive_vals$mapping_obj()[[feature_col]],
             expr = reactive_plot_df()[[target_statcols()$AveExpr]],
             pval = reactive_plot_df()[[target_statcols()$P.Value]],
-            pass_thres = reactive_plot_df()$pass_threshold_data,
-            hover_text = paste0("ProteinID: ", reactive_plot_df()$d1.Protein)
+            pass_thres = reactive_plot_df()$pass_threshold_data
+            # hover_text = paste0("ProteinID: ", reactive_plot_df()$d1.Protein)
         )
         
         if (input$color_type == "PCA") {
-            plot_df$PC <- reactive_plot_df()[["d1.PC1"]]
+            plot_df$d1.PC <- reactive_plot_df()[[sprintf("d1.PC%s", input$plot_pc1)]]
+            plot_df$d2.PC <- reactive_plot_df()[[sprintf("d2.PC%s", input$plot_pc2)]]
+            warning("The pass_thres could be better calculated for histograms also in PCA")
+            plot_df$pass_thres <- TRUE
         }
         
         if (input$color_type == "Column") {

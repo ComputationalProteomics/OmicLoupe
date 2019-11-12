@@ -20,7 +20,6 @@ ui <- navbarPage(
     "OmicLoupe",
     id="navbar",
     setup_panel_ui("Setup"),
-    # setup_visual_ui("Visual"),
     setup_plotly_ui("Plotly"),
     setup_pca_ui("PCA"),
     setup_help_ui("Help")
@@ -29,7 +28,6 @@ ui <- navbarPage(
 server <- shinyServer(function(session, input, output) {
     
     reactive_values <- callModule(module_setup_server, id="Setup")
-    # callModule(module_visual_server, id="Visual", reactive_values)
     callModule(module_plotly_server, id="Plotly", reactive_values)
     callModule(module_pca_server, id="PCA", reactive_values)
     callModule(module_help_server, id="Help")
