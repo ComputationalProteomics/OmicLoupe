@@ -163,7 +163,7 @@ module_setup_server <- function(input, output, session) {
     })
     
     update_statpatterns_display <- function(statpatterns, target_out) {
-        # found_stat_patterns_1/2
+
         if (!is.null(statpatterns)) {
             out_text <- paste(statpatterns, collapse=", ")
         }
@@ -243,13 +243,11 @@ module_setup_server <- function(input, output, session) {
             rv <- update_selcol_obj(rv, rv$filename_1(), "statcols", selected_statcols, sync_stat_patterns = TRUE)
             sync_select_inputs(session, "data_selected_columns_1", "statcols_selected_1", rv$filedata_1, selected_statcols)
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_1()]]$statpatterns, "found_stat_patterns_1")
-            # rv$selected_cols_obj()[[rv$filename_1()]][["statcols"]] <- selected_statcols
         }
         
         selected_statcols_2 <- autoselect_statpatterns(colnames(rv$filedata_2()))
         if (!is.null(rv$filename_2())) {
             rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols_2, sync_stat_patterns = TRUE)
-            # rv$selected_cols_obj()[[rv$filename_1()]][["statcols"]] <- selected_statcols_2
             sync_select_inputs(session, "data_selected_columns_2", "statcols_selected_2", rv$filedata_2, selected_statcols_2)
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
         }
