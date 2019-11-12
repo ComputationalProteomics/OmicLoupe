@@ -79,8 +79,50 @@ setup_plotly_ui <- function(id) {
 
 module_plotly_server <- function(input, output, session, reactive_vals) {
     
-    # pca_obj1 <- reactiveVal(NULL)
-
+    dataset_ind <- function(field) {
+        if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
+            1
+        }
+        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
+            2
+        }
+        else { 
+            warning(sprintf("Unknown input$dataset_%s: ", field), input[[sprintf("dataset%s", field)]])
+            NULL
+        }
+    }
+    
+    dataset_ref <- reactive({
+        ind <- dataset_ind(1)
+        reactive_vals[[sprintf("filedata_%s", ind)]]()
+    })
+    
+    dataset_comp <- reactive({
+        ind <- dataset_ind(2)
+        reactive_vals[[sprintf("filedata_%s", ind)]]()
+    })
+    
+    dataset_ref_cols <- reactive({
+        
+        ind <- dataset_ind(1)
+        if (!is.null(ind)) {
+            colnames(dataset_ref())
+        }
+        else {
+            ""
+        }
+    })
+    
+    dataset_comp_cols <- reactive({
+        ind <- dataset_ind(2)
+        if (!is.null(ind)) {
+            colnames(dataset_comp())
+        }
+        else {
+            ""
+        }
+    })
+    
     reactive_plot_df <- reactive({
 
         if (input$color_type == "Threshold") {
@@ -94,17 +136,28 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             )
         }
         else if (input$color_type == "PCA") {
-            pca_df <- calculate_pca_obj(
-                reactive_vals$filedata_1(),
+            
+            ref_pca_df <- calculate_pca_obj(
+                dataset_ref(),
                 reactive_vals$selected_cols_obj()[[input$dataset1]]$samples,
-                TRUE,
-                TRUE,
-                0.4,
+                do_scale = TRUE,
+                do_center = TRUE,
+                var_cut = 0.4,
                 return_df = TRUE
             )
-            colnames(pca_df) <- paste0("d1.", colnames(pca_df))
-            pca_df$pass_threshold_data <- TRUE
-            pca_df
+            colnames(ref_pca_df) <- paste0("d1.", colnames(ref_pca_df))
+            
+            comp_pca_df <- calculate_pca_obj(
+                dataset_comp(),
+                reactive_vals$selected_cols_obj()[[input$dataset2]]$samples,
+                do_scale = TRUE,
+                do_center = TRUE,
+                var_cut = 0.4,
+                return_df = TRUE
+            )
+            colnames(comp_pca_df) <- paste0("d2.", colnames(comp_pca_df))
+            
+            cbind(ref_pca_df, comp_pca_df)
         }
         else if (input$color_type == "Column") {
             base_df <- get_pass_thres_annot_data(
@@ -115,7 +168,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 input$fold_cutoff,
                 input$pvalue_type_select
             )
-            base_df$color_col <- reactive_vals$filedata1[[input$color_col_1]]
+            base_df$d1.color_col <- dataset_ref()[[input$color_col_1]]
+            base_df$d2.color_col <- dataset_comp()[[input$color_col_2]]
             base_df
         }
         else {
@@ -124,8 +178,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
-        
-        # browser()
         
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
@@ -139,6 +191,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         
         if (input$color_type == "PCA") {
             plot_df$PC <- reactive_plot_df()[["d1.PC1"]]
+        }
+        
+        if (input$color_type == "Column") {
+            plot_df$d1.color_col <- reactive_plot_df()[["d1.color_col"]]
+            plot_df$d2.color_col <- reactive_plot_df()[["d2.color_col"]]
         }
         
         plot_df$key <- row.names(plot_df)
@@ -177,39 +234,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
     })
     
-    dataset_ind <- function(field) {
-        if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
-            1
-        }
-        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
-            2
-        }
-        else { 
-            warning(sprintf("Unknown input$dataset_%s: ", field), input[[sprintf("dataset%s", field)]])
-            NULL
-        }
-    }
-    
-    dataset_ref_cols <- reactive({
-        
-        ind <- dataset_ind(1)
-        if (!is.null(ind)) {
-            colnames(reactive_vals[[sprintf("filedata_%s", ind)]]())
-        }
-        else {
-            ""
-        }
-    })
-    
-    dataset_comp_cols <- reactive({
-        ind <- dataset_ind(2)
-        if (!is.null(ind)) {
-            colnames(reactive_vals[[sprintf("filedata_%s", ind)]]())
-        }
-        else {
-            ""
-        }
-    })
+
     
     observe(
         if (input$dataset1 != "" && input$stat_base1 != "") {
@@ -238,8 +263,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     observeEvent(input$dataset1, {
         ref_data_cols <- dataset_ref_cols()
         comp_data_cols <- dataset_comp_cols()
-        updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
-        updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
+        updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected="pep_count")
+        updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected="pep_count")
     })
     
     observeEvent(reactive_vals$filedata_2(), {
@@ -251,6 +276,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     ########## Plotly functions #############
     
     make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE) {
+        
+        max_levels <- 10
+        df_color <- plot_df[[color_col]]
+        if ((is.factor(df_color) || is.character(df_color)) && length(unique(df_color)) > max_levels) {
+            warning("Maxlevels color color exceeded (", length(unique(df_color)), ") assigning no color")
+            color_col <- NULL
+        }
+        
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
             geom_point(alpha=0.5) + 
             ggtitle(title)
@@ -288,11 +321,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             manual_scale <- TRUE
         }
         else if (input$color_type == "PCA") {
-            color_col <- "PC"
+            color_col <- "d1.PC"
             manual_scale <- FALSE
         }
         else if (input$color_type == "Column") {
-            color_col <- "color_col"
+            color_col <- "d1.color_col"
             manual_scale <- FALSE
         }
         else {
@@ -327,11 +360,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             manual_scale <- TRUE
         }
         else if (input$color_type == "PCA") {
-            color_col <- "PC"
+            color_col <- "d2.PC"
             manual_scale <- FALSE
         }
         else if (input$color_type == "Column") {
-            color_col <- "color_col"
+            color_col <- "d2.color_col"
             manual_scale <- FALSE
         }
         else {
@@ -358,11 +391,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             manual_scale <- TRUE
         }
         else if (input$color_type == "PCA") {
-            color_col <- "PC"
+            color_col <- "d1.PC"
             manual_scale <- FALSE
         }
         else if (input$color_type == "Column") {
-            color_col <- "color_col"
+            color_col <- "d1.color_col"
             manual_scale <- FALSE
         }
         else {
@@ -389,8 +422,12 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- "pass_thres"
             manual_scale <- TRUE
         }
+        else if (input$color_type == "Column") {
+            color_col <- "d2.color_col"
+            manual_scale <- FALSE
+        }
         else if (input$color_type == "PCA") {
-            color_col <- "PC"
+            color_col <- "d2.PC"
             manual_scale <- FALSE
         }
         else {
