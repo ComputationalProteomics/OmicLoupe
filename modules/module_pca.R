@@ -12,9 +12,6 @@ setup_pca_ui <- function(id) {
                        wellPanel(
                            selectInput(ns("dataset1"), "Reference dataset", choices = c(""), selected = ""),
                            selectInput(ns("dataset2"), "Comparison dataset", choices = c(""), selected = ""),
-                           selectInput(ns("pca_dataset"), "Dataset settings", choices = c("dataset1", "dataset2"), selected = "dataset1"),
-                           # conditionalPanel(
-                           #     sprintf("input['%s'] == 'dataset1'", ns("pca_dataset")),
                            h4("Dataset 1"),
                            numericInput(ns("pc_comp_1_data1"), "PC1", min=1, value=1, step=1),
                            numericInput(ns("pc_comp_2_data1"), "PC2", min=1, value=2, step=1),
@@ -27,9 +24,6 @@ setup_pca_ui <- function(id) {
                                column(8, selectInput(ns("shape_data1"), "Shape", choices=c(""))),
                                column(4, checkboxInput(ns("use_shape_data1"), "Use", value=FALSE))
                            ),
-                           # ),
-                           # conditionalPanel(
-                           #     sprintf("input['%s'] == 'dataset2'", ns("pca_dataset")),
                            h4("Dataset 2"),
                            numericInput(ns("pc_comp_1_data2"), "PC1", min=1, value=1, step=1),
                            numericInput(ns("pc_comp_2_data2"), "PC2", min=1, value=2, step=1),
@@ -74,33 +68,25 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         }
     }
     
-    # observeEvent({
-    #     reactive_vals$design_1()
-    #     reactive_vals$design_2()
-    #     }, {
-    #     ind1 <- dataset_ind(1)
-    #     ind2 <- dataset_ind(2)
-    #     print("Updating input")
-    #     updateSelectInput(session, "color_data1", choices = colnames(reactive_vals[[sprintf("design_%s", ind1)]]()))
-    #     updateSelectInput(session, "shape_data1", choices = colnames(reactive_vals[[sprintf("design_%s", ind1)]]))
-    #     updateSelectInput(session, "sample_data1", choices = colnames(reactive_vals[[sprintf("design_%s", ind1)]]))
-    #     
-    #     updateSelectInput(session, "color_data2", choices = colnames(reactive_vals[[sprintf("design_%s", ind2)]]()))
-    #     updateSelectInput(session, "shape_data2", choices = colnames(reactive_vals[[sprintf("design_%s", ind2)]]))
-    #     updateSelectInput(session, "sample_data2", choices = colnames(reactive_vals[[sprintf("design_%s", ind2)]]))
-    # })
+    design_ref <- reactive({
+        ind <- dataset_ind(1)
+        reactive_vals[[sprintf("design_%s", ind)]]()
+    })
+    
+    design_comp <- reactive({
+        ind <- dataset_ind(2)
+        reactive_vals[[sprintf("design_%s", ind)]]()
+    })
     
     observeEvent(reactive_vals$design_1(), {
-        ind <- dataset_ind(1)
-        choices <- colnames(reactive_vals[[sprintf("design_%s", ind)]]())
+        choices <- colnames(design_ref())
         updateSelectInput(session, "color_data1", choices = choices, selected=choices[1])
         updateSelectInput(session, "shape_data1", choices = choices, selected=choices[1])
         updateSelectInput(session, "sample_data1", choices = choices, selected=choices[1])
     })
     
     observeEvent(reactive_vals$design_2(), {
-        ind <- dataset_ind(2)
-        choices <- colnames(reactive_vals[[sprintf("design_%s", ind)]]())
+        choices <- colnames(design_comp())
         updateSelectInput(session, "color_data2", choices = choices, selected=choices[1])
         updateSelectInput(session, "shape_data2", choices = choices, selected=choices[1])
         updateSelectInput(session, "sample_data2", choices = choices, selected=choices[1])
@@ -110,19 +96,16 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         choices <- get_dataset_choices(reactive_vals)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-        updateSelectInput(session, "pca_dataset", choices=choices, selected=choices[1])
     })
     
     observeEvent(reactive_vals$filedata_2(), {
         choices <- get_dataset_choices(reactive_vals)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-        updateSelectInput(session, "pca_dataset", choices=choices, selected=choices[1])
     })
     
     pca_obj1 <- reactive({
         
-        print("pca_obj1")
         ind <- dataset_ind(1)        
         calculate_pca_obj(
             reactive_vals[[sprintf("filedata_%s", ind)]](), 
@@ -135,7 +118,6 @@ module_pca_server <- function(input, output, session, reactive_vals) {
 
     pca_obj2 <- reactive({
         
-        print("pca_obj2")
         ind <- dataset_ind(2)
         calculate_pca_obj(
             reactive_vals[[sprintf("filedata_%s", ind)]](), 
@@ -152,8 +134,6 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         pc2 <- sprintf("PC%s", pc2)
         
         plt_df <- cbind(pca_obj$x, ddf)
-        
-        print("make_pca_plt")
         ggplot(plt_df, aes_string(x=pc1, y=pc2, color=color, shape=shape, text=sample)) + 
             geom_point(size=dot_size) + 
             ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", ")))
@@ -172,9 +152,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         
         ind <- dataset_ind(1)
         
-        print("plt1")
         plt <- make_pca_plt(
-            reactive_vals[[sprintf("design_%s", ind)]](),
+            design_ref(),
             pca_obj1(),
             input$pc_comp_1_data1,
             input$pc_comp_2_data1,
@@ -196,11 +175,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         if (input$sample_data2 == "") sample_col <- NULL
         else sample_col <- input$sample_data2
         
-        ind <- dataset_ind(2)
-        
-        print("plt2")
         plt <- make_pca_plt(
-            reactive_vals[[sprintf("design_%s", ind)]](),
+            design_comp(),
             pca_obj2(),
             input$pc_comp_1_data2,
             input$pc_comp_2_data2,
