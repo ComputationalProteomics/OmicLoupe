@@ -2,6 +2,7 @@
 data_display_ui_panel <- function(ns) {
     
     wellPanel(
+        selectInput(ns("color_type"), "Coloring type", choices=c("select", "threshold", "PCA loading"), selected="select"),
         column(6,
                selectInput(ns("dataset1"), "Reference dataset", choices=c(), selected = ""),
                selectInput(ns("dataset2"), "Compare dataset", choices=c(), selected = "")

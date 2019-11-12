@@ -279,25 +279,6 @@ module_setup_server <- function(input, output, session) {
         }
     }
     
-    # rv$pca <- reactiveVal(list())
-    # calculate_pca <- function(rdf, ddf, samples) {
-    #     # rdf <- reactive_vals$filedata_1()
-    #     # ddf <- reactive_vals$design_1()
-    #     # samples <- reactive_vals$selected_cols_obj()[[1]]$samples
-    #     sdf <- rdf[, samples]
-    #     variance_filter <- function(m, cutoff) {
-    #         vars <- apply(m, 1, var)
-    #         m[vars > quantile(vars, cutoff), ]
-    #     }
-    #     
-    #     sdf_complete <- sdf[complete.cases(sdf), ] %>% 
-    #         variance_filter(cutoff=input$variance_filter_data1) %>% 
-    #         t()
-    #     
-    #     pca_obj <- prcomp(sdf_complete, scale. = input$scale_pca_data1, center=input$center_pca_data1)
-    #     pca_obj
-    # }
-    
     observeEvent(input$autodetect_cols, {
         autodetect_stat_cols()
         if (input$design_sample_col_1 != "") {

@@ -6,6 +6,8 @@ library(ggpubr)
 source("R/vis_server_utils.R")
 source("R/vis_server_plots.R")
 
+MY_COLORS <- c("grey50", "blue", "red", "orange")
+
 setup_plotly_ui <- function(id) {
     
     ns <- NS(id)
@@ -14,10 +16,43 @@ setup_plotly_ui <- function(id) {
         fluidPage(
             fluidRow(
                 column(4,
-                       data_display_ui_panel(ns),
-                       minimaps_panel(ns)
+                       wellPanel(
+                           selectInput(ns("color_type"), "Coloring type", choices=c("Threshold", "PCA"), selected="select"),
+                           conditionalPanel(
+                               sprintf("input['%s'] == 'PCA'", ns("color_type")),
+                               fluidRow(
+                                   column(4, numericInput(ns("plot_pc1"), "Plt1 PC", value=1, min=1, step=1)),
+                                   column(4, numericInput(ns("plot_pc2"), "Plt2 PC", value=1, min=1, step=1)),
+                                   column(4, actionButton(ns("color_pca"), "Plot"))
+                               )
+                           ),
+                           column(6,
+                                  selectInput(ns("dataset1"), "Reference dataset", choices=c(), selected = ""),
+                                  selectInput(ns("dataset2"), "Compare dataset", choices=c(), selected = "")
+                           ),
+                           column(6,
+                                  selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
+                                  selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
+                           ),
+                           # selectInput(ns("reference_dataset"), "Reference dataset", choices=c(), selected = "dataset1"),
+                           fluidRow(
+                               column(9,
+                                      sliderInput(ns("pvalue_cutoff"), "P-value cutoff", value=0.05, step=0.01, min=0, max=1)
+                               ),
+                               column(3,
+                                      span(
+                                          selectInput(ns("pvalue_type_select"), choices = c("P.Value", "adj.P.Val"), selected = "P.Value", label = "P-value type"),
+                                          style="padding:20px"
+                                      )
+                               )
+                           ),
+                           sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
+                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
+                           checkboxInput(ns("toggle_minimaps"), "Display minimaps", value=FALSE)
+                       )
                 ),
                 column(8,
+                       p("Drag in figures to highlight features. Double click to unselect."),
                        column(6,
                               plotlyOutput(ns("plotly_volc1")),
                               plotlyOutput(ns("plotly_ma1")),
@@ -37,20 +72,40 @@ setup_plotly_ui <- function(id) {
 
 module_plotly_server <- function(input, output, session, reactive_vals) {
     
+    # pca_obj1 <- reactiveVal(NULL)
+
     reactive_plot_df <- reactive({
-        stat_cols <- reactive_ref_statcols()
-        get_pass_thres_annot_data(
-            reactive_vals$mapping_obj()$get_combined_dataset(),
-            stat_cols,
-            input$pvalue_cutoff,
-            input$fold_cutoff,
-            input$pvalue_type_select
-        )
+
+        if (input$color_type == "Threshold") {
+            get_pass_thres_annot_data(
+                reactive_vals$mapping_obj()$get_combined_dataset(),
+                reactive_ref_statcols(),
+                reactive_comp_statcols(),
+                input$pvalue_cutoff,
+                input$fold_cutoff,
+                input$pvalue_type_select
+            )
+        }
+        else if (input$color_type == "PCA") {
+            # browser()
+            pca_df <- calculate_pca_obj(
+                reactive_vals$filedata_1(),
+                reactive_vals$selected_cols_obj()[[input$dataset1]]$samples,
+                TRUE,
+                TRUE,
+                0.4,
+                return_df = TRUE
+            )
+            colnames(pca_df) <- paste0("d1.", colnames(pca_df))
+            pca_df$pass_threshold_data <- TRUE
+            pca_df
+        }
+        else {
+            warning("Unknown color_type !")
+        }
     })
     
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
-        
-        # browser()
         
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
@@ -61,6 +116,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             pass_thres = reactive_plot_df()$pass_threshold_data,
             hover_text = paste0("ProteinID: ", reactive_plot_df()$d1.Protein)
         )
+        
+        if (input$color_type == "PCA") {
+            plot_df$PC <- reactive_plot_df()[["d1.PC1"]]
+        }
+        
         plot_df$key <- row.names(plot_df)
         plot_df
     }
@@ -129,11 +189,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     ########## Plotly functions #############
     
-    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="") {
-        ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
+    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE) {
+        plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
             geom_point(alpha=0.5) + 
-            ggtitle(title) +
-            scale_color_manual(values=c("grey50", "blue", "red"))
+            ggtitle(title)
+        if (manual_scale) {
+            plt <- plt + scale_color_manual(values=MY_COLORS)
+        }
+        plt
     }
     
     make_histogram <- function(plot_df, x_col, fill_col, key_vals, title="") {
@@ -142,9 +205,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             x = ~get(x_col),
             color = ~get(fill_col),
             type = "histogram", 
-            colors = c("grey50", "blue"), 
+            colors = MY_COLORS, 
             alpha = 0.6,
-            nbinsx = 50,
+            nbinsx = input$bin_count,
             source = "subset",
             key = key_vals
         ) %>% layout(title = title, xaxis=list(title="P.Value"))
@@ -157,15 +220,31 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
+            manual_scale <- TRUE
+        }
+        else if(input$color_type == "Threshold") {
+            color_col <- "pass_thres"
+            manual_scale <- TRUE
+        }
+        else if (input$color_type == "PCA") {
+            color_col <- "PC"
+            manual_scale <- FALSE
         }
         else {
-            color_col <- "pass_thres"
+            warning("Unknown input$color_type: ", input$color_type)
         }
         
-        make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", title="Volcano: Reference dataset") %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+        make_scatter(
+            plot_df, 
+            x_col="fold", 
+            y_col="sig", 
+            color_col=color_col, 
+            key="key", 
+            title="Volcano: Reference dataset", 
+            manual_scale = manual_scale) %>% 
+                ggplotly(source="subset") %>%
+                layout(dragmode="select") %>%
+                toWebGL()
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -176,11 +255,21 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
+            manual_scale <- TRUE
+        }
+        else if(input$color_type == "Threshold") {
+            color_col <- "pass_thres"
+            manual_scale <- TRUE
+        }
+        else if (input$color_type == "PCA") {
+            color_col <- "PC"
+            manual_scale <- FALSE
         }
         else {
-            color_col <- "pass_thres"
+            warning("Unknown input$color_type: ", input$color_type)
         }
-        make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", title="Volcano: Compare dataset") %>% 
+        make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", 
+                     title="Volcano: Compare dataset", manual_scale = manual_scale) %>% 
             ggplotly(source="subset") %>% 
             layout(dragmode="select") %>%
             toWebGL()
@@ -193,11 +282,21 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
+            manual_scale <- TRUE
+        }
+        else if(input$color_type == "Threshold") {
+            color_col <- "pass_thres"
+            manual_scale <- TRUE
+        }
+        else if (input$color_type == "PCA") {
+            color_col <- "PC"
+            manual_scale <- FALSE
         }
         else {
-            color_col <- "pass_thres"
+            warning("Unknown input$color_type: ", input$color_type)
         }
-        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", title="MA: Reference dataset") %>% 
+        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, 
+                              key="key", title="MA: Reference dataset", manual_scale = manual_scale) %>% 
             ggplotly(source="subset") %>% 
             layout(dragmode="select") %>%
             toWebGL()
@@ -209,14 +308,23 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            print("Event data triggered!")
             plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
+            manual_scale <- TRUE
+        }
+        else if(input$color_type == "Threshold") {
+            color_col <- "pass_thres"
+            manual_scale <- TRUE
+        }
+        else if (input$color_type == "PCA") {
+            color_col <- "PC"
+            manual_scale <- FALSE
         }
         else {
-            color_col <- "pass_thres"
+            warning("Unknown input$color_type: ", input$color_type)
         }
-        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", title="MA: Compare dataset") %>% 
+        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", 
+                              title="MA: Compare dataset", manual_scale = manual_scale) %>% 
             ggplotly(source="subset") %>% 
             layout(dragmode="select") %>%
             toWebGL()

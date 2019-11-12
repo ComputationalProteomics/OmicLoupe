@@ -31,12 +31,46 @@ parse_stat_cols <- function(raw_stat_cols, base) {
 
 # Retrieves a subset of a dataframe where it is checked what points passes both
 # a statistical threshold and a fold threshold
-get_pass_thres_annot_data <- function(df, stat_cols, pvalue_cut, fold_cut, stat_pattern) {
+get_pass_thres_annot_data_old <- function(df, stat_cols, pvalue_cut, fold_cut, stat_pattern) {
     
     pass_threshold_data <- df[[stat_cols[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols$logFC]]) > fold_cut
     plot_df <- cbind(df, pass_threshold_data) %>% arrange(desc(UQ(as.name(stat_cols[[stat_pattern]]))))
     plot_df
 }
+
+get_pass_thres_annot_data <- function(df, stat_cols1, stat_cols2, pvalue_cut, fold_cut, stat_pattern) {
+    
+    pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut
+    pass_threshold_data2 <- df[[stat_cols2[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols2$logFC]]) > fold_cut
+    pass_both <- pass_threshold_data1 & pass_threshold_data2
+    # pass_neither <- !pass_threshold_data1 & !pass_threshold_data2
+    
+    pass_type <- rep("NONE", length(pass_both))
+    pass_type[pass_threshold_data1] <- "D1"
+    pass_type[pass_threshold_data2] <- "D2"
+    pass_type[pass_both] <- "BOTH"
+    pass_type <- factor(pass_type, levels = c("NONE", "BOTH", "D1", "D2"))
+    
+    # pass_type <- cbind(d1=pass_threshold_data1, d2=pass_threshold_data2) %>%
+    # pass_type <- map2(
+    #     pass_threshold_data1, 
+    #     pass_threshold_data2,
+    #     function(val1, val2) {
+    #         
+    #         if (is.na(val1)) val1 <- FALSE
+    #         if (is.na(val2)) val2 <- FALSE
+    #         
+    #         if (val1 && val2) "BOTH"
+    #         else if (val1) "D1"
+    #         else if (val2) "D2"
+    #         else "NONE"
+    #         
+    #     }) %>% unlist()
+    
+    plot_df <- cbind(df, pass_threshold_data=pass_type) %>% arrange(desc(UQ(as.name(stat_cols1[[stat_pattern]]))))
+    plot_df
+}
+
 
 get_curr_selected_cols_pattern <- function(chosen_dataset, filenames, pattern1="selected_cols_1", pattern2="selected_cols_2s") {
     if (chosen_dataset == filenames[1]) {
