@@ -80,46 +80,7 @@ setup_plotly_ui <- function(id) {
 
 module_plotly_server <- function(input, output, session, reactive_vals) {
     
-    output$target_data_dt = DT::renderDataTable({
-        
-        round_digits <- 3
-        trunc_length <- 20
-        
-        if (!is.null(reactive_vals$mapping_obj()$get_combined_dataset())) {
-            target_df <- reactive_vals$mapping_obj()$get_combined_dataset()
-        }
-        else {
-            return()
-        }
-        
-        event.data <- event_data("plotly_selected", source = "subset")
-        if (!is.null(event.data) == TRUE) {
-            target_df <- target_df[target_df$comb_id %in% event.data$key, ] 
-        }
-        
-        target_df %>%
-            mutate_if(
-                is.character,
-                ~str_trunc(., trunc_length)
-            ) %>%
-            mutate_if(
-                is.numeric,
-                ~round(., round_digits)
-            )
-    })
-    
-    dataset_ind <- function(field) {
-        if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
-            1
-        }
-        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
-            2
-        }
-        else { 
-            warning(sprintf("Unknown input$dataset_%s: ", field), input[[sprintf("dataset%s", field)]])
-            NULL
-        }
-    }
+    # ---------------- REACTIVE ---------------- 
     
     dataset_ref <- reactive({
         ind <- dataset_ind(1)
@@ -168,29 +129,39 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         else if (input$color_type == "PCA") {
             
+            d1_samples <- paste0(
+                sprintf("d%s.", dataset_ind(1)),
+                reactive_vals$selected_cols_obj()[[input$dataset1]]$samples
+            )
+            
+            d2_samples <- paste0(
+                sprintf("d%s.", dataset_ind(2)),
+                reactive_vals$selected_cols_obj()[[input$dataset2]]$samples
+            )
+            
             ref_pca_df <- calculate_pca_obj(
-                dataset_ref(),
-                reactive_vals$selected_cols_obj()[[input$dataset1]]$samples,
+                base_df,
+                d1_samples,
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
-                return_df = TRUE
+                return_df = TRUE,
+                col_prefix=sprintf("d%s.", dataset_ind(1))
             )
-            colnames(ref_pca_df) <- paste0("d1.", colnames(ref_pca_df))
-            
+
             comp_pca_df <- calculate_pca_obj(
-                dataset_comp(),
-                reactive_vals$selected_cols_obj()[[input$dataset2]]$samples,
+                base_df,
+                # dataset_comp(),
+                d2_samples,
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
-                return_df = TRUE
+                return_df = TRUE,
+                col_prefix=sprintf("d%s.", dataset_ind(1))
             )
-            colnames(comp_pca_df) <- paste0("d2.", colnames(comp_pca_df))
-            
+
             pca_df <- cbind(ref_pca_df, comp_pca_df)
-            warning("Temporary pass_threshold_data")
-            pca_df$pass_threshold_data <- TRUE
+            # pca_df$pass_threshold_data <- TRUE
             pca_df
         }
         else if (input$color_type == "Column") {
@@ -202,35 +173,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             warning("Unknown color_type !")
         }
     })
-    
-    get_plot_df <- function(target_statcols, feature_col="target_col1") {
-        
-        plot_df <- data.frame(
-            fold = reactive_plot_df()[[target_statcols()$logFC]],
-            sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
-            lab = reactive_vals$mapping_obj()[[feature_col]],
-            expr = reactive_plot_df()[[target_statcols()$AveExpr]],
-            pval = reactive_plot_df()[[target_statcols()$P.Value]],
-            pass_thres = reactive_plot_df()$pass_threshold_data,
-            hover_text = reactive_plot_df()$comb_id,
-            key = reactive_plot_df()$comb_id
-        )
-        
-        if (input$color_type == "PCA") {
-            plot_df$d1.PC <- reactive_plot_df()[[sprintf("d1.PC%s", input$plot_pc1)]]
-            plot_df$d2.PC <- reactive_plot_df()[[sprintf("d2.PC%s", input$plot_pc2)]]
-            warning("The pass_thres could be better calculated for histograms also in PCA")
-            plot_df$pass_thres <- TRUE
-        }
-        
-        if (input$color_type == "Column") {
-            plot_df$d1.color_col <- reactive_plot_df()[["d1.color_col"]]
-            plot_df$d2.color_col <- reactive_plot_df()[["d2.color_col"]]
-        }
-        
-        # plot_df$key <- plot_df$comb_id
-        plot_df
-    }
     
     plot_ref_df <- reactive({
         get_plot_df(reactive_ref_statcols)
@@ -270,6 +212,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     #     }
     # )
     
+    # ---------------- OBSERVERS ---------------- 
+    
     observeEvent(input$pvalue_type_select, {
         updateSliderInput(session, inputId="pvalue_cutoff", label=sprintf("%s cutoff", input$pvalue_type_select), 
                           value=input$pvalue_cutoff, min=0, max=1, step=0.01)
@@ -301,7 +245,49 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    ############# Plotly functions #############
+    # ---------------- FUNCTIONS ---------------- 
+    
+    dataset_ind <- function(field) {
+        if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
+            1
+        }
+        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
+            2
+        }
+        else { 
+            warning(sprintf("Unknown input$dataset_%s: ", field), input[[sprintf("dataset%s", field)]])
+            NULL
+        }
+    }
+    
+    get_plot_df <- function(target_statcols, feature_col="target_col1") {
+        
+        plot_df <- data.frame(
+            fold = reactive_plot_df()[[target_statcols()$logFC]],
+            sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
+            lab = reactive_vals$mapping_obj()[[feature_col]],
+            expr = reactive_plot_df()[[target_statcols()$AveExpr]],
+            pval = reactive_plot_df()[[target_statcols()$P.Value]],
+            pass_thres = reactive_plot_df()$pass_threshold_data,
+            hover_text = reactive_plot_df()$comb_id,
+            key = reactive_plot_df()$comb_id
+        )
+        
+        if (input$color_type == "PCA") {
+            plot_df$d1.PC <- reactive_plot_df()[[sprintf("d1.PC%s", input$plot_pc1)]]
+            plot_df$d2.PC <- reactive_plot_df()[[sprintf("d2.PC%s", input$plot_pc2)]]
+            warning("The pass_thres could be better calculated for histograms also in PCA")
+            plot_df$pass_thres <- TRUE
+        }
+        
+        if (input$color_type == "Column") {
+            plot_df$d1.color_col <- reactive_plot_df()[["d1.color_col"]]
+            plot_df$d2.color_col <- reactive_plot_df()[["d2.color_col"]]
+        }
+        
+        # plot_df$key <- plot_df$comb_id
+        plot_df
+    }
     
     make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE) {
         
@@ -350,6 +336,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         color_col
     }
+    
+    # ---------------- OUTPUTS ---------------- 
     
     output$plotly_volc1 <- renderPlotly({
         
@@ -494,6 +482,35 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             layout(dragmode="none", barmode="stack") %>% 
             toWebGL()
     })
+ 
+    output$target_data_dt = DT::renderDataTable({
+        
+        round_digits <- 3
+        trunc_length <- 20
+        
+        if (!is.null(reactive_vals$mapping_obj()$get_combined_dataset())) {
+            target_df <- reactive_vals$mapping_obj()$get_combined_dataset()
+        }
+        else {
+            return()
+        }
+        
+        event.data <- event_data("plotly_selected", source = "subset")
+        if (!is.null(event.data) == TRUE) {
+            target_df <- target_df[target_df$comb_id %in% event.data$key, ] 
+        }
+        
+        target_df %>%
+            mutate_if(
+                is.character,
+                ~str_trunc(., trunc_length)
+            ) %>%
+            mutate_if(
+                is.numeric,
+                ~round(., round_digits)
+            )
+    })
+    
     
 }
 

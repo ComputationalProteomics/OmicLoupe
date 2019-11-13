@@ -1,4 +1,4 @@
-calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return_df=FALSE) {
+calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return_df=FALSE, col_prefix=NULL) {
     
     sdf <- rdf[, samples]
     variance_filter <- function(m, cutoff) {
@@ -16,7 +16,11 @@ calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return
     }
     else {
         rdf_target <- rdf %>% filter(complete.cases(sdf)) %>% filter(var_filter_contrast)
-        cbind(rdf_target, pca_obj$rotation)
+        rot_df <- pca_obj$rotation
+        if (!is.null(col_prefix)) {
+            colnames(rot_df) <- paste0(col_prefix, colnames(rot_df))
+        }
+        cbind(rdf_target, rot_df)
     }
 }
 
