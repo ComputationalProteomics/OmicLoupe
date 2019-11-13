@@ -72,15 +72,32 @@ setup_panel_ui <- function(id) {
 
 module_setup_server <- function(input, output, session) {
     
-    output$dt_test = renderDT(
+    mRender <- function(data, type, row) {
+        trimmed_string <- substr(0, 6)
+        
+    }
+    
+    output$dt_test = DT::renderDataTable({
+        
+        round_digits <- 3
+        trunc_length <- 20
+        
         if (!is.null(rv$mapping_obj())) {
-            rv$mapping_obj()$get_combined_dataset()
+            rv$mapping_obj()$get_combined_dataset() %>%
+                mutate_if(
+                    is.character,
+                    ~str_trunc(., trunc_length)
+                ) %>%
+                mutate_if(
+                    is.numeric,
+                    ~round(., round_digits)
+                )
         }
         else {
             mtcars
         }
-    )
-    
+    })
+
     load_data <- function(in_file) {
         infile <- in_file
         if (is.null(infile)) {
@@ -174,7 +191,7 @@ module_setup_server <- function(input, output, session) {
     })
     
     update_statpatterns_display <- function(statpatterns, target_out) {
-
+        
         if (!is.null(statpatterns)) {
             out_text <- paste(statpatterns, collapse=", ")
         }
