@@ -136,14 +136,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         
         if (input$color_type == "Threshold") {
             base_df
-            # get_pass_thres_annot_data(
-            #     reactive_vals$mapping_obj()$get_combined_dataset(),
-            #     reactive_ref_statcols(),
-            #     reactive_comp_statcols(),
-            #     input$pvalue_cutoff,
-            #     input$fold_cutoff,
-            #     input$pvalue_type_select
-            # )
         }
         else if (input$color_type == "PCA") {
             
@@ -170,16 +162,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             pca_df <- cbind(ref_pca_df, comp_pca_df)
             warning("Temporary pass_threshold_data")
             pca_df$pass_threshold_data <- TRUE
+            pca_df
         }
         else if (input$color_type == "Column") {
-            # base_df <- get_pass_thres_annot_data(
-            #     reactive_vals$mapping_obj()$get_combined_dataset(),
-            #     reactive_ref_statcols(),
-            #     reactive_comp_statcols(),
-            #     input$pvalue_cutoff,
-            #     input$fold_cutoff,
-            #     input$pvalue_type_select
-            # )
             base_df$d1.color_col <- dataset_ref()[[input$color_col_1]]
             base_df$d2.color_col <- dataset_comp()[[input$color_col_2]]
             base_df
@@ -194,6 +179,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         # browser()
         
         warning("Hover text is taken as d1.Protein, not the Setup input!")
+        
+        # if (input$color_type == "PCA") {
+        #     browser()
+        # }
         
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
