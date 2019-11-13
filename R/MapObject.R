@@ -49,20 +49,24 @@ MapObject <- R6Class("MapObject", list(
             out_df2 <- self$dataset2[self$joint_indices2, ]
             colnames(out_df1) <- paste0("d1.", colnames(out_df1))
             colnames(out_df2) <- paste0("d2.", colnames(out_df2))
-            cbind(out_df1, out_df2)
+            out_df <- cbind(out_df1, out_df2)
         }
         else if (!is.null(self$dataset1)) {
-            out_df1 <- self$dataset1
-            colnames(out_df1) <- paste0("d1.", colnames(out_df1))
-            out_df1
+            out_df <- self$dataset1
+            colnames(out_df) <- paste0("d1.", colnames(out_df))
         }
         else if (!is.null(self$dataset2)) {
-            out_df2 <- self$dataset2
-            colnames(out_df2) <- paste0("d2.", colnames(out_df2))
-            out_df2
+            out_df <- self$dataset2
+            colnames(out_df) <- paste0("d2.", colnames(out_df))
+            out_df
         }
         else {
             stop("Unknown situation, for self$dataset1 and self$dataset2: ", self$dataset1, " ", self$dataset2)
         }
+        
+        cbind(
+            comb_id = paste0("C", seq_len(nrow(out_df))),
+            out_df
+        )
     }
 ))

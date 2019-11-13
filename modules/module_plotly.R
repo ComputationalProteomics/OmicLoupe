@@ -95,7 +95,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         warning("Are the numbers correct here?")
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
-            target_df <- target_df[row.names(target_df) %in% event.data$key, ] 
+            target_df <- target_df[target_df$comb_id %in% event.data$key, ] 
             
             # plot_df$selected <- row.names(plot_df) %in% event.data$key
             # color_col <- "selected"
@@ -217,8 +217,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             lab = reactive_vals$mapping_obj()[[feature_col]],
             expr = reactive_plot_df()[[target_statcols()$AveExpr]],
             pval = reactive_plot_df()[[target_statcols()$P.Value]],
-            pass_thres = reactive_plot_df()$pass_threshold_data
-            # hover_text = paste0("ProteinID: ", reactive_plot_df()$d1.Protein)
+            pass_thres = reactive_plot_df()$pass_threshold_data,
+            hover_text = reactive_plot_df()$comb_id,
+            key = reactive_plot_df()$comb_id
         )
         
         if (input$color_type == "PCA") {
@@ -233,7 +234,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             plot_df$d2.color_col <- reactive_plot_df()[["d2.color_col"]]
         }
         
-        plot_df$key <- row.names(plot_df)
+        # plot_df$key <- plot_df$comb_id
         plot_df
     }
     
@@ -345,7 +346,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            browser()
+            
+            plot_df$selected <- plot_df$key %in% event.data$key
+            # plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
             manual_scale <- TRUE
         }
@@ -384,7 +388,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
             manual_scale <- TRUE
         }
@@ -415,7 +419,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            plot_df$selected <- plot_df$key %in% event.data$key
+            # plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
             manual_scale <- TRUE
         }
@@ -447,7 +452,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            plot_df$selected <- plot_df$key %in% event.data$key
+            # plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
             manual_scale <- TRUE
         }
@@ -479,7 +485,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
         }
         else {
@@ -496,7 +502,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- row.names(plot_df) %in% event.data$key
+            plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
         }
         else {
