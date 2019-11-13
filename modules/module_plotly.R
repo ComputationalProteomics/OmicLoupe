@@ -206,12 +206,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
     })
     
-    # observe(
-    #     if (input$dataset1 != "" && input$stat_base1 != "") {
-    #         reactive_comp_statcols()
-    #     }
-    # )
-    
     # ---------------- OBSERVERS ---------------- 
     
     observeEvent(input$pvalue_type_select, {
@@ -235,8 +229,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     observeEvent(input$dataset1, {
         ref_data_cols <- dataset_ref_cols()
         comp_data_cols <- dataset_comp_cols()
-        updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected="pep_count")
-        updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected="pep_count")
+        updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
+        updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
     })
     
     observeEvent(reactive_vals$filedata_2(), {
@@ -285,7 +279,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             plot_df$d2.color_col <- reactive_plot_df()[["d2.color_col"]]
         }
         
-        # plot_df$key <- plot_df$comb_id
         plot_df
     }
     
@@ -354,22 +347,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 manual_scale <- FALSE
             }
         }
-        # else if(input$color_type == "Threshold") {
-        #     color_col <- "pass_thres"
-        #     manual_scale <- TRUE
-        # }
-        # else if (input$color_type == "PCA") {
-        #     color_col <- "d1.PC"
-        #     manual_scale <- FALSE
-        # }
-        # else if (input$color_type == "Column") {
-        #     color_col <- "d1.color_col"
-        #     manual_scale <- FALSE
-        # }
-        # else {
-        #     warning("Unknown input$color_type: ", input$color_type)
-        # }
-        
+
         make_scatter(
             plot_df, 
             x_col="fold", 
