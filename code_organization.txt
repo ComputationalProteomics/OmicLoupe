@@ -1,0 +1,117 @@
+# Setup module
+
+* rv - Reactive values
+    * filedata_1/2
+    * design_1/2
+    * selected_cols_obj
+    * filename_1/2
+    * mapping_obj
+
+* Functions
+    * update_selcol_obj
+    * solcol_obj_has_statpatterns
+    * update_statpatterns_display
+    * autodetect_stat_cols
+    * autodetect_sample_cols
+    
+* Observers
+    * input$sample_select_button_1
+    * input$sample_deselect_button_1
+    * input$stat_select_button_1
+    * input$stat_deselect_button_1
+    * input$feature_col_1
+    * input$autodetect_cols (button)
+    * rv$filedata_1()
+    * rv$filedata_2()
+    * rv$design_1()
+    * rv$design_2()
+    * input$perform_map_button/feature_col_1/feature_col_2
+    * rv$mapping_obj
+    
+* outputs
+    * found_stat_patterns_2
+
+# Plotly module
+
+## Issues
+
+There is something confusing here in how the data is mapped from raw data to visualization frame
+
+dataset_ref/dataset_comp ->
+
+get_pass_thres_annot_data ->
+    reactive_plot_df (reactive) ->
+    get_plot_df (function) ->
+    plot_ref_df/plot_comp_df (reactive) 
+
+The PCA plotting is not running again. Need to merge the systems, so that it is based on the combined_dataset
+data rather than targeting the raw dataframes directly
+
+There is a hard coding somewhere right now assigning pep_count as coloring col
+
+## Contents
+
+* outputs
+    * target_data_dt
+    * plotly_volc1
+    * plotly_volc2
+    * plotly_ma1
+    * plotly_ma2
+    * plotly_hist1
+    * plotly_hist2
+
+* functions
+    * dataset_ind
+    * get_plot_df
+    * make_scatter
+    * make_histogram
+
+* reactives
+    * dataset_ref
+    * dataset_comp
+    * dataset_ref_cols
+    * dataset_comp_cols
+    * reactive_plot_df
+    * plot_ref_df
+    * plot_comp_df
+    * reactive_ref_statcols
+    * reactive_comp_statcols
+    
+* observers
+    * input$dataset1 + input$stat_base1 -> reactive_comp_statcols ?
+    * input$pvalue_type_select
+    * reactive_vals$selected_cols_obj/input$dataset1/input$dataset2
+    * reactive_vals$filedata_1()
+    * input$datasset1
+    * reactive_vals$filedata_2()
+
+# PCA module
+
+* functions
+    * dataset_ind
+    * make_pca_plt1
+
+* reactives
+    * design_ref
+    * design_comp
+    * pca_obj1
+    * pca_obj2
+
+* observers
+    * reactive_vals$design_1()
+    * reactive_vals$design_2()
+    * reactive_vals$filedata_1()
+    * reactive_vals$filedata_2()
+
+outputs
+    * pca_plot1
+    * pca_plot2
+
+
+
+
+
+
+
+
+

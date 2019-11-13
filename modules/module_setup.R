@@ -119,8 +119,8 @@ module_setup_server <- function(input, output, session) {
     rv$filename_1 <- reactive(get_filename(input$data_file_1))
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
-    rv$test_react <- reactiveVal(NULL)
-    rv$pca <- reactiveVal(list())
+    # rv$test_react <- reactiveVal(NULL)
+    # rv$pca <- reactiveVal(list())
     
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
         selcol_obj <- rv$selected_cols_obj()

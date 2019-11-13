@@ -72,7 +72,7 @@ setup_plotly_ui <- function(id) {
                        )
                 )
             ),
-            DT::DTOutput(ns("dt_test"))
+            DT::DTOutput(ns("target_data_dt"))
         )
     )
 }
@@ -80,7 +80,7 @@ setup_plotly_ui <- function(id) {
 
 module_plotly_server <- function(input, output, session, reactive_vals) {
     
-    output$dt_test = DT::renderDataTable({
+    output$target_data_dt = DT::renderDataTable({
         
         round_digits <- 3
         trunc_length <- 20
@@ -92,17 +92,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             return()
         }
         
-        warning("Are the numbers correct here?")
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
             target_df <- target_df[target_df$comb_id %in% event.data$key, ] 
-            
-            # plot_df$selected <- row.names(plot_df) %in% event.data$key
-            # color_col <- "selected"
-            # manual_scale <- TRUE
         }
         
-        # if (!is.null(reactive_vals$mapping_obj())) {
         target_df %>%
             mutate_if(
                 is.character,
@@ -270,11 +264,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
     })
     
-    observe(
-        if (input$dataset1 != "" && input$stat_base1 != "") {
-            reactive_comp_statcols()
-        }
-    )
+    # observe(
+    #     if (input$dataset1 != "" && input$stat_base1 != "") {
+    #         reactive_comp_statcols()
+    #     }
+    # )
     
     observeEvent(input$pvalue_type_select, {
         updateSliderInput(session, inputId="pvalue_cutoff", label=sprintf("%s cutoff", input$pvalue_type_select), 
@@ -341,33 +335,52 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         ) %>% layout(title = title, xaxis=list(title="P.Value"))
     }
     
-    output$plotly_volc1 <- renderPlotly({
-        
-        plot_df <- plot_ref_df()
-        event.data <- event_data("plotly_selected", source = "subset")
-        if (!is.null(event.data) == TRUE) {
-            browser()
-            
-            plot_df$selected <- plot_df$key %in% event.data$key
-            # plot_df$selected <- row.names(plot_df) %in% event.data$key
-            color_col <- "selected"
-            manual_scale <- TRUE
-        }
-        else if(input$color_type == "Threshold") {
+    retrieve_color_col <- function(color_type) {
+        if(color_type == "Threshold") {
             color_col <- "pass_thres"
-            manual_scale <- TRUE
         }
-        else if (input$color_type == "PCA") {
+        else if (color_type == "PCA") {
             color_col <- "d1.PC"
-            manual_scale <- FALSE
         }
-        else if (input$color_type == "Column") {
+        else if (color_type == "Column") {
             color_col <- "d1.color_col"
-            manual_scale <- FALSE
         }
         else {
             warning("Unknown input$color_type: ", input$color_type)
         }
+        color_col
+    }
+    
+    output$plotly_volc1 <- renderPlotly({
+        
+        plot_df <- plot_ref_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        manual_scale <- TRUE
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- plot_df$key %in% event.data$key
+            color_col <- "selected"
+        } 
+        else {
+            color_col <- retrieve_color_col(input$color_type)
+            if (input$color_type %in% c("PCA", "Column")) {
+                manual_scale <- FALSE
+            }
+        }
+        # else if(input$color_type == "Threshold") {
+        #     color_col <- "pass_thres"
+        #     manual_scale <- TRUE
+        # }
+        # else if (input$color_type == "PCA") {
+        #     color_col <- "d1.PC"
+        #     manual_scale <- FALSE
+        # }
+        # else if (input$color_type == "Column") {
+        #     color_col <- "d1.color_col"
+        #     manual_scale <- FALSE
+        # }
+        # else {
+        #     warning("Unknown input$color_type: ", input$color_type)
+        # }
         
         make_scatter(
             plot_df, 
@@ -386,26 +399,16 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
-        
+        manual_scale <- TRUE
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
-            manual_scale <- TRUE
-        }
-        else if(input$color_type == "Threshold") {
-            color_col <- "pass_thres"
-            manual_scale <- TRUE
-        }
-        else if (input$color_type == "PCA") {
-            color_col <- "d2.PC"
-            manual_scale <- FALSE
-        }
-        else if (input$color_type == "Column") {
-            color_col <- "d2.color_col"
-            manual_scale <- FALSE
-        }
+        } 
         else {
-            warning("Unknown input$color_type: ", input$color_type)
+            color_col <- retrieve_color_col(input$color_type)
+            if (input$color_type %in% c("PCA", "Column")) {
+                manual_scale <- FALSE
+            }
         }
         make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", 
                      title="Volcano: Compare dataset", manual_scale = manual_scale) %>% 
@@ -418,26 +421,16 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
+        manual_scale <- TRUE
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
-            # plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
-            manual_scale <- TRUE
-        }
-        else if(input$color_type == "Threshold") {
-            color_col <- "pass_thres"
-            manual_scale <- TRUE
-        }
-        else if (input$color_type == "PCA") {
-            color_col <- "d1.PC"
-            manual_scale <- FALSE
-        }
-        else if (input$color_type == "Column") {
-            color_col <- "d1.color_col"
-            manual_scale <- FALSE
-        }
+        } 
         else {
-            warning("Unknown input$color_type: ", input$color_type)
+            color_col <- retrieve_color_col(input$color_type)
+            if (input$color_type %in% c("PCA", "Column")) {
+                manual_scale <- FALSE
+            }
         }
         ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, 
                               key="key", title="MA: Reference dataset", manual_scale = manual_scale) %>% 
@@ -450,27 +443,16 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
-        
+        manual_scale <- TRUE
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
-            # plot_df$selected <- row.names(plot_df) %in% event.data$key
             color_col <- "selected"
-            manual_scale <- TRUE
-        }
-        else if(input$color_type == "Threshold") {
-            color_col <- "pass_thres"
-            manual_scale <- TRUE
-        }
-        else if (input$color_type == "Column") {
-            color_col <- "d2.color_col"
-            manual_scale <- FALSE
-        }
-        else if (input$color_type == "PCA") {
-            color_col <- "d2.PC"
-            manual_scale <- FALSE
-        }
+        } 
         else {
-            warning("Unknown input$color_type: ", input$color_type)
+            color_col <- retrieve_color_col(input$color_type)
+            if (input$color_type %in% c("PCA", "Column")) {
+                manual_scale <- FALSE
+            }
         }
         ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", 
                               title="MA: Compare dataset", manual_scale = manual_scale) %>% 
@@ -513,19 +495,5 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             toWebGL()
     })
     
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+}
 
