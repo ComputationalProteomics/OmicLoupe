@@ -2,6 +2,7 @@ library(shiny)
 library(R6)
 library(plotly)
 library(tidyverse)
+library(DT)
 
 options(shiny.maxRequestSize=100*1024^2)
 

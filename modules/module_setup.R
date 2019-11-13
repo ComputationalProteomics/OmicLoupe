@@ -63,12 +63,23 @@ setup_panel_ui <- function(id) {
                            )
                        )
                 )
-            )
+            ),
+            h3("I am here"),
+            DT::DTOutput(ns("dt_test"))
         )
     )
 }
 
 module_setup_server <- function(input, output, session) {
+    
+    output$dt_test = renderDT(
+        if (!is.null(rv$mapping_obj())) {
+            rv$mapping_obj()$get_combined_dataset()
+        }
+        else {
+            mtcars
+        }
+    )
     
     load_data <- function(in_file) {
         infile <- in_file
