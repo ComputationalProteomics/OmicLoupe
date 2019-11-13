@@ -64,7 +64,6 @@ setup_panel_ui <- function(id) {
                        )
                 )
             ),
-            h3("I am here"),
             DT::DTOutput(ns("dt_test"))
         )
     )
@@ -92,9 +91,6 @@ module_setup_server <- function(input, output, session) {
                     is.numeric,
                     ~round(., round_digits)
                 )
-        }
-        else {
-            mtcars
         }
     })
 

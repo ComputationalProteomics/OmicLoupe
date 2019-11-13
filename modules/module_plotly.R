@@ -71,13 +71,48 @@ setup_plotly_ui <- function(id) {
                               plotlyOutput(ns("plotly_hist2"))
                        )
                 )
-            )
+            ),
+            DT::DTOutput(ns("dt_test"))
         )
     )
 }
 
 
 module_plotly_server <- function(input, output, session, reactive_vals) {
+    
+    output$dt_test = DT::renderDataTable({
+        
+        round_digits <- 3
+        trunc_length <- 20
+        
+        if (!is.null(reactive_vals$mapping_obj()$get_combined_dataset())) {
+            target_df <- reactive_vals$mapping_obj()$get_combined_dataset()
+        }
+        else {
+            return()
+        }
+        
+        warning("Are the numbers correct here?")
+        event.data <- event_data("plotly_selected", source = "subset")
+        if (!is.null(event.data) == TRUE) {
+            target_df <- target_df[row.names(target_df) %in% event.data$key, ] 
+            
+            # plot_df$selected <- row.names(plot_df) %in% event.data$key
+            # color_col <- "selected"
+            # manual_scale <- TRUE
+        }
+        
+        # if (!is.null(reactive_vals$mapping_obj())) {
+        target_df %>%
+            mutate_if(
+                is.character,
+                ~str_trunc(., trunc_length)
+            ) %>%
+            mutate_if(
+                is.numeric,
+                ~round(., round_digits)
+            )
+    })
     
     dataset_ind <- function(field) {
         if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
@@ -124,7 +159,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     reactive_plot_df <- reactive({
-
+        
         base_df <- get_pass_thres_annot_data(
             reactive_vals$mapping_obj()$get_combined_dataset(),
             reactive_ref_statcols(),
@@ -175,14 +210,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
-        
-        # browser()
-        
-        warning("Hover text is taken as d1.Protein, not the Setup input!")
-        
-        # if (input$color_type == "PCA") {
-        #     browser()
-        # }
         
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
@@ -242,8 +269,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
     })
     
-
-    
     observe(
         if (input$dataset1 != "" && input$stat_base1 != "") {
             reactive_comp_statcols()
@@ -281,7 +306,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    ########## Plotly functions #############
+    ############# Plotly functions #############
     
     make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE) {
         
@@ -348,9 +373,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             key="key", 
             title="Volcano: Reference dataset", 
             manual_scale = manual_scale) %>% 
-                ggplotly(source="subset") %>%
-                layout(dragmode="select") %>%
-                toWebGL()
+            ggplotly(source="subset") %>%
+            layout(dragmode="select") %>%
+            toWebGL()
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -482,7 +507,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             toWebGL()
     })
     
-}
+    }
 
 
 
