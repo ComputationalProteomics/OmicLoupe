@@ -59,7 +59,7 @@ setup_plotly_ui <- function(id) {
                        )
                 ),
                 column(8,
-                       htmlOutput(ns("plotly_warning")),
+                       htmlOutput(ns("warnings")),
                        p("Drag in figures to highlight features. Double click to unselect."),
                        column(6,
                               plotlyOutput(ns("plotly_volc1")),
@@ -378,7 +378,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     # ---------------- OUTPUTS ---------------- 
     
-    output$plotly_warning <- renderUI({
+    output$warnings <- renderUI({
         
         no_comp_text <- plotly_warnings$no_comparisons_warning
         no_design_text <- plotly_warnings$no_design_warning

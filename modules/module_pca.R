@@ -46,6 +46,7 @@ setup_pca_ui <- function(id) {
                        numericInput(ns("variance_filter_data"), "Variance filter", min=0, max=1, step=0.01, value = 0.1)
                 ),
                 column(8,
+                       htmlOutput(ns("warnings")),
                        plotlyOutput(ns("pca_plot1"), height = "400px"),
                        plotlyOutput(ns("pca_plot2"), height = "400px")
                 )
@@ -56,27 +57,61 @@ setup_pca_ui <- function(id) {
 
 module_pca_server <- function(input, output, session, reactive_vals) {
     
-    dataset_ind <- function(field) {
-        if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
-            1
-        }
-        else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
-            2
-        }
-        else { 
-            warning(sprintf("Unknown input$dataset%s: ", field), input[[sprintf("dataset%s", field)]])
-        }
-    }
+    ########### REACTIVE ############
     
-    design_ref <- reactive({
+    warnings <- reactiveValues()
+    warnings$no_data_warning <- "no data warning, orig val"
+    warnings$no_comparisons_warning <- "no comparisons warning, orig val"
+    warnings$no_design_warning <- "no design warning, orig val"
+    
+    design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
+    design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
+    data_ref <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() })
+    data_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
+    samples_ref <- reactive({ 
+        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(1))]]]]$samples 
+    })
+    samples_comp <- reactive({ 
+        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(2))]]]]$samples 
+    })
+    
+    pca_obj1 <- reactive({
+        
+        req(data_ref())
+        req(design_ref())
+        req(samples_ref())
+        
         ind <- dataset_ind(1)
-        reactive_vals[[sprintf("design_%s", ind)]]()
+        calculate_pca_obj(
+            # reactive_vals[[sprintf("filedata_%s", ind)]](), 
+            data_ref(),
+            samples_ref(),
+            # reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples,
+            do_scale = input$scale_pca_data,
+            do_center = input$center_pca_data,
+            var_cut = input$variance_filter_data
+        )
     })
     
-    design_comp <- reactive({
+    pca_obj2 <- reactive({
+        
+        req(data_comp())
+        req(design_comp())
+        req(samples_comp())
+        
         ind <- dataset_ind(2)
-        reactive_vals[[sprintf("design_%s", ind)]]()
+        calculate_pca_obj(
+            # reactive_vals[[sprintf("filedata_%s", ind)]](), 
+            data_comp(),
+            samples_comp(),
+            # reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples,
+            do_scale = input$scale_pca_data,
+            do_center = input$center_pca_data,
+            var_cut = input$variance_filter_data
+        )
     })
+    
+    ########### OBSERVERS ############
     
     observeEvent(reactive_vals$design_1(), {
         choices <- colnames(design_ref())
@@ -104,29 +139,28 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    pca_obj1 <- reactive({
+    ########### FUNCTIONS ############
+    
+    dataset_ind <- function(field) {
         
-        ind <- dataset_ind(1)        
-        calculate_pca_obj(
-            reactive_vals[[sprintf("filedata_%s", ind)]](), 
-            reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples,
-            do_scale = input$scale_pca_data,
-            do_center = input$center_pca_data,
-            var_cut = input$variance_filter_data
-        )
-    })
-
-    pca_obj2 <- reactive({
+        req(reactive_vals$filename_1(), cancelOutput = TRUE)
+        # req(reactive_vals$filename_2())
         
-        ind <- dataset_ind(2)
-        calculate_pca_obj(
-            reactive_vals[[sprintf("filedata_%s", ind)]](), 
-            reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples,
-            do_scale = input$scale_pca_data,
-            do_center = input$center_pca_data,
-            var_cut = input$variance_filter_data
-        )
-    })
+        if (is.null(reactive_vals$filename_1())) {
+            warnings$no_data_warning <- "No data present, upload in the setup page!"
+        }
+        if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
+            1
+        }
+        else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
+            2
+        }
+        else { 
+            warning(sprintf("Unknown input$dataset%s: ", field), input[[sprintf("dataset%s", field)]])
+        }
+    }
+    
+    
     
     make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3) {
         
@@ -143,7 +177,32 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
             ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
     }
+    
+    ########### OUTPUTS ############
+    
+    output$warnings <- renderUI({
+
+        error_vect <- c()
+        if (is.null(reactive_vals$filename_1())) {
+            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+        }
         
+        if (is.null(reactive_vals$design_1())) {
+            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+        }
+        
+        if (is.null(samples_ref()) || length(samples_ref()) == 0) {
+            error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
+        }
+        
+        # reactive_vals[[sprintf("design_%s", ind)]]()
+        # no_data_text <- warnings$no_data_warning
+        # no_comp_text <- warnings$no_comparisons_warning
+        # no_design_text <- warnings$no_design_warning
+        total_text <- paste(error_vect, collapse="<br>")
+        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    })
+    
     output$pca_plot1 <- renderPlotly({
         
         if (input$use_color_data1) color_col <- input$color_data1
