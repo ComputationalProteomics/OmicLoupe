@@ -1,7 +1,5 @@
 calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return_df=FALSE, col_prefix=NULL) {
     
-    # browser()
-    
     sdf <- rdf[, samples]
     variance_filter <- function(m, cutoff) {
         vars <- apply(m, 1, var)
@@ -10,7 +8,9 @@ calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return
     
     has_inf_rows <- apply(sdf, 1, function(elem) { any(is.infinite(elem)) } )
     
-    sdf_complete <- sdf[complete.cases(sdf) & !has_inf_rows, ] 
+    valid_pca_rows <- complete.cases(sdf) & !has_inf_rows
+    
+    sdf_complete <- sdf[valid_pca_rows, ] 
     
     var_filter_contrast <- variance_filter(sdf_complete, cutoff=var_cut)
     sdf_complete_varfilt <- sdf_complete[var_filter_contrast, ]
@@ -20,7 +20,9 @@ calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return
         pca_obj
     }
     else {
-        rdf_target <- rdf %>% filter(complete.cases(sdf)) %>% filter(var_filter_contrast)
+        rdf_target <- rdf %>% 
+            filter(valid_pca_rows) %>%
+            filter(var_filter_contrast)
         rot_df <- pca_obj$rotation
         if (!is.null(col_prefix)) {
             colnames(rot_df) <- paste0(col_prefix, colnames(rot_df))

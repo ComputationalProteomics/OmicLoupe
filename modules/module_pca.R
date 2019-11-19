@@ -59,10 +59,10 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     ########### REACTIVE ############
     
-    warnings <- reactiveValues()
-    warnings$no_data_warning <- "no data warning, orig val"
-    warnings$no_comparisons_warning <- "no comparisons warning, orig val"
-    warnings$no_design_warning <- "no design warning, orig val"
+    # warnings <- reactiveValues()
+    # warnings$no_data_warning <- "no data warning, orig val"
+    # warnings$no_comparisons_warning <- "no comparisons warning, orig val"
+    # warnings$no_design_warning <- "no design warning, orig val"
     
     design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
     design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })

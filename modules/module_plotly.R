@@ -54,8 +54,8 @@ setup_plotly_ui <- function(id) {
                                )
                            ),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
-                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
-                           checkboxInput(ns("toggle_minimaps"), "Display minimaps", value=FALSE)
+                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200)
+                           # checkboxInput(ns("toggle_minimaps"), "Display minimaps", value=FALSE)
                        )
                 ),
                 column(8,
@@ -83,83 +83,42 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     # ---------------- REACTIVE ---------------- 
     
-    plotly_warnings <- reactiveValues()
-    plotly_warnings$no_comparisons_warning <- "no comparisons warning, orig val"
-    plotly_warnings$no_design_warning <- "no design warning, orig val"
-    
     dataset_ref <- reactive({
-        ind <- dataset_ind(1)
-        reactive_vals[[sprintf("filedata_%s", ind)]]()
+        reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() 
     })
-    
-    dataset_comp <- reactive({
+    dataset_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
+    samples_ref <- reactive({
+        ind <- dataset_ind(1)
+        paste0(
+            sprintf("d%s.", ind),
+            reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
+        )
+    })
+    samples_comp <- reactive({
         ind <- dataset_ind(2)
-        reactive_vals[[sprintf("filedata_%s", ind)]]()
+        paste0(
+            sprintf("d%s.", ind),
+            reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
+        )
     })
 
-    samples_ref <- reactive({
-        ind1 <- dataset_ind(1)
-        sample_names <- reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind1)]]]]$samples
-        if (!is.null(sample_names)) {
-            plotly_warnings$no_design_warning <- "Design1 good!"
-            paste0(sprintf("d%s.", dataset_ind(ind1)), sample_names)
-        }
-        else {
-            plotly_warnings$no_design_warning <- "Design1 not good!"
-            ""
-        }
-    })
-    
-    samples_comp <- reactive({
-        ind2 <- dataset_ind(2)
-        sample_names <- reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind2)]]]]$samples
-        if (!is.null(sample_names)) {
-            plotly_warnings$no_design_warning <- "Design2 good!"
-            paste0(sprintf("d%s.", dataset_ind(ind2)), sample_names)
-        }
-        else {
-            plotly_warnings$no_design_warning <- "Design2 not good!"
-            ""
-        }
-        
-    })
-        
-    # d1_samples <- paste0(
-    #     sprintf("d%s.", dataset_ind(1)),
-    #     reactive_vals$selected_cols_obj()[[input$dataset1]]$samples
-    # )
-    # 
-    # d2_samples <- paste0(
-    #     sprintf("d%s.", dataset_ind(2)),
-    #     reactive_vals$selected_cols_obj()[[input$dataset2]]$samples
-    # )
+    design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
+    design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
     
     dataset_ref_cols <- reactive({
-        
-        ind <- dataset_ind(1)
-        if (!is.null(ind)) {
-            plotly_warnings$no_comparisons_warning <- "Comparisons good!"
-            colnames(dataset_ref())
-        }
-        else {
-            plotly_warnings$no_comparisons_warning <- "No comparisons found, need to assign 'Stat cols' in 'Setup' tab"
-            ""
-        }
+        req(dataset_ref())
+        colnames(dataset_ref())
     })
     
     dataset_comp_cols <- reactive({
-        ind <- dataset_ind(2)
-        if (!is.null(ind)) {
-            plotly_warnings$no_comparisons_warning <- "Comparisons good!"
-            colnames(dataset_comp())
-        }
-        else {
-            plotly_warnings$no_comparisons_warning <- "No comparisons found, need to assign 'Stat cols' in 'Setup' tab"
-            ""
-        }
+        req(dataset_comp())
+        colnames(dataset_comp())
     })
     
     reactive_plot_df <- reactive({
+        
+        req(reactive_ref_statcols())
+        req(reactive_comp_statcols())
         
         base_df <- get_pass_thres_annot_data(
             reactive_vals$mapping_obj()$get_combined_dataset(),
@@ -175,15 +134,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         else if (input$color_type == "PCA") {
             
-            # d1_samples <- paste0(
-            #     sprintf("d%s.", dataset_ind(1)),
-            #     reactive_vals$selected_cols_obj()[[input$dataset1]]$samples
-            # )
-            # 
-            # d2_samples <- paste0(
-            #     sprintf("d%s.", dataset_ind(2)),
-            #     reactive_vals$selected_cols_obj()[[input$dataset2]]$samples
-            # )
+            req(samples_ref())
+            req(samples_comp())
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
@@ -197,7 +149,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
 
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                # dataset_comp(),
                 samples_comp(),
                 do_scale = TRUE,
                 do_center = TRUE,
@@ -207,7 +158,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             )
 
             pca_df <- cbind(ref_pca_df, comp_pca_df)
-            # pca_df$pass_threshold_data <- TRUE
             pca_df
         }
         else if (input$color_type == "Column") {
@@ -288,6 +238,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     # ---------------- FUNCTIONS ---------------- 
     
     dataset_ind <- function(field) {
+        
+        req(reactive_vals$filename_1())
+        
         if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
             1
         }
@@ -380,10 +333,24 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     output$warnings <- renderUI({
         
-        no_comp_text <- plotly_warnings$no_comparisons_warning
-        no_design_text <- plotly_warnings$no_design_warning
-        total_text <- paste(c(no_comp_text, no_design_text), collapse="<br>")
+        error_vect <- c()
+        if (is.null(reactive_vals$filename_1())) {
+            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+        }
         
+        if (is.null(reactive_vals$design_1()) && input$color_type == "PCA") {
+            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+        }
+        
+        if (is.null(reactive_ref_statcols())) {
+            error_vect <- c(error_vect, "No ref_statcols found, assign stat-columns at Setup page")
+        }
+        
+        if ((is.null(samples_ref()) || is.null(samples_comp())) && input$color_type == "PCA") {
+            error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
+        }
+        
+        total_text <- paste(error_vect, collapse="<br>")
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
     
@@ -518,6 +485,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
  
     output$target_data_dt = DT::renderDataTable({
         
+        req(reactive_vals$mapping_obj())
+        
         round_digits <- 3
         trunc_length <- 20
         
@@ -543,7 +512,5 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 ~round(., round_digits)
             )
     })
-    
-    
 }
 
