@@ -6,6 +6,14 @@ setup_help_ui <- function(id) {
             fluidRow(
                 column(8,
                        h4("Help: Setup"),
+                       plotOutput(ns("setup_image"), height = 1000),
+                       p("Text for setup image"),
+                       plotOutput(ns("plotly1_image"), height = 1000),
+                       p("Text for plotly1 image"),
+                       plotOutput(ns("plotly2_image"), height = 1000),
+                       p("Text for plotly2 image"),
+                       plotOutput(ns("pca_image"), height=1000),
+                       p("Text for PCA image"),
                        p("[INSERT] Figure from Setup tab illustrating different aspects"),
                        p("[INSERT] Figure showing how design- and data- matrices belong together"),
                        p("
@@ -51,6 +59,27 @@ setup_help_ui <- function(id) {
 
 module_help_server <- function(input, output, session) {
 
+    output$setup_image <- renderImage({
+        filename <- normalizePath(file.path("./doc", "setup_screen.png"))
+        list(src = filename)
+    }, deleteFile = FALSE)
+    
+    output$plotly1_image <- renderImage({
+        filename <- normalizePath(file.path("./doc", "plotly_screen1.png"))
+        list(src = filename)
+    }, deleteFile = FALSE)
+    
+    output$plotly2_image <- renderImage({
+        filename <- normalizePath(file.path("./doc", "plotly_screen1.png"))
+        list(src = filename)
+    }, deleteFile = FALSE)
+    
+    output$pca_image <- renderImage({
+        filename <- normalizePath(file.path("./doc", "PCA_screen.png"))
+        list(src = filename)
+    }, deleteFile = FALSE)
+    
+    
     # output$help_setup <- renderText({
     #     "There are three separate panels."
     # })

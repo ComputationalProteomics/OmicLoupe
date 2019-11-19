@@ -54,7 +54,8 @@ setup_plotly_ui <- function(id) {
                                )
                            ),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
-                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200)
+                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
+                           sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
                            # checkboxInput(ns("toggle_minimaps"), "Display minimaps", value=FALSE)
                        )
                 ),
@@ -137,6 +138,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             req(samples_ref())
             req(samples_comp())
             
+            warning("Should PCA parameters be linked to PCA page?")
             ref_pca_df <- calculate_pca_obj(
                 base_df,
                 samples_ref(),
@@ -144,7 +146,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 do_center = TRUE,
                 var_cut = 0.4,
                 return_df = TRUE,
-                col_prefix=sprintf("d%s.", dataset_ind(1))
+                col_prefix="ref."
             )
 
             comp_pca_df <- calculate_pca_obj(
@@ -154,15 +156,16 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 do_center = TRUE,
                 var_cut = 0.4,
                 return_df = TRUE,
-                col_prefix=sprintf("d%s.", dataset_ind(1))
+                col_prefix="comp."
             )
 
             pca_df <- cbind(ref_pca_df, comp_pca_df)
             pca_df
         }
         else if (input$color_type == "Column") {
-            base_df$d1.color_col <- dataset_ref()[[input$color_col_1]]
-            base_df$d2.color_col <- dataset_comp()[[input$color_col_2]]
+            base_df$ref.color_col <- dataset_ref()[[input$color_col_1]]
+            base_df$comp.color_col <- dataset_comp()[[input$color_col_2]]
+            browser()
             base_df
         }
         else {
@@ -179,6 +182,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     reactive_ref_statcols <- reactive({
+        warning("Should the if statement be removed?")
         if (input$dataset1 != "" && input$stat_base1 != "") {
             parse_stat_cols_for_visuals(
                 reactive_vals$filename_1(), 
@@ -191,6 +195,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     reactive_comp_statcols <- reactive({
+        warning("Should the if statement be removed?")
         if (input$dataset2 != "" && input$stat_base2 != "") {
             parse_stat_cols_for_visuals(
                 reactive_vals$filename_1(), 
@@ -267,21 +272,23 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         )
         
         if (input$color_type == "PCA") {
-            plot_df$d1.PC <- reactive_plot_df()[[sprintf("d1.PC%s", input$plot_pc1)]]
-            plot_df$d2.PC <- reactive_plot_df()[[sprintf("d2.PC%s", input$plot_pc2)]]
+            # browser()
+            plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
+            plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
             warning("The pass_thres could be better calculated for histograms also in PCA")
             plot_df$pass_thres <- TRUE
         }
         
         if (input$color_type == "Column") {
-            plot_df$d1.color_col <- reactive_plot_df()[["d1.color_col"]]
-            plot_df$d2.color_col <- reactive_plot_df()[["d2.color_col"]]
+            browser()
+            plot_df$ref.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "ref")]]
+            plot_df$comp.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "comp")]]
         }
         
         plot_df
     }
     
-    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE) {
+    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, alpha=0.5) {
         
         max_levels <- 10
         df_color <- plot_df[[color_col]]
@@ -291,7 +298,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
-            geom_point(alpha=0.5) + 
+            geom_point(alpha=alpha) + 
             ggtitle(title)
         if (manual_scale) {
             plt <- plt + scale_color_manual(values=MY_COLORS)
@@ -313,15 +320,15 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         ) %>% layout(title = title, xaxis=list(title="P.Value"))
     }
     
-    retrieve_color_col <- function(color_type) {
+    retrieve_color_col <- function(color_type, data_pattern) {
         if(color_type == "Threshold") {
             color_col <- "pass_thres"
         }
         else if (color_type == "PCA") {
-            color_col <- "d1.PC"
+            color_col <- sprintf("%s.PC", data_pattern)
         }
         else if (color_type == "Column") {
-            color_col <- "d1.color_col"
+            color_col <- sprintf("%s.color_col", data_pattern)
         }
         else {
             warning("Unknown input$color_type: ", input$color_type)
@@ -364,7 +371,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- "selected"
         } 
         else {
-            color_col <- retrieve_color_col(input$color_type)
+            color_col <- retrieve_color_col(input$color_type, "ref")
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
             }
@@ -376,11 +383,12 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             y_col="sig", 
             color_col=color_col, 
             key="key", 
+            alpha=input$alpha,
             title="Volcano: Reference dataset", 
             manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+                ggplotly(source="subset") %>%
+                layout(dragmode="select") %>%
+                toWebGL()
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -393,16 +401,24 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- "selected"
         } 
         else {
-            color_col <- retrieve_color_col(input$color_type)
+            color_col <- retrieve_color_col(input$color_type, "comp")
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
             }
         }
-        make_scatter(plot_df, x_col="fold", y_col="sig", color_col=color_col, key="key", 
-                     title="Volcano: Compare dataset", manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>% 
-            layout(dragmode="select") %>%
-            toWebGL()
+        
+        make_scatter(
+            plot_df, 
+            x_col="fold", 
+            y_col="sig", 
+            color_col=color_col, 
+            key="key", 
+            alpha=input$alpha,
+            title="Volcano: Compare dataset", 
+            manual_scale = manual_scale) %>% 
+                ggplotly(source="subset") %>% 
+                layout(dragmode="select") %>%
+                toWebGL()
     })
     
     output$plotly_ma1 <- renderPlotly({
@@ -415,16 +431,23 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- "selected"
         } 
         else {
-            color_col <- retrieve_color_col(input$color_type)
+            color_col <- retrieve_color_col(input$color_type, "ref")
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
             }
         }
-        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, 
-                              key="key", title="MA: Reference dataset", manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>% 
-            layout(dragmode="select") %>%
-            toWebGL()
+        ggplt <- make_scatter(
+            plot_df, 
+            x_col="expr", 
+            y_col="fold", 
+            color_col=color_col, 
+            alpha=input$alpha,
+            key="key", 
+            title="MA: Reference dataset", 
+            manual_scale = manual_scale) %>% 
+                ggplotly(source="subset") %>% 
+                layout(dragmode="select") %>%
+                toWebGL()
     })
     
     output$plotly_ma2 <- renderPlotly({
@@ -437,16 +460,23 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- "selected"
         } 
         else {
-            color_col <- retrieve_color_col(input$color_type)
+            color_col <- retrieve_color_col(input$color_type, "comp")
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
             }
         }
-        ggplt <- make_scatter(plot_df, x_col="expr", y_col="fold", color_col=color_col, key="key", 
-                              title="MA: Compare dataset", manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>% 
-            layout(dragmode="select") %>%
-            toWebGL()
+        ggplt <- make_scatter(
+            plot_df, 
+            x_col="expr", 
+            y_col="fold", 
+            color_col=color_col, 
+            alpha=input$alpha,
+            key="key", 
+            title="MA: Compare dataset", 
+            manual_scale = manual_scale) %>% 
+                ggplotly(source="subset") %>% 
+                layout(dragmode="select") %>%
+                toWebGL()
     })
     
     output$plotly_hist1 <- renderPlotly({
@@ -461,9 +491,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         else {
             color_col <- "pass_thres"
         }
-        make_histogram(plot_df, x_col="pval", fill_col=color_col, key_vals=plot_df$key, title="P-value histogram: Reference dataset") %>% 
-            layout(dragmode="none", barmode="stack") %>% 
-            toWebGL()
+        make_histogram(
+            plot_df, 
+            x_col="pval", 
+            fill_col=color_col, 
+            key_vals=plot_df$key,
+            title="P-value histogram: Reference dataset") %>% 
+                layout(dragmode="none", barmode="stack") %>% 
+                toWebGL()
     })
     
     output$plotly_hist2 <- renderPlotly({
@@ -478,9 +513,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         else {
             color_col <- "pass_thres"
         }
-        make_histogram(plot_df, x_col="pval", fill_col=color_col, key_vals=plot_df$key, title="P-value histogram: Compare dataset") %>% 
-            layout(dragmode="none", barmode="stack") %>% 
-            toWebGL()
+        make_histogram(
+            plot_df, 
+            x_col="pval", 
+            fill_col=color_col, 
+            key_vals=plot_df$key, 
+            title="P-value histogram: Compare dataset") %>% 
+                layout(dragmode="none", barmode="stack") %>% 
+                toWebGL()
     })
  
     output$target_data_dt = DT::renderDataTable({

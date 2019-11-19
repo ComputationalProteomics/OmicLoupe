@@ -59,11 +59,6 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     ########### REACTIVE ############
     
-    # warnings <- reactiveValues()
-    # warnings$no_data_warning <- "no data warning, orig val"
-    # warnings$no_comparisons_warning <- "no comparisons warning, orig val"
-    # warnings$no_design_warning <- "no design warning, orig val"
-    
     design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
     design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
     data_ref <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() })
@@ -75,18 +70,23 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(2))]]]]$samples 
     })
     
+    design_cols_ref <- reactive({
+        colnames(design_ref())
+    })
+    
+    design_cols_comp <- reactive({
+        colnames(design_comp())
+    })
+    
     pca_obj1 <- reactive({
         
         req(data_ref())
         req(design_ref())
         req(samples_ref())
         
-        ind <- dataset_ind(1)
         calculate_pca_obj(
-            # reactive_vals[[sprintf("filedata_%s", ind)]](), 
             data_ref(),
             samples_ref(),
-            # reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples,
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -99,12 +99,9 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         req(design_comp())
         req(samples_comp())
         
-        ind <- dataset_ind(2)
         calculate_pca_obj(
-            # reactive_vals[[sprintf("filedata_%s", ind)]](), 
             data_comp(),
             samples_comp(),
-            # reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples,
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -113,37 +110,45 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     ########### OBSERVERS ############
     
+    sync_pca_param_choices <- function() {
+        ref_choices <- design_cols_ref()
+        comp_choices <- design_cols_comp()
+        updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
+        updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
+        updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
+        updateSelectInput(session, "color_data2", choices = comp_choices, selected=comp_choices[1])
+        updateSelectInput(session, "shape_data2", choices = comp_choices, selected=comp_choices[1])
+        updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
+    }
+    
     observeEvent(reactive_vals$design_1(), {
-        choices <- colnames(design_ref())
-        updateSelectInput(session, "color_data1", choices = choices, selected=choices[1])
-        updateSelectInput(session, "shape_data1", choices = choices, selected=choices[1])
-        updateSelectInput(session, "sample_data1", choices = choices, selected=choices[1])
+        sync_pca_param_choices()
     })
     
     observeEvent(reactive_vals$design_2(), {
-        choices <- colnames(design_comp())
-        updateSelectInput(session, "color_data2", choices = choices, selected=choices[1])
-        updateSelectInput(session, "shape_data2", choices = choices, selected=choices[1])
-        updateSelectInput(session, "sample_data2", choices = choices, selected=choices[1])
+        sync_pca_param_choices()
     })
     
     observeEvent(reactive_vals$filedata_1(), {
         choices <- get_dataset_choices(reactive_vals)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+        # sync_pca_param_choices()
     })
-    
+
     observeEvent(reactive_vals$filedata_2(), {
         choices <- get_dataset_choices(reactive_vals)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+        # sync_pca_param_choices()
     })
     
+        
     ########### FUNCTIONS ############
     
     dataset_ind <- function(field) {
         
-        req(reactive_vals$filename_1(), cancelOutput = TRUE)
+        req(reactive_vals$filename_1())
         # req(reactive_vals$filename_2())
         
         if (is.null(reactive_vals$filename_1())) {
@@ -159,8 +164,6 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             warning(sprintf("Unknown input$dataset%s: ", field), input[[sprintf("dataset%s", field)]])
         }
     }
-    
-    
     
     make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3) {
         
@@ -195,10 +198,6 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
         
-        # reactive_vals[[sprintf("design_%s", ind)]]()
-        # no_data_text <- warnings$no_data_warning
-        # no_comp_text <- warnings$no_comparisons_warning
-        # no_design_text <- warnings$no_design_warning
         total_text <- paste(error_vect, collapse="<br>")
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
@@ -213,8 +212,6 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         
         if (input$sample_data1 == "") sample_col <- NULL
         else sample_col <- input$sample_data1
-        
-        # ind <- dataset_ind(1)
         
         plt <- make_pca_plt(
             design_ref(),
