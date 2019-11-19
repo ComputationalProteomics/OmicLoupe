@@ -59,6 +59,7 @@ setup_plotly_ui <- function(id) {
                        )
                 ),
                 column(8,
+                       htmlOutput(ns("plotly_warning")),
                        p("Drag in figures to highlight features. Double click to unselect."),
                        column(6,
                               plotlyOutput(ns("plotly_volc1")),
@@ -82,6 +83,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     # ---------------- REACTIVE ---------------- 
     
+    plotly_warnings <- reactiveValues()
+    plotly_warnings$no_comparisons_warning <- "no comparisons warning, orig val"
+    plotly_warnings$no_design_warning <- "no design warning, orig val"
+    
     dataset_ref <- reactive({
         ind <- dataset_ind(1)
         reactive_vals[[sprintf("filedata_%s", ind)]]()
@@ -91,14 +96,53 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         ind <- dataset_ind(2)
         reactive_vals[[sprintf("filedata_%s", ind)]]()
     })
+
+    samples_ref <- reactive({
+        ind1 <- dataset_ind(1)
+        sample_names <- reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind1)]]]]$samples
+        if (!is.null(sample_names)) {
+            plotly_warnings$no_design_warning <- "Design1 good!"
+            paste0(sprintf("d%s.", dataset_ind(ind1)), sample_names)
+        }
+        else {
+            plotly_warnings$no_design_warning <- "Design1 not good!"
+            ""
+        }
+    })
+    
+    samples_comp <- reactive({
+        ind2 <- dataset_ind(2)
+        sample_names <- reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind2)]]]]$samples
+        if (!is.null(sample_names)) {
+            plotly_warnings$no_design_warning <- "Design2 good!"
+            paste0(sprintf("d%s.", dataset_ind(ind2)), sample_names)
+        }
+        else {
+            plotly_warnings$no_design_warning <- "Design2 not good!"
+            ""
+        }
+        
+    })
+        
+    # d1_samples <- paste0(
+    #     sprintf("d%s.", dataset_ind(1)),
+    #     reactive_vals$selected_cols_obj()[[input$dataset1]]$samples
+    # )
+    # 
+    # d2_samples <- paste0(
+    #     sprintf("d%s.", dataset_ind(2)),
+    #     reactive_vals$selected_cols_obj()[[input$dataset2]]$samples
+    # )
     
     dataset_ref_cols <- reactive({
         
         ind <- dataset_ind(1)
         if (!is.null(ind)) {
+            plotly_warnings$no_comparisons_warning <- "Comparisons good!"
             colnames(dataset_ref())
         }
         else {
+            plotly_warnings$no_comparisons_warning <- "No comparisons found, need to assign 'Stat cols' in 'Setup' tab"
             ""
         }
     })
@@ -106,9 +150,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     dataset_comp_cols <- reactive({
         ind <- dataset_ind(2)
         if (!is.null(ind)) {
+            plotly_warnings$no_comparisons_warning <- "Comparisons good!"
             colnames(dataset_comp())
         }
         else {
+            plotly_warnings$no_comparisons_warning <- "No comparisons found, need to assign 'Stat cols' in 'Setup' tab"
             ""
         }
     })
@@ -129,19 +175,19 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         else if (input$color_type == "PCA") {
             
-            d1_samples <- paste0(
-                sprintf("d%s.", dataset_ind(1)),
-                reactive_vals$selected_cols_obj()[[input$dataset1]]$samples
-            )
-            
-            d2_samples <- paste0(
-                sprintf("d%s.", dataset_ind(2)),
-                reactive_vals$selected_cols_obj()[[input$dataset2]]$samples
-            )
+            # d1_samples <- paste0(
+            #     sprintf("d%s.", dataset_ind(1)),
+            #     reactive_vals$selected_cols_obj()[[input$dataset1]]$samples
+            # )
+            # 
+            # d2_samples <- paste0(
+            #     sprintf("d%s.", dataset_ind(2)),
+            #     reactive_vals$selected_cols_obj()[[input$dataset2]]$samples
+            # )
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                d1_samples,
+                samples_ref(),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -152,7 +198,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             comp_pca_df <- calculate_pca_obj(
                 base_df,
                 # dataset_comp(),
-                d2_samples,
+                samples_comp(),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -331,6 +377,15 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     }
     
     # ---------------- OUTPUTS ---------------- 
+    
+    output$plotly_warning <- renderUI({
+        
+        no_comp_text <- plotly_warnings$no_comparisons_warning
+        no_design_text <- plotly_warnings$no_design_warning
+        total_text <- paste(c(no_comp_text, no_design_text), collapse="<br>")
+        
+        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    })
     
     output$plotly_volc1 <- renderPlotly({
         

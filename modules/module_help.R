@@ -49,18 +49,18 @@ setup_help_ui <- function(id) {
     )
 }
 
-# module_help_server <- function(input, output, session) {
-# 
-#     output$help_setup <- renderText({
-#         "There are three separate panels."
-#     })
-#     
-#     output$help_plotly <- renderText({
-#         "Plotly text"
-#     })
-#     
-#     output$help_pca <- renderText({
-#         "PCA text"
-#     })
-#     
-# }
+module_help_server <- function(input, output, session) {
+
+    # output$help_setup <- renderText({
+    #     "There are three separate panels."
+    # })
+    # 
+    # output$help_plotly <- renderText({
+    #     "Plotly text"
+    # })
+    # 
+    # output$help_pca <- renderText({
+    #     "PCA text"
+    # })
+
+}

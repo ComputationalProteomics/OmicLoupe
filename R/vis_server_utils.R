@@ -29,15 +29,6 @@ parse_stat_cols <- function(raw_stat_cols, base) {
     stat_cols
 }
 
-# Retrieves a subset of a dataframe where it is checked what points passes both
-# a statistical threshold and a fold threshold
-get_pass_thres_annot_data_old <- function(df, stat_cols, pvalue_cut, fold_cut, stat_pattern) {
-    
-    pass_threshold_data <- df[[stat_cols[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols$logFC]]) > fold_cut
-    plot_df <- cbind(df, pass_threshold_data) %>% arrange(desc(UQ(as.name(stat_cols[[stat_pattern]]))))
-    plot_df
-}
-
 get_pass_thres_annot_data <- function(df, stat_cols1, stat_cols2, pvalue_cut, fold_cut, stat_pattern) {
     
     pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut

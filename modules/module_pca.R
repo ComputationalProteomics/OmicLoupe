@@ -155,7 +155,7 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         if (input$sample_data1 == "") sample_col <- NULL
         else sample_col <- input$sample_data1
         
-        ind <- dataset_ind(1)
+        # ind <- dataset_ind(1)
         
         plt <- make_pca_plt(
             design_ref(),
