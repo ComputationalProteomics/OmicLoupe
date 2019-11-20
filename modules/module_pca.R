@@ -49,7 +49,7 @@ setup_pca_ui <- function(id) {
                                    checkboxInput(ns("scale_pca_data"), "Scale", value = TRUE),
                                    checkboxInput(ns("center_pca_data"), "Center", value = TRUE),
                                    checkboxInput(ns("show_labels_data"), "Show labels", value = FALSE),
-                                   checkboxInput(ns("show_loadings_data"), "Show loadings", value = FALSE),
+                                   checkboxInput(ns("show_loadings"), "Show loadings", value = FALSE),
                                    numericInput(ns("variance_filter_data"), "Variance filter", min=0, max=1, step=0.01, value = 0.1)
                                )
                            )
@@ -57,7 +57,15 @@ setup_pca_ui <- function(id) {
                 ),
                 column(8,
                        htmlOutput(ns("warnings")),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1", ns("show_loadings")),
+                           plotOutput(ns("loadings_plot1"), height = "200px")
+                       ),
                        plotlyOutput(ns("pca_plot1"), height = "400px"),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1", ns("show_loadings")),
+                           plotOutput(ns("loadings_plot2"), height = "200px")
+                       ),
                        plotlyOutput(ns("pca_plot2"), height = "400px")
                 )
             )
@@ -69,8 +77,22 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     ########### REACTIVE ############
     
-    design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
-    design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
+    design_ref <- reactive({ 
+        if (!is.null(dataset_ind(1))) {
+            reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() 
+        }
+        else {
+            NULL
+        }
+    })
+    design_comp <- reactive({ 
+        if (!is.null(dataset_ind(2))) {
+            reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() 
+        }
+        else {
+            NULL
+        }
+    })
     data_ref <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() })
     data_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
     samples_ref <- reactive({ 
@@ -123,6 +145,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     sync_pca_param_choices <- function() {
         ref_choices <- design_cols_ref()
         comp_choices <- design_cols_comp()
+        print(ref_choices)
+        print(comp_choices)
         updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
@@ -131,11 +155,13 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
     }
     
-    observeEvent(reactive_vals$design_1(), {
+    observeEvent(design_ref(), {
+        print("Design ref changed")
         sync_pca_param_choices()
     })
     
-    observeEvent(reactive_vals$design_2(), {
+    observeEvent(design_comp(), {
+        print("Design comp changed")
         sync_pca_param_choices()
     })
     
@@ -158,24 +184,29 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     dataset_ind <- function(field) {
         
-        req(reactive_vals$filename_1())
+        # req(reactive_vals$filename_1())
         # req(reactive_vals$filename_2())
+        # 
+        # browser()
         
-        if (is.null(reactive_vals$filename_1())) {
-            warnings$no_data_warning <- "No data present, upload in the setup page!"
+        if (is.null(reactive_vals$filename_1()) || reactive_vals$filename_1() == "") {
+            # warnings$no_data_warning <- "No data present, upload in the setup page!"
+            NULL
         }
-        if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
+        else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
             1
         }
-        else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
+        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
             2
         }
         else { 
-            warning(sprintf("Unknown input$dataset%s: ", field), input[[sprintf("dataset%s", field)]])
+            # browser()
+            # warning(sprintf("Unknown input$dataset%s: ", field), input[[sprintf("dataset%s", field)]])
+            NULL
         }
     }
     
-    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3) {
+    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE) {
         
         pc1_lab <- sprintf("PC%s", pc1)
         pc2_lab <- sprintf("PC%s", pc2)
@@ -184,31 +215,65 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         pc2_var <- pca_obj$sdev[pc2] ** 2 / sum(pca_obj$sdev ** 2)
         
         plt_df <- cbind(pca_obj$x, ddf)
-        ggplot(plt_df, aes_string(x=pc1_lab, y=pc2_lab, color=color, shape=shape, text=sample)) + 
-            geom_point(size=dot_size) + 
+        if (!is.null(shape)) {
+            plt_df[[shape]] <- as.factor(plt_df[[shape]])
+        }
+        plt_base <- ggplot(plt_df, aes_string(x=pc1_lab, y=pc2_lab, color=color, shape=shape, text=sample, label=sample))
+        if (!show_labels) {
+            plt_base <- plt_base + geom_point(size=dot_size)
+        }
+        else {
+            plt_base <- plt_base + geom_text(size=dot_size)
+        }
+        
+        plt_base + 
             ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", "))) +
             xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
             ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
+    }
+    
+    make_loadings_plot <- function(pca_obj, title, display_count) {
+        vars <- pca_obj$sdev ** 2
+        perc_vars <- vars / sum(vars)
+        pcs <- paste0("PC", seq_len(length(perc_vars)))
+        plot_df <- data.frame(PC=pcs, perc_var=perc_vars) %>% head(display_count)
+        plot_df$PC <- factor(plot_df$PC, levels = head(pcs, display_count))
+        ggplot(plot_df, aes(x=PC, y=perc_var)) + geom_col(fill="#000077") + ggtitle(title)
     }
     
     ########### OUTPUTS ############
     
     output$warnings <- renderUI({
         
+        # browser()
+        
         error_vect <- c()
+        
         if (is.null(reactive_vals$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
         else if (is.null(samples_ref()) || length(samples_ref()) == 0) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
-        
+
+        if (!is.null(reactive_vals$filename_2()) && (is.null(samples_comp()) || length(samples_comp()) == 0)) {
+            error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
+        }
+
         if (is.null(reactive_vals$design_1())) {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
         }
         
         total_text <- paste(error_vect, collapse="<br>")
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    })
+
+    output$loadings_plot1 <- renderPlot({
+        make_loadings_plot(pca_obj1(), "Loadings PCA 1", display_count=10)
+    })
+    
+    output$loadings_plot2 <- renderPlot({
+        make_loadings_plot(pca_obj2(), "Loadings PCA 2", display_count=10)
     })
     
     output$pca_plot1 <- renderPlotly({
@@ -230,8 +295,11 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             color_col,
             shape_col,
             sample_col,
-            input$dot_size
+            input$dot_size,
+            show_labels = input$show_labels_data
         ) %>% ggplotly() %>% layout(dragmode="select")
+        
+        plt
     })
     
     output$pca_plot2 <- renderPlotly({
@@ -253,8 +321,10 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             color_col,
             shape_col,
             sample_col,
-            input$dot_size
+            input$dot_size,
+            show_labels = input$show_labels_data
         ) %>% ggplotly() %>% layout(dragmode="select")
+        plt
     })
 }
 

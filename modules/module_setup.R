@@ -31,6 +31,7 @@ setup_panel_ui <- function(id) {
                 ),  
                 column(3,
                        align="center",
+                       # plotlyOutput(ns("debug_out")),
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
@@ -70,11 +71,6 @@ setup_panel_ui <- function(id) {
 }
 
 module_setup_server <- function(input, output, session) {
-    
-    mRender <- function(data, type, row) {
-        trimmed_string <- substr(0, 6)
-        
-    }
     
     output$dt_test = DT::renderDataTable({
         
@@ -324,24 +320,6 @@ module_setup_server <- function(input, output, session) {
             )
         }
     })
-    
-    # output$found_stat_patterns_2 <- renderText({
-    #     
-    #     if (selcol_obj_has_statpatterns(rv$selected_col_obj, input$dataset_2)) {
-    #         stat_patterns <- rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns
-    #         if (length(statpatterns) > 0) {
-    #             found_patterns_text <- paste(stat_patterns, collapse=", ")
-    #         }
-    #         else {
-    #             found_patterns_text <- "None"
-    #         }
-    #         paste("Found base patterns:", found_patterns_text)
-    #     }
-    #     else {
-    #         "Nothing found"
-    #     }
-    # })
-    
     
     observeEvent(rv$filedata_1(), {
         clear_fields(session, rv$filedata_1, c("sample_selected_1", "statcols_selected_1"))
