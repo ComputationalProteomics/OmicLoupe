@@ -41,7 +41,6 @@ setup_plotly_ui <- function(id) {
                                   selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
                                   selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
                            ),
-                           # selectInput(ns("reference_dataset"), "Reference dataset", choices=c(), selected = "dataset1"),
                            fluidRow(
                                column(9,
                                       sliderInput(ns("pvalue_cutoff"), "P-value cutoff", value=0.05, step=0.01, min=0, max=1)
@@ -56,7 +55,6 @@ setup_plotly_ui <- function(id) {
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
                            sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
                            sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
-                           # checkboxInput(ns("toggle_minimaps"), "Display minimaps", value=FALSE)
                        )
                 ),
                 column(8,
@@ -174,37 +172,37 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     plot_ref_df <- reactive({
+        req(reactive_ref_statcols())
         get_plot_df(reactive_ref_statcols)
     })
     
     plot_comp_df <- reactive({
+        req(reactive_comp_statcols())
         get_plot_df(reactive_comp_statcols)
     })
     
     reactive_ref_statcols <- reactive({
-        warning("Should the if statement be removed?")
-        if (input$dataset1 != "" && input$stat_base1 != "") {
-            parse_stat_cols_for_visuals(
-                reactive_vals$filename_1(), 
-                reactive_vals$filename_2(), 
-                reactive_vals$selected_cols_obj(), 
-                input$dataset1, 
-                input$stat_base1
-            )
-        }
+        req(input$dataset1)
+        req(input$stat_base1)
+        parse_stat_cols_for_visuals(
+            reactive_vals$filename_1(), 
+            reactive_vals$filename_2(), 
+            reactive_vals$selected_cols_obj(), 
+            input$dataset1, 
+            input$stat_base1
+        )
     })
     
     reactive_comp_statcols <- reactive({
-        warning("Should the if statement be removed?")
-        if (input$dataset2 != "" && input$stat_base2 != "") {
-            parse_stat_cols_for_visuals(
-                reactive_vals$filename_1(), 
-                reactive_vals$filename_2(), 
-                reactive_vals$selected_cols_obj(), 
-                input$dataset2, 
-                input$stat_base2
-            )
-        }
+        req(input$dataset2)
+        req(input$stat_base2)
+        parse_stat_cols_for_visuals(
+            reactive_vals$filename_1(), 
+            reactive_vals$filename_2(), 
+            reactive_vals$selected_cols_obj(), 
+            input$dataset2, 
+            input$stat_base2
+        )
     })
     
     # ---------------- OBSERVERS ---------------- 
@@ -344,17 +342,17 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         if (is.null(reactive_vals$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
+        else {
+            if ((is.null(samples_ref()) || is.null(samples_comp())) && input$color_type == "PCA") {
+                error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
+            }
+            if (is.null(reactive_ref_statcols()) || is.null(reactive_comp_statcols())) {
+                error_vect <- c(error_vect, "ref_statcols or comp_statcols not found, assign stat-columns at Setup page")
+            }
+        }
         
         if (is.null(reactive_vals$design_1()) && input$color_type == "PCA") {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        }
-        
-        if (is.null(reactive_ref_statcols())) {
-            error_vect <- c(error_vect, "No ref_statcols found, assign stat-columns at Setup page")
-        }
-        
-        if ((is.null(samples_ref()) || is.null(samples_comp())) && input$color_type == "PCA") {
-            error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
         }
         
         total_text <- paste(error_vect, collapse="<br>")

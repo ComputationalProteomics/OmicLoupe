@@ -325,22 +325,22 @@ module_setup_server <- function(input, output, session) {
         }
     })
     
-    output$found_stat_patterns_2 <- renderText({
-        
-        if (selcol_obj_has_statpatterns(rv$selected_col_obj, input$dataset_2)) {
-            stat_patterns <- rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns
-            if (length(statpatterns) > 0) {
-                found_patterns_text <- paste(stat_patterns, collapse=", ")
-            }
-            else {
-                found_patterns_text <- "None"
-            }
-            paste("Found base patterns:", found_patterns_text)
-        }
-        else {
-            "Nothing found"
-        }
-    })
+    # output$found_stat_patterns_2 <- renderText({
+    #     
+    #     if (selcol_obj_has_statpatterns(rv$selected_col_obj, input$dataset_2)) {
+    #         stat_patterns <- rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns
+    #         if (length(statpatterns) > 0) {
+    #             found_patterns_text <- paste(stat_patterns, collapse=", ")
+    #         }
+    #         else {
+    #             found_patterns_text <- "None"
+    #         }
+    #         paste("Found base patterns:", found_patterns_text)
+    #     }
+    #     else {
+    #         "Nothing found"
+    #     }
+    # })
     
     
     observeEvent(rv$filedata_1(), {
