@@ -133,11 +133,11 @@ module_setup_server <- function(input, output, session) {
         rv
     }
     
-    selcol_obj_has_statpatterns <- function(selcol_obj, dataset) {
-        !is.null(selcol_obj) && 
-            !is.null(selcol_obj[[dataset]]) && 
-            !is.null(selcol_obj[[dataset]][["statpatterns"]])
-    }
+    # selcol_obj_has_statpatterns <- function(selcol_obj, dataset) {
+    #     !is.null(selcol_obj) && 
+    #         !is.null(selcol_obj[[dataset]]) && 
+    #         !is.null(selcol_obj[[dataset]][["statpatterns"]])
+    # }
     
     # ------------------- Sample Management --------------------
     

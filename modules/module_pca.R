@@ -1,5 +1,6 @@
 library(ggplot2)
 library(PCAtools)
+library(ggthemes)
 
 setup_pca_ui <- function(id) {
     ns <- NS(id)
@@ -22,7 +23,8 @@ setup_pca_ui <- function(id) {
                                    selectInput(ns("sample_data1"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data1"), "Color", choices=c(""))),
-                                       column(4, checkboxInput(ns("use_color_data1"), "Use", value=FALSE))
+                                       column(4, checkboxInput(ns("use_color_data1"), "Use", value=FALSE), style="margin-top: 12px"),
+                                       column(4, checkboxInput(ns("data1_as_factor"), "As factor", value=FALSE), style="margin-top: -25px")
                                    ),
                                    fluidRow(
                                        column(8, selectInput(ns("shape_data1"), "Shape", choices=c(""))),
@@ -36,7 +38,8 @@ setup_pca_ui <- function(id) {
                                    selectInput(ns("sample_data2"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data2"), "Color", choices=c(""))),
-                                       column(4, checkboxInput(ns("use_color_data2"), "Use", value=FALSE))
+                                       column(4, checkboxInput(ns("use_color_data2"), "Use", value=FALSE), style="margin-top: 12px"),
+                                       column(4, checkboxInput(ns("data2_as_factor"), "As factor", value=FALSE), style="margin-top: -25px")
                                    ),
                                    fluidRow(
                                        column(8, selectInput(ns("shape_data2"), "Shape", choices=c(""))),
@@ -93,8 +96,22 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             NULL
         }
     })
-    data_ref <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() })
-    data_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
+    data_ref <- reactive({ 
+        if (!is.null(dataset_ind(1))) {
+            reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() 
+        }
+        else {
+            NULL
+        }
+    })
+    data_comp <- reactive({ 
+        if (!is.null(dataset_ind(2))) {
+            reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() 
+        }
+        else {
+            NULL
+        }
+    })
     samples_ref <- reactive({ 
         reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(1))]]]]$samples 
     })
@@ -184,13 +201,7 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     dataset_ind <- function(field) {
         
-        # req(reactive_vals$filename_1())
-        # req(reactive_vals$filename_2())
-        # 
-        # browser()
-        
         if (is.null(reactive_vals$filename_1()) || reactive_vals$filename_1() == "") {
-            # warnings$no_data_warning <- "No data present, upload in the setup page!"
             NULL
         }
         else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
@@ -200,13 +211,11 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             2
         }
         else { 
-            # browser()
-            # warning(sprintf("Unknown input$dataset%s: ", field), input[[sprintf("dataset%s", field)]])
             NULL
         }
     }
     
-    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE) {
+    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
         
         pc1_lab <- sprintf("PC%s", pc1)
         pc2_lab <- sprintf("PC%s", pc2)
@@ -218,6 +227,10 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         if (!is.null(shape)) {
             plt_df[[shape]] <- as.factor(plt_df[[shape]])
         }
+        if (color_as_fact) {
+            plt_df[[color]] <- as.factor(plt_df[[color]])
+        }
+        
         plt_base <- ggplot(plt_df, aes_string(x=pc1_lab, y=pc2_lab, color=color, shape=shape, text=sample, label=sample))
         if (!show_labels) {
             plt_base <- plt_base + geom_point(size=dot_size)
@@ -245,10 +258,7 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     output$warnings <- renderUI({
         
-        # browser()
-        
         error_vect <- c()
-        
         if (is.null(reactive_vals$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
@@ -296,7 +306,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             shape_col,
             sample_col,
             input$dot_size,
-            show_labels = input$show_labels_data
+            show_labels = input$show_labels_data, 
+            color_as_fact = input$data1_as_factor
         ) %>% ggplotly() %>% layout(dragmode="select")
         
         plt
@@ -322,7 +333,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
             shape_col,
             sample_col,
             input$dot_size,
-            show_labels = input$show_labels_data
+            show_labels = input$show_labels_data, 
+            color_as_fact = input$data2_as_factor
         ) %>% ggplotly() %>% layout(dragmode="select")
         plt
     })

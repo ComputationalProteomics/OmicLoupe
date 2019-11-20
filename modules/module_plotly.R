@@ -163,7 +163,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         else if (input$color_type == "Column") {
             base_df$ref.color_col <- dataset_ref()[[input$color_col_1]]
             base_df$comp.color_col <- dataset_comp()[[input$color_col_2]]
-            browser()
             base_df
         }
         else {
@@ -278,7 +277,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         
         if (input$color_type == "Column") {
-            browser()
             plot_df$ref.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "ref")]]
             plot_df$comp.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "comp")]]
         }
@@ -286,7 +284,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df
     }
     
-    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, alpha=0.5) {
+    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
         
         max_levels <- 10
         df_color <- plot_df[[color_col]]
@@ -298,9 +296,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
             geom_point(alpha=alpha) + 
             ggtitle(title)
+        
         if (manual_scale) {
             plt <- plt + scale_color_manual(values=MY_COLORS)
         }
+        else if (!is.null(cont_scale)) {
+            plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
+        }
+        
         plt
     }
     
@@ -364,6 +367,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
+        cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
@@ -372,6 +376,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- retrieve_color_col(input$color_type, "ref")
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
+            }
+            if (input$color_type == "PCA") {
+                cont_scale <- TRUE
             }
         }
 
@@ -382,6 +389,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col=color_col, 
             key="key", 
             alpha=input$alpha,
+            cont_scale = cont_scale,
             title="Volcano: Reference dataset", 
             manual_scale = manual_scale) %>% 
                 ggplotly(source="subset") %>%
@@ -394,6 +402,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
+        cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
@@ -403,6 +412,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
             }
+            if (input$color_type == "PCA") {
+                cont_scale <- TRUE
+            }        
         }
         
         make_scatter(
@@ -412,6 +424,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col=color_col, 
             key="key", 
             alpha=input$alpha,
+            cont_scale = cont_scale,
             title="Volcano: Compare dataset", 
             manual_scale = manual_scale) %>% 
                 ggplotly(source="subset") %>% 
@@ -424,6 +437,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
+        cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
@@ -433,6 +447,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
             }
+            if (input$color_type == "PCA") {
+                cont_scale <- TRUE
+            }
         }
         ggplt <- make_scatter(
             plot_df, 
@@ -441,7 +458,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col=color_col, 
             alpha=input$alpha,
             key="key", 
-            title="MA: Reference dataset", 
+            title="MA: Reference dataset",
+            cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
                 ggplotly(source="subset") %>% 
                 layout(dragmode="select") %>%
@@ -453,6 +471,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
+        cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
             plot_df$selected <- plot_df$key %in% event.data$key
             color_col <- "selected"
@@ -461,6 +480,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             color_col <- retrieve_color_col(input$color_type, "comp")
             if (input$color_type %in% c("PCA", "Column")) {
                 manual_scale <- FALSE
+            }
+            if (input$color_type == "PCA") {
+                cont_scale <- TRUE
             }
         }
         ggplt <- make_scatter(
@@ -471,6 +493,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             alpha=input$alpha,
             key="key", 
             title="MA: Compare dataset", 
+            cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
                 ggplotly(source="subset") %>% 
                 layout(dragmode="select") %>%

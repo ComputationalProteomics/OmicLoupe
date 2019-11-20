@@ -35,11 +35,11 @@ get_pass_thres_annot_data <- function(df, stat_cols1, stat_cols2, pvalue_cut, fo
     pass_threshold_data2 <- df[[stat_cols2[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols2$logFC]]) > fold_cut
     pass_both <- pass_threshold_data1 & pass_threshold_data2
 
-    pass_type <- rep("NONE", length(pass_both))
-    pass_type[pass_threshold_data1] <- "D1"
-    pass_type[pass_threshold_data2] <- "D2"
-    pass_type[pass_both] <- "BOTH"
-    pass_type <- factor(pass_type, levels = c("NONE", "BOTH", "D1", "D2"))
+    pass_type <- rep("None", length(pass_both))
+    pass_type[pass_threshold_data1] <- "Ref"
+    pass_type[pass_threshold_data2] <- "Comp"
+    pass_type[pass_both] <- "Both"
+    pass_type <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp"))
     
     plot_df <- cbind(df, pass_threshold_data=pass_type) %>% arrange(desc(UQ(as.name(stat_cols1[[stat_pattern]]))))
     plot_df
