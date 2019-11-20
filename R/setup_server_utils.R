@@ -56,19 +56,31 @@ do_dataset_mapping <- function(rv, input, output) {
         print("Performing new map")
         rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1))
         output$perform_map_status <- renderText({
-            sprintf("Dataset1 present and mapped, %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
+            sprintf(
+                "Dataset1 present and mapped, %s entries matched (%s full)", 
+                nrow(rv$mapping_obj()$get_combined_dataset()),
+                nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE))
+            )
         })
     }
     else if (is.null(rv$filedata_1())) {
         rv$mapping_obj(MapObject$new(rv$filedata_2(), input$feature_col_2))
         output$perform_map_status <- renderText({
-            sprintf("Dataset2 present and mapped, %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
+            sprintf(
+                "Dataset2 present and mapped, %s entries matched (%s full)", 
+                nrow(rv$mapping_obj()$get_combined_dataset()),
+                nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE))
+            )
         })
     }
     else {
         rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1, rv$filedata_2(), input$feature_col_2))
         output$perform_map_status <- renderText({
-            sprintf("Both datasets present and mapped! %s entries matched", nrow(rv$mapping_obj()$get_combined_dataset()))
+            sprintf(
+                "Both datasets present and mapped! %s entries matched (%s full)", 
+                nrow(rv$mapping_obj()$get_combined_dataset()),
+                nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE))
+            )
         })
     }
     rv

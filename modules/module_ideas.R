@@ -32,3 +32,4 @@ module_ideas_server <- function(input, output, session) {
         HTML(sprintf("<ul>%s</ul>", html_string))
     })
 }
+

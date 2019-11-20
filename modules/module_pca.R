@@ -23,12 +23,12 @@ setup_pca_ui <- function(id) {
                                    selectInput(ns("sample_data1"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data1"), "Color", choices=c(""))),
-                                       column(4, checkboxInput(ns("use_color_data1"), "Use", value=FALSE), style="margin-top: 12px"),
-                                       column(4, checkboxInput(ns("data1_as_factor"), "As factor", value=FALSE), style="margin-top: -25px")
+                                       # column(4, checkboxInput(ns("use_color_data1"), "Use", value=FALSE), style="margin-top: 12px"),
+                                       column(4, checkboxInput(ns("data1_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
                                    ),
                                    fluidRow(
-                                       column(8, selectInput(ns("shape_data1"), "Shape", choices=c(""))),
-                                       column(4, checkboxInput(ns("use_shape_data1"), "Use", value=FALSE))
+                                       column(8, selectInput(ns("shape_data1"), "Shape", choices=c("")))
+                                       # column(4, checkboxInput(ns("use_shape_data1"), "Use", value=FALSE))
                                    )
                                ),
                                tabPanel(
@@ -38,12 +38,12 @@ setup_pca_ui <- function(id) {
                                    selectInput(ns("sample_data2"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data2"), "Color", choices=c(""))),
-                                       column(4, checkboxInput(ns("use_color_data2"), "Use", value=FALSE), style="margin-top: 12px"),
-                                       column(4, checkboxInput(ns("data2_as_factor"), "As factor", value=FALSE), style="margin-top: -25px")
+                                       # column(4, checkboxInput(ns("use_color_data2"), "Use", value=FALSE), style="margin-top: 12px"),
+                                       column(4, checkboxInput(ns("data2_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
                                    ),
                                    fluidRow(
-                                       column(8, selectInput(ns("shape_data2"), "Shape", choices=c(""))),
-                                       column(4, checkboxInput(ns("use_shape_data2"), "Use", value=FALSE))
+                                       column(8, selectInput(ns("shape_data2"), "Shape", choices=c("")))
+                                       # column(4, checkboxInput(ns("use_shape_data2"), "Use", value=FALSE))
                                    )
                                ),
                                tabPanel(
@@ -160,10 +160,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     ########### OBSERVERS ############
     
     sync_pca_param_choices <- function() {
-        ref_choices <- design_cols_ref()
-        comp_choices <- design_cols_comp()
-        print(ref_choices)
-        print(comp_choices)
+        ref_choices <- c("None", design_cols_ref())
+        comp_choices <- c("None", design_cols_comp())
         updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
@@ -286,16 +284,20 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         make_loadings_plot(pca_obj2(), "Loadings PCA 2", display_count=10)
     })
     
+    has_value <- function(design_col) {
+        design_col != "None" && design_col != ""
+    }
+    
     output$pca_plot1 <- renderPlotly({
         
-        if (input$use_color_data1) color_col <- input$color_data1
+        if (has_value(input$color_data1)) color_col <- input$color_data1
         else color_col <- NULL
         
-        if (input$use_shape_data1) shape_col <- input$shape_data1
+        if (has_value(input$shape_data1)) shape_col <- input$shape_data1
         else shape_col <- NULL
         
-        if (input$sample_data1 == "") sample_col <- NULL
-        else sample_col <- input$sample_data1
+        if (has_value(input$sample_data1)) sample_col <- input$sample_data1
+        else sample_col <- NULL
         
         plt <- make_pca_plt(
             design_ref(),
@@ -315,14 +317,14 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     output$pca_plot2 <- renderPlotly({
         
-        if (input$use_color_data2) color_col <- input$color_data2
+        if (has_value(input$color_data2)) color_col <- input$color_data2
         else color_col <- NULL
         
-        if (input$use_shape_data2) shape_col <- input$shape_data2
+        if (has_value(input$shape_data2)) shape_col <- input$shape_data2
         else shape_col <- NULL
         
-        if (input$sample_data2 == "") sample_col <- NULL
-        else sample_col <- input$sample_data2
+        if (has_value(input$sample_data2)) sample_col <- input$sample_data2
+        else sample_col <- NULL
         
         plt <- make_pca_plt(
             design_comp(),
@@ -339,11 +341,3 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         plt
     })
 }
-
-
-
-
-
-
-
-

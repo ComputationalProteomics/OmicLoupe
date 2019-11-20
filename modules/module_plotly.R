@@ -29,17 +29,21 @@ setup_plotly_ui <- function(id) {
                            conditionalPanel(
                                sprintf("input['%s'] == 'Column'", ns("color_type")),
                                fluidRow(
-                                   column(6, selectInput(ns("color_col_1"), "Plt1 column", choices = c(""))),
-                                   column(6, selectInput(ns("color_col_2"), "Plt2 column", choices = c("")))
+                                   column(6, selectInput(ns("color_col_1"), "Ref. column", choices = c(""))),
+                                   column(6, selectInput(ns("color_col_2"), "Comp. column", choices = c("")))
                                )
                            ),
                            column(6,
-                                  selectInput(ns("dataset1"), "Reference dataset", choices=c(), selected = ""),
-                                  selectInput(ns("dataset2"), "Compare dataset", choices=c(), selected = "")
+                                  fluidRow(
+                                      selectInput(ns("dataset1"), "Ref. data", choices=c(), selected = ""),
+                                      selectInput(ns("dataset2"), "Comp. data", choices=c(), selected = "")
+                                  )
                            ),
                            column(6,
-                                  selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
-                                  selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
+                                  fluidRow(
+                                      selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
+                                      selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
+                                  )
                            ),
                            fluidRow(
                                column(9,
@@ -100,9 +104,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
         )
     })
-
-    design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
-    design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
+    
+    # design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
+    # design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
     
     dataset_ref_cols <- reactive({
         req(dataset_ref())
@@ -119,8 +123,16 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         req(reactive_ref_statcols())
         req(reactive_comp_statcols())
         
+        if (input$color_type == "PCA") {
+            combined_dataset <- reactive_vals$mapping_obj()$get_combined_dataset(full_entries=TRUE)
+        }
+        else {
+            combined_dataset <- reactive_vals$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+        }
+        
         base_df <- get_pass_thres_annot_data(
-            reactive_vals$mapping_obj()$get_combined_dataset(),
+            combined_dataset,
+            # reactive_vals$mapping_obj()$get_combined_dataset(),
             reactive_ref_statcols(),
             reactive_comp_statcols(),
             input$pvalue_cutoff,
@@ -132,10 +144,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             base_df
         }
         else if (input$color_type == "PCA") {
-            
+
             req(samples_ref())
             req(samples_comp())
-            
+
             warning("Should PCA parameters be linked to PCA page?")
             ref_pca_df <- calculate_pca_obj(
                 base_df,
@@ -161,9 +173,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             pca_df
         }
         else if (input$color_type == "Column") {
-            base_df$ref.color_col <- dataset_ref()[[input$color_col_1]]
-            base_df$comp.color_col <- dataset_comp()[[input$color_col_2]]
-            base_df
+            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(1), input$color_col_1)]]
+            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(2), input$color_col_2)]]
+            base_df %>% arrange(ref.color_col)
         }
         else {
             warning("Unknown color_type !")
@@ -224,12 +236,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    observeEvent(input$dataset1, {
-        ref_data_cols <- dataset_ref_cols()
-        comp_data_cols <- dataset_comp_cols()
-        updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
-        updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
-    })
+    observeEvent({
+        input$dataset1
+        input$dataset2}, {
+            ref_data_cols <- dataset_ref_cols()
+            comp_data_cols <- dataset_comp_cols()
+            updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
+            updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
+        })
     
     observeEvent(reactive_vals$filedata_2(), {
         choices <- get_dataset_choices(reactive_vals)
@@ -257,6 +271,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
         
+        # if (input$color_type == "PCA") {
+        #     base_df <- reactive_plot_df()
+        # }
+        # else {
+        #     base_df <- reactive_pca_plot_df()
+        # }
+        # browser()
+        
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
             sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
@@ -267,6 +289,16 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             hover_text = reactive_plot_df()$comb_id,
             key = reactive_plot_df()$comb_id
         )
+        # plot_df <- data.frame(
+        #     fold = reactive_plot_df()[[target_statcols()$logFC]],
+        #     sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
+        #     lab = reactive_vals$mapping_obj()[[feature_col]],
+        #     expr = reactive_plot_df()[[target_statcols()$AveExpr]],
+        #     pval = reactive_plot_df()[[target_statcols()$P.Value]],
+        #     pass_thres = reactive_plot_df()$pass_threshold_data,
+        #     hover_text = reactive_plot_df()$comb_id,
+        #     key = reactive_plot_df()$comb_id
+        # )
         
         if (input$color_type == "PCA") {
             # browser()
@@ -381,7 +413,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 cont_scale <- TRUE
             }
         }
-
+        
         make_scatter(
             plot_df, 
             x_col="fold", 
@@ -392,9 +424,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             cont_scale = cont_scale,
             title="Volcano: Reference dataset", 
             manual_scale = manual_scale) %>% 
-                ggplotly(source="subset") %>%
-                layout(dragmode="select") %>%
-                toWebGL()
+            ggplotly(source="subset") %>%
+            layout(dragmode="select") %>%
+            toWebGL()
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -427,9 +459,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             cont_scale = cont_scale,
             title="Volcano: Compare dataset", 
             manual_scale = manual_scale) %>% 
-                ggplotly(source="subset") %>% 
-                layout(dragmode="select") %>%
-                toWebGL()
+            ggplotly(source="subset") %>% 
+            layout(dragmode="select") %>%
+            toWebGL()
     })
     
     output$plotly_ma1 <- renderPlotly({
@@ -461,9 +493,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             title="MA: Reference dataset",
             cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
-                ggplotly(source="subset") %>% 
-                layout(dragmode="select") %>%
-                toWebGL()
+            ggplotly(source="subset") %>% 
+            layout(dragmode="select") %>%
+            toWebGL()
     })
     
     output$plotly_ma2 <- renderPlotly({
@@ -495,9 +527,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             title="MA: Compare dataset", 
             cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
-                ggplotly(source="subset") %>% 
-                layout(dragmode="select") %>%
-                toWebGL()
+            ggplotly(source="subset") %>% 
+            layout(dragmode="select") %>%
+            toWebGL()
     })
     
     output$plotly_hist1 <- renderPlotly({
@@ -518,8 +550,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             fill_col=color_col, 
             key_vals=plot_df$key,
             title="P-value histogram: Reference dataset") %>% 
-                layout(dragmode="none", barmode="stack") %>% 
-                toWebGL()
+            layout(dragmode="none", barmode="stack") %>% 
+            toWebGL()
     })
     
     output$plotly_hist2 <- renderPlotly({
@@ -540,10 +572,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             fill_col=color_col, 
             key_vals=plot_df$key, 
             title="P-value histogram: Compare dataset") %>% 
-                layout(dragmode="none", barmode="stack") %>% 
-                toWebGL()
+            layout(dragmode="none", barmode="stack") %>% 
+            toWebGL()
     })
- 
+    
     output$target_data_dt = DT::renderDataTable({
         
         req(reactive_vals$mapping_obj())
