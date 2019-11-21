@@ -15,23 +15,22 @@ setup_panel_ui <- function(id) {
             ),
             fluidRow(
                 column(4,
-                       selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Sample 1"=1,"Sample 2"=2), selected = 1),
+                       selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1),
                        conditionalPanel(
                            sprintf("input['%s'] == 1", ns("select_dataset")),
                            h3("Dataset 1"),
-                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1")),
+                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1")),
                            design_input_well(ns("design_file_1"), ns("design_sample_col_1"))
                        ),
                        conditionalPanel(
                            sprintf("input['%s'] == 2", ns("select_dataset")),
                            h3("Dataset 2"),
-                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2")),
+                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2")),
                            design_input_well(ns("design_file_2"), ns("design_sample_col_2"))
                        )
                 ),  
                 column(3,
                        align="center",
-                       # plotlyOutput(ns("debug_out")),
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
@@ -39,60 +38,93 @@ setup_panel_ui <- function(id) {
                            action_button_row(ns("perform_map_button"), "Map datasets")
                        ),
                        wellPanel(
+                           p("If using two datasets, assign matching feature column. If wanting PCA measures, assign sample columns."),
                            textOutput(ns("perform_map_status"))
                        )
-                       # informative_text()
                 ),
                 column(5,
                        conditionalPanel(
                            sprintf("input['%s'] == 1", ns("select_dataset")),
                            h3("Dataset 1"),
-                           selected_sample_well(
-                               ns("sample_selected_1"),
-                               ns("statcols_selected_1"),
-                               ns("feature_col_1"),
-                               ns("found_stat_patterns_1")
+                           wellPanel(
+                               selectInput(
+                                   ns("sample_selected_1"),
+                                   "Sample columns",
+                                   choices = c(""),
+                                   multiple = TRUE,
+                                   selectize = FALSE,
+                                   size = 12
+                               ),
+                               selectInput(
+                                   ns("statcols_selected_1"),
+                                   "Stat cols",
+                                   choices = c(""),
+                                   multiple = TRUE,
+                                   selectize = FALSE,
+                                   size = 12
+                               ),
+                               textOutput(ns("found_stat_patterns_1"))
                            )
                        ),
                        conditionalPanel(
                            sprintf("input['%s'] == 2", ns("select_dataset")),
                            h3("Dataset 2"),
-                           selected_sample_well(
-                               ns("sample_selected_2"),
-                               ns("statcols_selected_2"),
-                               ns("feature_col_2"),
-                               ns("found_stat_patterns_2")
+                           wellPanel(
+                               selectInput(
+                                   ns("sample_selected_2"),
+                                   "Sample columns",
+                                   choices = c(""),
+                                   multiple = TRUE,
+                                   selectize = FALSE,
+                                   size = 12
+                               ),
+                               selectInput(
+                                   ns("statcols_selected_2"),
+                                   "Stat cols",
+                                   choices = c(""),
+                                   multiple = TRUE,
+                                   selectize = FALSE,
+                                   size = 12
+                               ),
+                               textOutput(ns("found_stat_patterns_2"))
                            )
                        )
                 )
             ),
-            DT::DTOutput(ns("dt_test"))
+            h3("Table views"),
+            tabsetPanel(
+                type = "tabs",
+                tabPanel("Data 1", DT::DTOutput(ns("dt_data1"))),
+                tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
+                tabPanel("Data 2", DT::DTOutput(ns("dt_data2"))),
+                tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
+            )
         )
     )
 }
 
 module_setup_server <- function(input, output, session) {
-    
-    output$dt_test = DT::renderDataTable({
-        
-        req(rv$mapping_obj()$get_combined_dataset())
-        
-        round_digits <- 3
-        trunc_length <- 20
-        
-        if (!is.null(rv$mapping_obj())) {
-            rv$mapping_obj()$get_combined_dataset() %>%
-                mutate_if(
-                    is.character,
-                    ~str_trunc(., trunc_length)
-                ) %>%
-                mutate_if(
-                    is.numeric,
-                    ~round(., round_digits)
-                )
-        }
-    })
 
+    output$dt_data1 = DT::renderDataTable({
+        req(rv$filedata_1)
+        rv$filedata_1()
+    })
+        
+    output$dt_design1 = DT::renderDataTable({
+        req(rv$design_1)
+        rv$design_1()
+    })
+    
+    output$dt_data2 = DT::renderDataTable({
+        req(rv$filedata_2)
+        rv$filedata_2()
+    })
+    
+    output$dt_design2 = DT::renderDataTable({
+        req(rv$design_2)
+        rv$design_2()
+    })
+    
     load_data <- function(in_file) {
         infile <- in_file
         if (is.null(infile)) {
@@ -118,9 +150,7 @@ module_setup_server <- function(input, output, session) {
     rv$filename_1 <- reactive(get_filename(input$data_file_1))
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
-    # rv$test_react <- reactiveVal(NULL)
-    # rv$pca <- reactiveVal(list())
-    
+
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
@@ -135,12 +165,6 @@ module_setup_server <- function(input, output, session) {
         rv$selected_cols_obj(selcol_obj)
         rv
     }
-    
-    # selcol_obj_has_statpatterns <- function(selcol_obj, dataset) {
-    #     !is.null(selcol_obj) && 
-    #         !is.null(selcol_obj[[dataset]]) && 
-    #         !is.null(selcol_obj[[dataset]][["statpatterns"]])
-    # }
     
     # ------------------- Sample Management --------------------
     
@@ -350,16 +374,12 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent({
         input$perform_map_button
-        # input$feature_col_1
-        # input$feature_col_2
     }, {
         print("Doing dataset mapping")
-        # browser()
-        
+
         selcol1 <- NULL
         if (length(rv$selected_cols_obj()) > 0) {
             selcol_list <- rv$selected_cols_obj()[[1]]
-            # browser()
             if ("samples" %in% names(selcol_list)) {
                 selcol1 <- selcol_list$samples
             }
@@ -381,18 +401,7 @@ module_setup_server <- function(input, output, session) {
             selcol1,
             selcol2
         )
-        # rv <- do_dataset_mapping(rv, input, output, input$data_selected_columns_1, input$data_selected_columns_2)
     })
-
-    # selcol_obj <- rv$selected_cols_obj()
-    # selcol_obj[[dataset]][[colname]] <- new_value
-    
-    # observe({
-    #     print("Doing dataset mapping")
-    #     req(input$feature_col_1)
-    #     rv <- do_dataset_mapping(rv, input$feature_col_1, input$feature_col_2, output, input$data_selected_columns_1, input$data_selected_columns_2)
-    # })
-    
         
     observeEvent(rv$mapping_obj, {
         message("Mapping object obtained!")

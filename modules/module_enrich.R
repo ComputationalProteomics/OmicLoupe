@@ -1,4 +1,4 @@
-setup_ideas_ui <- function(id) {
+setup_enrich_ui <- function(id) {
     ns <- NS(id)
     tabPanel(
         id,
@@ -13,13 +13,12 @@ setup_ideas_ui <- function(id) {
     )
 }
 
-module_ideas_server <- function(input, output, session) {
+module_enrich_server <- function(input, output, session) {
     
     output$html <- renderUI({
         
         entries <- c(
-            "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
-            "More advanced ID mapping system would be beneficial (now required to uniquely match)"
+            "Could enrich for the selected subsets compared to global data and illustrate with entire clusterProfiler package, but is would require IDs matching some particular GO databases. Should maybe skip this one."
         )
         
         html_string <- paste0(

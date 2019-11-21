@@ -1,4 +1,4 @@
-setup_ideas_ui <- function(id) {
+setup_spotcheck_ui <- function(id) {
     ns <- NS(id)
     tabPanel(
         id,
@@ -13,13 +13,15 @@ setup_ideas_ui <- function(id) {
     )
 }
 
-module_ideas_server <- function(input, output, session) {
+module_spotcheck_server <- function(input, output, session) {
     
     output$html <- renderUI({
         
         entries <- c(
-            "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
-            "More advanced ID mapping system would be beneficial (now required to uniquely match)"
+            "Allow rapidly switch here after identifying features in other tab",
+            "Intensity illustration across characteristic from design (boxplot / scatter)",
+            "Profile illustrations allowing display of multiple features (sorted on design condition)",
+            "Possibly sequence alignment - But would require rework in the backend as we then need to include sequence data. I recommend against."
         )
         
         html_string <- paste0(

@@ -16,7 +16,6 @@ MapObject <- R6Class("MapObject", list(
 
     initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, samples2=NULL) {
         
-        # browser()
         self$dataset1 <- dataset1 %>% arrange(UQ(as.name(target_col1)))
         self$target_col1 <- target_col1
         
@@ -64,9 +63,7 @@ MapObject <- R6Class("MapObject", list(
         }
     },
     has_full_entries = function() {
-        # browser()
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
-            # browser()
             !is.null(self$samples1) && !is.null(self$samples2)
         }
         else if (!is.null(self$dataset1)) {
@@ -83,12 +80,10 @@ MapObject <- R6Class("MapObject", list(
         
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
             
-            browser()
             out_df1 <- self$dataset1[self$joint_indices1, ]
             out_df2 <- self$dataset2[self$joint_indices2, ]
             
             if (full_entries) {
-                browser()
                 out_df1_full_entries <- out_df1 %>% self$get_full_entries(self$samples1)
                 out_df2_full_entries <- out_df2 %>% self$get_full_entries(self$samples2)
                 all_full_entries <- out_df1_full_entries & out_df2_full_entries

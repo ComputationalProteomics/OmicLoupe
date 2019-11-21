@@ -28,7 +28,6 @@ autoselect_statpatterns <- function(dataset_cols, stat_patterns=c("P.Value", "ad
 
     grep_string <- sprintf("%s%s", paste(stat_patterns, collapse="$|"), "$")
     dataset_cols[grepl(grep_string, dataset_cols)]
-    # rv$selected_cols_2$selected_statcols <- column_selection_action(input$data_selected_columns_2, rv$selected_cols_2, "selected_statcols")
 }
 
 reset_reactive_cols <- function(rv) {
@@ -47,10 +46,7 @@ clear_fields <- function(session, filedata, field_ids) {
 }
 
 do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2) {
-    # do_dataset_mapping <- function(rv, input, output, sample_cols1, sample_cols2) {
-        
-    # browser()
-    
+
     if (is.null(rv$filedata_1()) && is.null(rv$filedata_2())) {
         output$perform_map_status <- renderText({
             sprintf("Both datasets needs to be present, missing both")
@@ -104,7 +100,6 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             samples2=sample_cols2
         ))
         
-        browser()
         # To function
         out_text <- sprintf(
             "Both datasets present and mapped, %s entries matched", 

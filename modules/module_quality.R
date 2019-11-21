@@ -1,4 +1,4 @@
-setup_ideas_ui <- function(id) {
+setup_quality_ui <- function(id) {
     ns <- NS(id)
     tabPanel(
         id,
@@ -13,13 +13,17 @@ setup_ideas_ui <- function(id) {
     )
 }
 
-module_ideas_server <- function(input, output, session) {
+module_quality_server <- function(input, output, session) {
     
     output$html <- renderUI({
         
         entries <- c(
-            "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
-            "More advanced ID mapping system would be beneficial (now required to uniquely match)"
+            "Density plots (colored from design)",
+            "Box plots (colored from design)",
+            "Total intensity / total missing (colored from design)",
+            "Tree plot",
+            "Histograms (intensity, retentiontime, whichever column)",
+            "Design histograms (how target characteristic is distributed)"
         )
         
         html_string <- paste0(

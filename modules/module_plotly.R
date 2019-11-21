@@ -105,9 +105,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         )
     })
     
-    # design_ref <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() })
-    # design_comp <- reactive({ reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() })
-    
     dataset_ref_cols <- reactive({
         req(dataset_ref())
         colnames(dataset_ref())
@@ -132,7 +129,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         
         base_df <- get_pass_thres_annot_data(
             combined_dataset,
-            # reactive_vals$mapping_obj()$get_combined_dataset(),
             reactive_ref_statcols(),
             reactive_comp_statcols(),
             input$pvalue_cutoff,
@@ -148,8 +144,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             req(samples_ref())
             req(samples_comp())
 
-            browser()
-            warning("Should PCA parameters be linked to PCA page?")
             ref_pca_df <- calculate_pca_obj(
                 base_df,
                 samples_ref(),
@@ -272,14 +266,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
         
-        # if (input$color_type == "PCA") {
-        #     base_df <- reactive_plot_df()
-        # }
-        # else {
-        #     base_df <- reactive_pca_plot_df()
-        # }
-        # browser()
-        
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
             sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
@@ -290,19 +276,8 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             hover_text = reactive_plot_df()$comb_id,
             key = reactive_plot_df()$comb_id
         )
-        # plot_df <- data.frame(
-        #     fold = reactive_plot_df()[[target_statcols()$logFC]],
-        #     sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
-        #     lab = reactive_vals$mapping_obj()[[feature_col]],
-        #     expr = reactive_plot_df()[[target_statcols()$AveExpr]],
-        #     pval = reactive_plot_df()[[target_statcols()$P.Value]],
-        #     pass_thres = reactive_plot_df()$pass_threshold_data,
-        #     hover_text = reactive_plot_df()$comb_id,
-        #     key = reactive_plot_df()$comb_id
-        # )
-        
+
         if (input$color_type == "PCA") {
-            # browser()
             plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
             plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
             warning("The pass_thres could be better calculated for histograms also in PCA")

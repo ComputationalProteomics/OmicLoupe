@@ -5,52 +5,18 @@ setup_help_ui <- function(id) {
         fluidPage(
             fluidRow(
                 column(8,
-                       h4("Help: Setup"),
-                       plotOutput(ns("setup_image"), height = 1000),
-                       p("Text for setup image"),
-                       plotOutput(ns("plotly1_image"), height = 1000),
-                       p("Text for plotly1 image"),
-                       plotOutput(ns("plotly2_image"), height = 1000),
-                       p("Text for plotly2 image"),
-                       plotOutput(ns("pca_image"), height=1000),
-                       p("Text for PCA image"),
-                       p("[INSERT] Figure from Setup tab illustrating different aspects"),
-                       p("[INSERT] Figure showing how design- and data- matrices belong together"),
-                       p("
-                         There are three distinct panels: (1) Dataset selection panel (left) 
-                         (2) Column selection panel (right)
-                         (3) Action panel (middle)."),
-                       p("The data selection panel takes a data file and an optional design file.
-                         The design file is required to visualize the data as PCA and for doing PCA-based
-                         coloring of the statistical plots."),
-                       p("The data matrix needs to contain contrast columns containing information on
-                         P-values, adjusted p-values, fold change and average expression for features. This
-                         should follow the pattern: contrast1.P.Value, contrast1.adj.P.Val, contrast1.logFC,
-                         contrast1.AveExpr. Sample columns are required to do PCA plotting"),
-                       p("Finally, the action buttons allow moving selecting columns as sample- or stat- columns.
-                         This can be performed automatically using the Autodetect button. Then it will look
-                         for samples using the 'Select sample column' from the design matrix and look for
-                         groups of statistical columns fulfilling the pattern specified above."),
-                       p("It is possible to study either one or several datasets. If using multiple a feature
-                         column matching between them needs to be specified. The information notice in the middle
-                         shows how many entries were present in both cases."),
-                       p("CURRENTLY IDS ARE EXPECTED TO BE UNIQUE. THIS WILL BE HANDLED MORE CLEVERLY IN THE FUTURE."),
-                       
-                       h4("Help: Plotly"),
-                       p("[INSERT] Illustrative and marked figure"),
-                       p("The main view for Plotly shows six figures and a table. The left column illustrates
-                         the reference dataset and its selected comparison. The right the compare dataset.
-                         When using threshold filtering features passing these thresholds in the two cases
-                         will be illustrated, and also how they are distributed across each other. When using the
-                         Column coloring you as a user decide a column from the data matrix that is used for
-                         coloring. This can be categorical or continuous, but if having to many discrete values
-                         it will be colored black (to avoid crashing). Finally, the figures can be colored based
-                         on PCA loadings, meaning they indicate how strongly they contribute to different principal components."),
-                       
-                       h4("Help: PCA"),
-                       p("[INSERT] Illustrative and marked figure"),
-                       p("To run the PCA requires a data matrix, a design matrix and that you have mapped sample columns
-                         corresponding to the given design matrix column entries")
+                       h2("Setup page"),
+                       htmlOutput(ns("setup_image_text")),
+                       plotOutput(ns("setup_image"), height = 800),
+                       h2("Plotly page"),
+                       htmlOutput(ns("plotly1_image_text")),
+                       plotOutput(ns("plotly1_image"), height = 1050),
+                       h2("Plotly page 2"),
+                       htmlOutput(ns("plotly2_image_text")),
+                       plotOutput(ns("plotly2_image"), height = 1050),
+                       h2("PCA page"),
+                       htmlOutput(ns("pca_image_text")),
+                       plotOutput(ns("pca_image"), height=1000)
                 )
             )
         )
@@ -64,20 +30,76 @@ module_help_server <- function(input, output, session) {
         list(src = filename)
     }, deleteFile = FALSE)
     
+    output$setup_image_text <- renderUI({
+        HTML(parse_vector_to_bullets(c(
+            "Select dataset 1 or 2",
+            "Upload tab delimited data file containing sample columns and optionally annotation",
+            "Column names will automatically appear here on upload",
+            "Optional design matrix with annotation for each sample",
+            "What column contains sample names - should be exact match to what is found in the data file",
+            "Select or deselect samples manually by marking in the left/right panels and moving with arrow buttons",
+            "Select or deselect statistics columns manually",
+            "Detect sample columns and statistics columns automatically based on patterns matching the pattern 'pattern.P.Value$'. Sample columns are retrieved from the design matrix.",
+            "Information about mapping between datasets",
+            "Select sample columns",
+            "Selected statistics columns",
+            "The statistic columns are expected to follow the pattern 'base.P.Value', 'base.adj.P.Val', 'base.logFC' and 'base.AvgExpr'. This displays all patterns matching this.",
+            "Column among data columns containing unique identifier which can be used to map across datasets"
+        )))
+    })
+    
     output$plotly1_image <- renderImage({
         filename <- normalizePath(file.path("./doc", "plotly_screen1.png"))
         list(src = filename)
     }, deleteFile = FALSE)
     
+    output$plotly1_image_text <- renderUI({
+        HTML(parse_vector_to_bullets(c(
+            "First",
+            "Second"
+        )))
+    })
+    
     output$plotly2_image <- renderImage({
-        filename <- normalizePath(file.path("./doc", "plotly_screen1.png"))
+        filename <- normalizePath(file.path("./doc", "plotly_screen2.png"))
         list(src = filename)
     }, deleteFile = FALSE)
+    
+    output$plotly2_image_text <- renderUI({
+        HTML(parse_vector_to_bullets(c(
+            "First",
+            "Second"
+        )))
+    })
     
     output$pca_image <- renderImage({
         filename <- normalizePath(file.path("./doc", "PCA_screen.png"))
         list(src = filename)
     }, deleteFile = FALSE)
+    
+    output$pca_image_text <- renderUI({
+        HTML(parse_vector_to_bullets(c(
+            "First",
+            "Second"
+        )))
+    })
+    
+    parse_vector_to_bullets <- function(vect, number=TRUE) {
+        html_string <- paste0(
+            "<li>",
+            paste(vect, collapse="</li><li>"),
+            "</li>"
+        )
+        
+        if (!number) {
+            list_style <- "ul"
+        }
+        else {
+            list_style <- "ol"
+        }
+        
+        sprintf("<%s>%s</%s>", list_style, html_string, list_style)
+    }
     
     
     # output$help_setup <- renderText({

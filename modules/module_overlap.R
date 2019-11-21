@@ -1,4 +1,4 @@
-setup_ideas_ui <- function(id) {
+setup_overlap_ui <- function(id) {
     ns <- NS(id)
     tabPanel(
         id,
@@ -13,13 +13,15 @@ setup_ideas_ui <- function(id) {
     )
 }
 
-module_ideas_server <- function(input, output, session) {
+module_overlap_server <- function(input, output, session) {
     
     output$html <- renderUI({
         
         entries <- c(
-            "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
-            "More advanced ID mapping system would be beneficial (now required to uniquely match)"
+            "Illustration of presence of certain features across the two datasets",
+            "Illustration of presence of certain features in certain statistical comparisons",
+            "Illustration of overlap across features passing certain statistical thresholds",
+            "Venn diagrams and upsets are alternatives"
         )
         
         html_string <- paste0(
