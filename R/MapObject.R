@@ -28,14 +28,14 @@ MapObject <- R6Class("MapObject", list(
             self$joint_indices2 <- which(self$dataset2[[target_col2]] %in% self$dataset1[[target_col1]])
         }
         
-        if (!is.null(samples1)) {
+        if (!is.null(samples1) && length(samples1) > 0) {
             if (!all(samples1 %in% colnames(dataset1))) {
                 warning("Invalid samples, not all present in colnames")
             }
             self$samples1 <- samples1
         }
         
-        if (!is.null(samples2)) {
+        if (!is.null(samples2) && length(samples2) > 0) {
             if (!all(samples2 %in% colnames(dataset2))) {
                 warning("Invalid samples, not all present in colnames")
             }
@@ -66,6 +66,7 @@ MapObject <- R6Class("MapObject", list(
     has_full_entries = function() {
         # browser()
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
+            # browser()
             !is.null(self$samples1) && !is.null(self$samples2)
         }
         else if (!is.null(self$dataset1)) {
@@ -81,6 +82,8 @@ MapObject <- R6Class("MapObject", list(
     get_combined_dataset = function(full_entries = FALSE) {
         
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
+            
+            browser()
             out_df1 <- self$dataset1[self$joint_indices1, ]
             out_df2 <- self$dataset2[self$joint_indices2, ]
             
@@ -119,9 +122,14 @@ MapObject <- R6Class("MapObject", list(
             stop("Unknown situation, for self$dataset1 and self$dataset2: ", self$dataset1, " ", self$dataset2)
         }
         
-        cbind(
-            comb_id = paste0("C", seq_len(nrow(out_df))),
-            out_df
-        )
+        if (nrow(out_df) > 0) {
+            cbind(
+                comb_id = paste0("C", seq_len(nrow(out_df))),
+                out_df
+            )
+        } 
+        else {
+            NULL
+        }
     }
 ))

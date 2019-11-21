@@ -75,6 +75,8 @@ module_setup_server <- function(input, output, session) {
     
     output$dt_test = DT::renderDataTable({
         
+        req(rv$mapping_obj()$get_combined_dataset())
+        
         round_digits <- 3
         trunc_length <- 20
         
@@ -348,8 +350,8 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent({
         input$perform_map_button
-        input$feature_col_1
-        input$feature_col_2
+        # input$feature_col_1
+        # input$feature_col_2
     }, {
         print("Doing dataset mapping")
         # browser()
@@ -365,7 +367,10 @@ module_setup_server <- function(input, output, session) {
 
         selcol2 <- NULL
         if (length(rv$selected_cols_obj()) > 1) {
-            selcol2 <- rv$selected_cols_obj()[[2]]
+            selcol2_list <- rv$selected_cols_obj()[[2]]
+            if ("samples" %in% names(selcol2_list)) {
+                selcol2 <- selcol2_list$samples
+            }
         }
         
         rv <- do_dataset_mapping(
