@@ -2,15 +2,34 @@
 library(ggplot2)
 theme_set(theme_classic())
 library(ggpubr)
+library(shinycssloaders)
 
 source("R/vis_server_utils.R")
 source("R/vis_server_plots.R")
+
+# mycss <- "
+# #plot-container {
+#   position: relative;
+# }
+# #loading-spinner {
+#   position: absolute;
+#   left: 50%;
+#   top: 50%;
+#   z-index: -1;
+#   margin-top: -33px;  /* half of the spinner's height */
+#   margin-left: -33px; /* half of the spinner's width */
+# }
+# #plot.recalculating {
+#   z-index: -2;
+# }
+# "
 
 MY_COLORS <- c("grey50", "blue", "red", "orange")
 
 setup_plotly_ui <- function(id) {
     
     ns <- NS(id)
+    # tags$head(tags$style(HTML(mycss)))
     tabPanel(
         id,
         fluidPage(
@@ -65,14 +84,14 @@ setup_plotly_ui <- function(id) {
                        htmlOutput(ns("warnings")),
                        p("Drag in figures to highlight features. Double click to unselect."),
                        column(6,
-                              plotlyOutput(ns("plotly_volc1")),
-                              plotlyOutput(ns("plotly_ma1")),
-                              plotlyOutput(ns("plotly_hist1"))
+                              plotlyOutput(ns("plotly_volc1")) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_ma1")) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_hist1")) %>% withSpinner()
                        ),
                        column(6,
-                              plotlyOutput(ns("plotly_volc2")),
-                              plotlyOutput(ns("plotly_ma2")),
-                              plotlyOutput(ns("plotly_hist2"))
+                              plotlyOutput(ns("plotly_volc2")) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_ma2")) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_hist2")) %>% withSpinner()
                        )
                 )
             ),
@@ -140,10 +159,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             base_df
         }
         else if (input$color_type == "PCA") {
-
+            
             req(samples_ref())
             req(samples_comp())
-
+            
             ref_pca_df <- calculate_pca_obj(
                 base_df,
                 samples_ref(),
@@ -153,7 +172,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 return_df = TRUE,
                 col_prefix="ref."
             )
-
+            
             comp_pca_df <- calculate_pca_obj(
                 base_df,
                 samples_comp(),
@@ -163,7 +182,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 return_df = TRUE,
                 col_prefix="comp."
             )
-
+            
             pca_df <- cbind(ref_pca_df, comp_pca_df)
             pca_df
         }
@@ -276,7 +295,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             hover_text = reactive_plot_df()$comb_id,
             key = reactive_plot_df()$comb_id
         )
-
+        
         if (input$color_type == "PCA") {
             plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
             plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
@@ -372,37 +391,41 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     output$plotly_volc1 <- renderPlotly({
         
-        plot_df <- plot_ref_df()
-        event.data <- event_data("plotly_selected", source = "subset")
-        manual_scale <- TRUE
-        cont_scale <- NULL
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- retrieve_color_col(input$color_type, "ref")
-            if (input$color_type %in% c("PCA", "Column")) {
-                manual_scale <- FALSE
+        withProgress(message = "Testing progress", value = 0.5, {
+            plot_df <- plot_ref_df()
+            event.data <- event_data("plotly_selected", source = "subset")
+            manual_scale <- TRUE
+            cont_scale <- NULL
+            if (!is.null(event.data) == TRUE) {
+                plot_df$selected <- plot_df$key %in% event.data$key
+                color_col <- "selected"
+            } 
+            else {
+                color_col <- retrieve_color_col(input$color_type, "ref")
+                if (input$color_type %in% c("PCA", "Column")) {
+                    manual_scale <- FALSE
+                }
+                if (input$color_type == "PCA") {
+                    cont_scale <- TRUE
+                }
             }
-            if (input$color_type == "PCA") {
-                cont_scale <- TRUE
-            }
-        }
-        
-        make_scatter(
-            plot_df, 
-            x_col="fold", 
-            y_col="sig", 
-            color_col=color_col, 
-            key="key", 
-            alpha=input$alpha,
-            cont_scale = cont_scale,
-            title="Volcano: Reference dataset", 
-            manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+            
+            incProgress(0.1, detail="Working")
+            
+            make_scatter(
+                plot_df, 
+                x_col="fold", 
+                y_col="sig", 
+                color_col=color_col, 
+                key="key", 
+                alpha=input$alpha,
+                cont_scale = cont_scale,
+                title="Volcano: Reference dataset", 
+                manual_scale = manual_scale) %>% 
+                ggplotly(source="subset") %>%
+                layout(dragmode="select") %>%
+                toWebGL()
+        })
     })
     
     output$plotly_volc2 <- renderPlotly({

@@ -18,13 +18,13 @@ module_ideas_server <- function(input, output, session) {
     output$html <- renderUI({
         
         entries <- c(
+            "(Needed) more flexible way to assign statistical columns",
+            "(Needed) Loading screen when calculating the plots",
             "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
             "More advanced ID mapping system would be beneficial (now required to uniquely match)",
-            "(Needed) more flexible way to assign statistical columns",
             "For volcano / MA - Allow fixing x/y axis to same range for all four plots",
             "Could use hexbins for summarizing scatter distribution when number of datapoints is huge",
             "Could do heatmap to illustrate feature expression / missing values",
-            "(Needed) Loading screen when calculating the plots",
             "Alternative view for scatter plot: Full screen one of the plots",
             "Think about documentation: Work through the help page, and do video at some point",
             "PCA: Allow filtering to view subsets of PCA in efficient way (can be done by sample selection, but could be more useful)",

@@ -23,12 +23,10 @@ setup_pca_ui <- function(id) {
                                    selectInput(ns("sample_data1"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data1"), "Color", choices=c(""))),
-                                       # column(4, checkboxInput(ns("use_color_data1"), "Use", value=FALSE), style="margin-top: 12px"),
                                        column(4, checkboxInput(ns("data1_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
                                    ),
                                    fluidRow(
                                        column(8, selectInput(ns("shape_data1"), "Shape", choices=c("")))
-                                       # column(4, checkboxInput(ns("use_shape_data1"), "Use", value=FALSE))
                                    )
                                ),
                                tabPanel(
@@ -38,12 +36,10 @@ setup_pca_ui <- function(id) {
                                    selectInput(ns("sample_data2"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data2"), "Color", choices=c(""))),
-                                       # column(4, checkboxInput(ns("use_color_data2"), "Use", value=FALSE), style="margin-top: 12px"),
                                        column(4, checkboxInput(ns("data2_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
                                    ),
                                    fluidRow(
                                        column(8, selectInput(ns("shape_data2"), "Shape", choices=c("")))
-                                       # column(4, checkboxInput(ns("use_shape_data2"), "Use", value=FALSE))
                                    )
                                ),
                                tabPanel(
@@ -64,12 +60,12 @@ setup_pca_ui <- function(id) {
                            sprintf("input['%s'] == 1", ns("show_loadings")),
                            plotOutput(ns("loadings_plot1"), height = "200px")
                        ),
-                       plotlyOutput(ns("pca_plot1"), height = "400px"),
+                       plotlyOutput(ns("pca_plot1"), height = "400px") %>% withSpinner(),
                        conditionalPanel(
                            sprintf("input['%s'] == 1", ns("show_loadings")),
                            plotOutput(ns("loadings_plot2"), height = "200px")
                        ),
-                       plotlyOutput(ns("pca_plot2"), height = "400px")
+                       plotlyOutput(ns("pca_plot2"), height = "400px") %>% withSpinner()
                 )
             )
         )
@@ -184,14 +180,12 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         choices <- get_dataset_choices(reactive_vals)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-        # sync_pca_param_choices()
     })
     
     observeEvent(reactive_vals$filedata_2(), {
         choices <- get_dataset_choices(reactive_vals)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-        # sync_pca_param_choices()
     })
     
     
