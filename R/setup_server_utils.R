@@ -46,7 +46,11 @@ clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
 }
 
-do_dataset_mapping <- function(rv, input, output) {
+do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2) {
+    # do_dataset_mapping <- function(rv, input, output, sample_cols1, sample_cols2) {
+        
+    # browser()
+    
     if (is.null(rv$filedata_1()) && is.null(rv$filedata_2())) {
         output$perform_map_status <- renderText({
             sprintf("Both datasets needs to be present, missing both")
@@ -54,17 +58,22 @@ do_dataset_mapping <- function(rv, input, output) {
     }
     else if (is.null(rv$filedata_2())) {
         print("Performing new map")
-        rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1))
+        # browser()
+        rv$mapping_obj(MapObject$new(rv$filedata_1(), feature_col_1, samples1=sample_cols1))
         output$perform_map_status <- renderText({
-            sprintf(
-                "Dataset1 present and mapped, %s entries matched (%s full)", 
-                nrow(rv$mapping_obj()$get_combined_dataset()),
-                nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE))
+            out_text <- sprintf(
+                "Dataset1 present and mapped, %s entries matched", 
+                nrow(rv$mapping_obj()$get_combined_dataset())
             )
+            # browser()
+            if (rv$mapping_obj()$has_full_entries()) {
+                out_text <- sprintf("%s (%s full)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            }
+            out_text
         })
     }
     else if (is.null(rv$filedata_1())) {
-        rv$mapping_obj(MapObject$new(rv$filedata_2(), input$feature_col_2))
+        rv$mapping_obj(MapObject$new(rv$filedata_2(), feature_col_2, samples2=sample_cols2))
         output$perform_map_status <- renderText({
             sprintf(
                 "Dataset2 present and mapped, %s entries matched (%s full)", 
@@ -74,7 +83,14 @@ do_dataset_mapping <- function(rv, input, output) {
         })
     }
     else {
-        rv$mapping_obj(MapObject$new(rv$filedata_1(), input$feature_col_1, rv$filedata_2(), input$feature_col_2))
+        rv$mapping_obj(MapObject$new(
+            rv$filedata_1(), 
+            feature_col_1, 
+            rv$filedata_2(), 
+            feature_col_2,
+            samples1=sample_cols1,
+            samples2=sample_cols2
+        ))
         output$perform_map_status <- renderText({
             sprintf(
                 "Both datasets present and mapped! %s entries matched (%s full)", 

@@ -35,7 +35,8 @@ setup_panel_ui <- function(id) {
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           action_button_row(ns("autodetect_cols"), "Autodetect")
+                           action_button_row(ns("autodetect_cols"), "Autodetect"),
+                           action_button_row(ns("perform_map_button"), "Map datasets")
                        ),
                        wellPanel(
                            textOutput(ns("perform_map_status"))
@@ -350,9 +351,44 @@ module_setup_server <- function(input, output, session) {
         input$feature_col_1
         input$feature_col_2
     }, {
-        rv <- do_dataset_mapping(rv, input, output)
+        print("Doing dataset mapping")
+        # browser()
+        
+        selcol1 <- NULL
+        if (length(rv$selected_cols_obj()) > 0) {
+            selcol_list <- rv$selected_cols_obj()[[1]]
+            # browser()
+            if ("samples" %in% names(selcol_list)) {
+                selcol1 <- selcol_list$samples
+            }
+        }
+
+        selcol2 <- NULL
+        if (length(rv$selected_cols_obj()) > 1) {
+            selcol2 <- rv$selected_cols_obj()[[2]]
+        }
+        
+        rv <- do_dataset_mapping(
+            rv, 
+            input$feature_col_1, 
+            input$feature_col_2, 
+            output, 
+            selcol1,
+            selcol2
+        )
+        # rv <- do_dataset_mapping(rv, input, output, input$data_selected_columns_1, input$data_selected_columns_2)
     })
+
+    # selcol_obj <- rv$selected_cols_obj()
+    # selcol_obj[[dataset]][[colname]] <- new_value
     
+    # observe({
+    #     print("Doing dataset mapping")
+    #     req(input$feature_col_1)
+    #     rv <- do_dataset_mapping(rv, input$feature_col_1, input$feature_col_2, output, input$data_selected_columns_1, input$data_selected_columns_2)
+    # })
+    
+        
     observeEvent(rv$mapping_obj, {
         message("Mapping object obtained!")
     })

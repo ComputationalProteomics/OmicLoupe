@@ -148,6 +148,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             req(samples_ref())
             req(samples_comp())
 
+            browser()
             warning("Should PCA parameters be linked to PCA page?")
             ref_pca_df <- calculate_pca_obj(
                 base_df,
