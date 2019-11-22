@@ -311,7 +311,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df
     }
     
-    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
+    make_scatter_gg <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
         
         max_levels <- 10
         df_color <- plot_df[[color_col]]
@@ -330,6 +330,41 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         else if (!is.null(cont_scale)) {
             plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
         }
+        
+        plt
+    }
+    
+    # Inspired by: https://plot.ly/r/shiny-coupled-events/
+    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
+        
+        # max_levels <- 10
+        # df_color <- plot_df[[color_col]]
+        # if ((is.factor(df_color) || is.character(df_color)) && length(unique(df_color)) > max_levels) {
+        #     warning("Maxlevels color color exceeded (", length(unique(df_color)), ") assigning no color")
+        #     color_col <- NULL
+        # }
+        
+        # plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
+        #     geom_point(alpha=alpha) + 
+        #     ggtitle(title)
+        
+        # browser()
+        
+        plt <- plot_ly(
+            plot_df,
+            x = ~get(x_col),
+            y = ~get(y_col),
+            color = ~get(color_col),
+            source = "subset",
+            key = plot_df[[key]]
+        )
+        
+        # if (manual_scale) {
+        #     plt <- plt + scale_color_manual(values=MY_COLORS)
+        # }
+        # else if (!is.null(cont_scale)) {
+        #     plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
+        # }
         
         plt
     }
@@ -391,42 +426,43 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     output$plotly_volc1 <- renderPlotly({
         
-        withProgress(message = "Testing progress", value = 0.5, {
-            plot_df <- plot_ref_df()
-            event.data <- event_data("plotly_selected", source = "subset")
-            manual_scale <- TRUE
-            cont_scale <- NULL
-            if (!is.null(event.data) == TRUE) {
-                plot_df$selected <- plot_df$key %in% event.data$key
-                color_col <- "selected"
-            } 
-            else {
-                color_col <- retrieve_color_col(input$color_type, "ref")
-                if (input$color_type %in% c("PCA", "Column")) {
-                    manual_scale <- FALSE
-                }
-                if (input$color_type == "PCA") {
-                    cont_scale <- TRUE
-                }
+        # withProgress(message = "Testing progress", value = 0.5, {
+        plot_df <- plot_ref_df()
+        event.data <- event_data("plotly_selected", source = "subset")
+        manual_scale <- TRUE
+        cont_scale <- NULL
+        if (!is.null(event.data) == TRUE) {
+            plot_df$selected <- plot_df$key %in% event.data$key
+            color_col <- "selected"
+        } 
+        else {
+            color_col <- retrieve_color_col(input$color_type, "ref")
+            if (input$color_type %in% c("PCA", "Column")) {
+                manual_scale <- FALSE
             }
-            
-            incProgress(0.1, detail="Working")
-            
-            make_scatter(
-                plot_df, 
-                x_col="fold", 
-                y_col="sig", 
-                color_col=color_col, 
-                key="key", 
-                alpha=input$alpha,
-                cont_scale = cont_scale,
-                title="Volcano: Reference dataset", 
-                manual_scale = manual_scale) %>% 
-                ggplotly(source="subset") %>%
-                layout(dragmode="select") %>%
-                toWebGL()
-        })
+            if (input$color_type == "PCA") {
+                cont_scale <- TRUE
+            }
+        }
+        
+        # incProgress(0.1, detail="Working")
+        # browser()
+        
+        make_scatter(
+            plot_df, 
+            x_col="fold", 
+            y_col="sig", 
+            color_col=color_col, 
+            key="key", 
+            alpha=input$alpha,
+            cont_scale = cont_scale,
+            title="Volcano: Reference dataset", 
+            manual_scale = manual_scale) %>% 
+            # ggplotly(source="subset") %>%
+            layout(dragmode="select") %>%
+            toWebGL()
     })
+    # })
     
     output$plotly_volc2 <- renderPlotly({
         
@@ -458,7 +494,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             cont_scale = cont_scale,
             title="Volcano: Compare dataset", 
             manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>% 
+            # ggplotly(source="subset") %>% 
             layout(dragmode="select") %>%
             toWebGL()
     })
@@ -492,7 +528,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             title="MA: Reference dataset",
             cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>% 
+            # ggplotly(source="subset") %>% 
             layout(dragmode="select") %>%
             toWebGL()
     })
@@ -526,7 +562,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             title="MA: Compare dataset", 
             cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
-            ggplotly(source="subset") %>% 
+            # ggplotly(source="subset") %>% 
             layout(dragmode="select") %>%
             toWebGL()
     })

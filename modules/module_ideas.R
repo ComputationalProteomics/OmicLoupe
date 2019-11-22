@@ -13,11 +13,30 @@ setup_ideas_ui <- function(id) {
     )
 }
 
+parse_vector_to_bullets <- function(vect, number=TRUE) {
+    html_string <- paste0(
+        "<li>",
+        paste(vect, collapse="</li><li>"),
+        "</li>"
+    )
+    
+    if (!number) {
+        list_style <- "ul"
+    }
+    else {
+        list_style <- "ol"
+    }
+    
+    sprintf("<%s>%s</%s>", list_style, html_string, list_style)
+}
+
+
+
 module_ideas_server <- function(input, output, session) {
     
     output$html <- renderUI({
         
-        entries <- c(
+        parse_vector_to_bullets(HTML(c(
             "(Needed) more flexible way to assign statistical columns",
             "(Needed) Loading screen when calculating the plots",
             "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
@@ -39,15 +58,8 @@ module_ideas_server <- function(input, output, session) {
             "Plotly: Could allow selecting additional annotation information column for hover",
             "Think: How should sample mapping be performed? Design matrix, manual clicking or both (as now)?",
             "Would a dashboard be beneficial for clarification? (Not as it looks now I think)"
-        )
+        )))
         
-        html_string <- paste0(
-            "<li>",
-            paste(entries, collapse="</li><li>"),
-            "</li>"
-        )
-        
-        HTML(sprintf("<ul>%s</ul>", html_string))
     })
 }
 

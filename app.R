@@ -35,7 +35,7 @@ ui <- navbarPage(
     setup_spotcheck_ui("(Spotcheck)"),
     setup_spotcheck_ui("(Enrich)"),
     setup_help_ui("Help"),
-    setup_ideas_ui("(Ideas)")
+    setup_ideas_ui("Ideas")
 )
 
 server <- shinyServer(function(session, input, output) {
@@ -48,7 +48,7 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_overlap_server, id="(Overlap)")
     callModule(module_spotcheck_server, id="(Spotcheck)")
     callModule(module_enrich_server, id="(Enrich)")
-    callModule(module_ideas_server, id="(Ideas)")
+    callModule(module_ideas_server, id="Ideas")
 })
 
 shinyApp(ui = ui, server = server)
