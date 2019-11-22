@@ -9,7 +9,13 @@ Description:
 Imports:
     tidyverse,
     ggpubr,
-    shiny
+    shiny,
+    plotly,
+    shinycssloaders,
+    DT,
+    R6,
+    stringr,
+    ggthemes
 Suggests:
     knitr,
     testthat

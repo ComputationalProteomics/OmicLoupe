@@ -1,5 +1,5 @@
 library(ggplot2)
-library(PCAtools)
+# library(PCAtools)
 library(ggthemes)
 
 setup_pca_ui <- function(id) {
