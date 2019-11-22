@@ -8,7 +8,8 @@ setup_overlap_ui <- function(id) {
                        h4("Some ideas for development"),
                        htmlOutput(ns("html"))
                 )
-            )
+            ),
+            p("Left and right: Venns or upsets")
         )
     )
 }

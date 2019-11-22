@@ -15,7 +15,8 @@ Imports:
     DT,
     R6,
     stringr,
-    ggthemes
+    ggthemes,
+    shinythemes
 Suggests:
     knitr,
     testthat

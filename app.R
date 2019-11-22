@@ -17,7 +17,7 @@ source("modules/module_ideas.R")
 source("modules/module_quality.R")
 source("modules/module_overlap.R")
 source("modules/module_spotcheck.R")
-source("modules/module_enrich.R")
+# source("modules/module_enrich.R")
 
 source("R/pca.R")
 source("R/MapObject.R")
@@ -30,10 +30,10 @@ ui <- navbarPage(
     setup_panel_ui("Setup"),
     setup_plotly_ui("Plotly"),
     setup_pca_ui("PCA"),
-    setup_quality_ui("(Quality)"),
-    setup_overlap_ui("(Overlap)"),
-    setup_spotcheck_ui("(Spotcheck)"),
-    setup_spotcheck_ui("(Enrich)"),
+    setup_quality_ui("Quality"),
+    setup_overlap_ui("Overlap"),
+    setup_spotcheck_ui("Spotcheck"),
+    # setup_spotcheck_ui("(Enrich)"),
     setup_help_ui("Help"),
     setup_ideas_ui("Ideas")
 )
@@ -44,10 +44,10 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_plotly_server, id="Plotly", reactive_values)
     callModule(module_pca_server, id="PCA", reactive_values)
     callModule(module_help_server, id="Help")
-    callModule(module_quality_server, id="(Quality)")
-    callModule(module_overlap_server, id="(Overlap)")
-    callModule(module_spotcheck_server, id="(Spotcheck)")
-    callModule(module_enrich_server, id="(Enrich)")
+    callModule(module_quality_server, id="Quality")
+    callModule(module_overlap_server, id="Overlap")
+    callModule(module_spotcheck_server, id="Spotcheck")
+    # callModule(module_enrich_server, id="(Enrich)")
     callModule(module_ideas_server, id="Ideas")
 })
 
