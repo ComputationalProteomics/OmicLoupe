@@ -34,8 +34,6 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-
-
 module_ideas_server <- function(input, output, session) {
     
     output$important_points <- renderUI({
@@ -48,7 +46,6 @@ module_ideas_server <- function(input, output, session) {
     })
     
     output$priority_points <- renderUI({
-        
         HTML(parse_vector_to_bullets(c(
             "Could consider allowing sample-matched comparisons, which would enable direct comparison in for instance PCA plot and calculating correlations",
             "PCA: Allow filtering to view subsets of PCA in efficient way (can be done by sample selection, but could be more useful)",

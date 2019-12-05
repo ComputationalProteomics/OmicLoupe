@@ -44,7 +44,7 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_plotly_server, id="Plotly", reactive_values)
     callModule(module_pca_server, id="PCA", reactive_values)
     callModule(module_help_server, id="Help")
-    callModule(module_quality_server, id="Quality")
+    callModule(module_quality_server, id="Quality", reactive_values)
     callModule(module_overlap_server, id="Overlap")
     callModule(module_spotcheck_server, id="Spotcheck")
     # callModule(module_enrich_server, id="(Enrich)")
