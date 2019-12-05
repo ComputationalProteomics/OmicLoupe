@@ -146,6 +146,8 @@ module_setup_server <- function(input, output, session) {
     rv$filedata_2 <- reactive(load_data(input$data_file_2))
     rv$design_1 <- reactive(load_data(input$design_file_1))
     rv$design_2 <- reactive(load_data(input$design_file_2))
+    rv$design_samplecol_1 <- reactive(input$design_sample_col_1)
+    rv$design_samplecol_2 <- reactive(input$design_sample_col_2)
     rv$selected_cols_obj <- reactiveVal(list())
     rv$filename_1 <- reactive(get_filename(input$data_file_1))
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
