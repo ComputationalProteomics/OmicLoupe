@@ -4,71 +4,77 @@ setup_quality_ui <- function(id) {
         id,
         fluidPage(
             fluidRow(
-                column(8,
-                       h4("Some ideas for development"),
-                       htmlOutput(ns("html"))
+                column(
+                    4,
+                    wellPanel(
+                        selectInput(ns("dataset1"), "Reference dataset", choices = c(""), selected = ""),
+                        selectInput(ns("dataset2"), "Comparison dataset", choices = c(""), selected = ""),
+                        selectInput(ns("color_data1"), "Color", choices=c("")),
+                        selectInput(ns("color_data2"), "Color", choices=c(""))
+                    ),
+                    wellPanel(
+                        p("some text"),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Boxplots'", ns("plot_tabs")),
+                            checkboxInput(ns("do_violin"), "Do violin", value=FALSE)
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Density'", ns("plot_tabs")),
+                            p("density")
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Barplots'", ns("plot_tabs")),
+                            checkboxInput(ns("show_missing"), "Show missing", value=FALSE)
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Histograms'", ns("plot_tabs")),
+                            selectInput(ns("num_col"), "Histogram column", choices=c("")),
+                            selectInput(ns("cat_col"), "Fill column", choices=c(""))
+                        )
+                    )
+                ),
+                column(
+                    8,
+                    tabsetPanel(
+                        id = ns("plot_tabs"),
+                        type = "tabs",
+                        tabPanel("Boxplots", plotOutput(ns("boxplots"))),
+                        tabPanel("Density", plotOutput(ns("density"))),
+                        tabPanel("Barplots", plotOutput(ns("bars"))),
+                        tabPanel("Histograms", plotOutput(ns("histograms")))
+                    )
                 )
-            ),
-            tabsetPanel(
-                type = "tabs",
-                tabPanel("Boxplots", plotOutput(ns("boxplots"))),
-                tabPanel("Density", plotOutput(ns("density"))),
-                tabPanel("Barplots", plotOutput(ns("bars"))),
-                tabPanel("Histograms", plotOutput(ns("histograms")))
             )
         )
     )
 }
 
-
-parse_vector_to_bullets <- function(vect, number=TRUE) {
-    html_string <- paste0(
-        "<li>",
-        paste(vect, collapse="</li><li>"),
-        "</li>"
-    )
-    
-    if (!number) {
-        list_style <- "ul"
-    }
-    else {
-        list_style <- "ol"
-    }
-    
-    sprintf("<%s>%s</%s>", list_style, html_string, list_style)
-}
-
 module_quality_server <- function(input, output, session, rv) {
     
-    output$html <- renderUI({
-        
-        HTML(parse_vector_to_bullets(c(
-            "Density plots (colored from design)",
-            "Box plots (colored from design)",
-            "Total intensity / total missing (colored from design)",
-            "Tree plot",
-            "Histograms (intensity, retentiontime, whichever column)",
-            "Design histograms (how target characteristic is distributed)"
-        )))
-    })
-    
-    output$bars <- renderPlot({ 
-        
+    reactive_long_sdf1 <- reactive({
         dataset1 <- rv$mapping_obj()$dataset1
         sample_cols1 <- rv$mapping_obj()$samples1
         sdf1 <- dataset1[, sample_cols1]
         ddf1 <- rv$design_1()
-        target_ddf_cond1 <- "variety"
         target_ddf_samplecol1 <- "old_sample"
         join_by <- c("name"=target_ddf_samplecol1)
         long_sdf1 <- sdf1 %>%
             pivot_longer(sample_cols1) %>%
             inner_join(ddf1, by=join_by)
-
-        do_sum <- TRUE
+        long_sdf1
+    })
+    
+    output$bars <- renderPlot({ 
         
+        target_ddf_cond1 <- "variety"
+        target_ddf_samplecol1 <- "old_sample"
+        join_by <- c("name"=target_ddf_samplecol1)
+        ddf1 <- rv$design_1()
+        
+        long_sdf1 <- reactive_long_sdf1()
+
         # Bar
-        if (do_sum) {
+        if (!input$show_missing) {
             summed_data1 <- long_sdf1 %>% 
                 group_by(name) %>%
                 summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf1, by=join_by)
@@ -88,22 +94,14 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     output$boxplots <- renderPlot({ 
-        dataset1 <- rv$mapping_obj()$dataset1
-        sample_cols1 <- rv$mapping_obj()$samples1
-        sdf1 <- dataset1[, sample_cols1]
-        ddf1 <- rv$design_1()
+        long_sdf1 <- reactive_long_sdf1()
         target_ddf_cond1 <- "variety"
         target_ddf_samplecol1 <- "old_sample"
-        join_by <- c("name"=target_ddf_samplecol1)
-        long_sdf1 <- sdf1 %>%
-            pivot_longer(sample_cols1) %>%
-            inner_join(ddf1, by=join_by)
         
-        do_violin <- TRUE
         plt1 <- ggplot(long_sdf1, aes_string(x="name", y="value", color=target_ddf_cond1)) + ggtitle("Boxplot 1")
         plt2 <- ggplot(long_sdf1, aes_string(x="name", y="value", color=target_ddf_cond1)) + ggtitle("Boxplot 2")
         
-        if (!do_violin) {
+        if (!input$do_violin) {
             plt1 <- plt1 + geom_boxplot(na.rm=TRUE)
             plt2 <- plt2 + geom_boxplot(na.rm=TRUE)
         }
@@ -116,16 +114,9 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     output$density <- renderPlot({ 
-        dataset1 <- rv$mapping_obj()$dataset1
-        sample_cols1 <- rv$mapping_obj()$samples1
-        sdf1 <- dataset1[, sample_cols1]
-        ddf1 <- rv$design_1()
+        long_sdf1 <- reactive_long_sdf1()
         target_ddf_cond1 <- "variety"
         target_ddf_samplecol1 <- "old_sample"
-        join_by <- c("name"=target_ddf_samplecol1)
-        long_sdf1 <- sdf1 %>%
-            pivot_longer(sample_cols1) %>%
-            inner_join(ddf1, by=join_by)
         
         plt1 <- ggplot(long_sdf1, aes_string(x="value", group="name", color=target_ddf_cond1)) + geom_density(na.rm=TRUE) + ggtitle("Density 1")
         plt2 <- ggplot(long_sdf1, aes_string(x="value", group="name", color=target_ddf_cond1)) + geom_density(na.rm=TRUE) + ggtitle("Density 2")
