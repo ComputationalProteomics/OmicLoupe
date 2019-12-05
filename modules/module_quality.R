@@ -5,15 +5,20 @@ setup_quality_ui <- function(id) {
         fluidPage(
             fluidRow(
                 column(
-                    4,
+                    12,
                     wellPanel(
-                        selectInput(ns("dataset1"), "Reference dataset", choices = c(""), selected = ""),
-                        selectInput(ns("dataset2"), "Comparison dataset", choices = c(""), selected = ""),
-                        selectInput(ns("color_data_ref"), "Color", choices=c("")),
-                        selectInput(ns("color_data_comp"), "Color", choices=c(""))
+                        fluidRow(
+                            column(6,
+                                   selectInput(ns("dataset1"), "Reference dataset", choices = c(""), selected = ""),
+                                   selectInput(ns("dataset2"), "Comparison dataset", choices = c(""), selected = "")
+                            ),
+                            column(6,
+                                   selectInput(ns("color_data_ref"), "Color", choices=c("")),
+                                   selectInput(ns("color_data_comp"), "Color", choices=c(""))
+                            )
+                        )
                     ),
                     wellPanel(
-                        p("some text"),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Boxplots'", ns("plot_tabs")),
                             checkboxInput(ns("do_violin"), "Do violin", value=FALSE)
@@ -28,17 +33,21 @@ setup_quality_ui <- function(id) {
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Histograms'", ns("plot_tabs")),
-                            selectInput(ns("data_num_col_ref"), "Histogram column ref", choices=c("")),
-                            selectInput(ns("data_cat_col_ref"), "Fill column ref", choices=c("")),
-                            selectInput(ns("data_num_col_comp"), "Histogram column comp", choices=c("")),
-                            selectInput(ns("data_cat_col_comp"), "Fill column comp", choices=c("")),
-                            numericInput(ns("max_color_cats"), "Maximum color cats.", min=1, step=1, value=5),
-                            numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)
+                            fluidRow(
+                                column(6,
+                                       selectInput(ns("data_num_col_ref"), "Histogram column ref", choices=c("")),
+                                       selectInput(ns("data_cat_col_ref"), "Fill column ref", choices=c("")),
+                                       numericInput(ns("max_color_cats"), "Maximum color cats.", min=1, step=1, value=5)
+                                ),
+                                column(6,
+                                       selectInput(ns("data_num_col_comp"), "Histogram column comp", choices=c("")),
+                                       selectInput(ns("data_cat_col_comp"), "Fill column comp", choices=c("")),
+                                       numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)
+                                )
+                            )
                         )
-                    )
-                ),
-                column(
-                    8,
+                    ),
+                    htmlOutput(ns("warnings")),
                     tabsetPanel(
                         id = ns("plot_tabs"),
                         type = "tabs",
@@ -176,18 +185,39 @@ module_quality_server <- function(input, output, session, rv) {
         else { NULL }
     })
     
+    output$warnings <- renderUI({
+        
+        error_vect <- c()
+        if (is.null(rv$filename_1())) {
+            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+        }
+        # else if (is.null(samples_ref()) || length(samples_ref()) == 0) {
+        #     error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
+        # }
+        
+        # if (!is.null(rv$filename_2()) && (is.null(samples_comp()) || length(samples_comp()) == 0)) {
+        #     error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
+        # }
+        
+        if (is.null(rv$design_1())) {
+            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+        }
+        
+        total_text <- paste(error_vect, collapse="<br>")
+        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    })
+    
     output$bars <- renderPlot({ 
         
-        # target_ddf_samplecol1 <- "old_sample"
-        # target_ddf_samplecol1 <- ref_ddf_samplecol()
+        req(design_ref())
+        req(reactive_long_sdf_ref())
         
         join_by_ref <- c("name"=ref_ddf_samplecol())
-        join_by_comp <- c("name"=comp_ddf_samplecol())
-        
         ddf_ref <- design_ref()
-        ddf_comp <- design_comp()
-        
         long_sdf_ref <- reactive_long_sdf_ref()
+        
+        join_by_comp <- c("name"=comp_ddf_samplecol())
+        ddf_comp <- design_comp()
         long_sdf_comp <- reactive_long_sdf_comp()
         
         if (!input$show_missing) {
@@ -227,6 +257,9 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$boxplots <- renderPlot({ 
         
+        req(design_ref())
+        req(reactive_long_sdf_ref())
+        
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
             aes_string(x="name", y="value", color=ref_color())) + 
@@ -251,6 +284,9 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     output$density <- renderPlot({ 
+        req(design_ref())
+        req(reactive_long_sdf_ref())
+        
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
             aes_string(x="value", group="name", color=ref_color())) + 
@@ -272,7 +308,10 @@ module_quality_server <- function(input, output, session, rv) {
     }
     
     output$histograms <- renderPlot({ 
-
+        
+        req(design_ref())
+        req(reactive_long_sdf_ref())
+        
         if (input$data_num_col_ref != "None") {
             # browser()
             rdf_ref <- data_ref()

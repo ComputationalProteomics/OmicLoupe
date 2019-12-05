@@ -7,23 +7,6 @@ library(shinycssloaders)
 source("R/vis_server_utils.R")
 source("R/vis_server_plots.R")
 
-# mycss <- "
-# #plot-container {
-#   position: relative;
-# }
-# #loading-spinner {
-#   position: absolute;
-#   left: 50%;
-#   top: 50%;
-#   z-index: -1;
-#   margin-top: -33px;  /* half of the spinner's height */
-#   margin-left: -33px; /* half of the spinner's width */
-# }
-# #plot.recalculating {
-#   z-index: -2;
-# }
-# "
-
 MY_COLORS <- c("grey50", "blue", "red", "orange")
 
 setup_plotly_ui <- function(id) {
@@ -344,27 +327,27 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         #     color_col <- NULL
         # }
         
-        # plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
-        #     geom_point(alpha=alpha) + 
-        #     ggtitle(title)
+        plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
+            geom_point(alpha=alpha) +
+            ggtitle(title)
         
         # browser()
         
-        plt <- plot_ly(
-            plot_df,
-            x = ~get(x_col),
-            y = ~get(y_col),
-            color = ~get(color_col),
-            source = "subset",
-            key = plot_df[[key]]
-        )
+        # plt <- plot_ly(
+        #     plot_df,
+        #     x = ~get(x_col),
+        #     y = ~get(y_col),
+        #     color = ~get(color_col),
+        #     source = "subset",
+        #     key = plot_df[[key]]
+        # )
         
-        # if (manual_scale) {
-        #     plt <- plt + scale_color_manual(values=MY_COLORS)
-        # }
-        # else if (!is.null(cont_scale)) {
-        #     plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
-        # }
+        if (manual_scale) {
+            plt <- plt + scale_color_manual(values=MY_COLORS)
+        }
+        else if (!is.null(cont_scale)) {
+            plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
+        }
         
         plt
     }
@@ -458,7 +441,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             cont_scale = cont_scale,
             title="Volcano: Reference dataset", 
             manual_scale = manual_scale) %>% 
-            # ggplotly(source="subset") %>%
+            ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
     })
@@ -494,7 +477,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             cont_scale = cont_scale,
             title="Volcano: Compare dataset", 
             manual_scale = manual_scale) %>% 
-            # ggplotly(source="subset") %>% 
+            ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
     })
@@ -528,7 +511,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             title="MA: Reference dataset",
             cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
-            # ggplotly(source="subset") %>% 
+            ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
     })
@@ -562,7 +545,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             title="MA: Compare dataset", 
             cont_scale = cont_scale,
             manual_scale = manual_scale) %>% 
-            # ggplotly(source="subset") %>% 
+            ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
     })
