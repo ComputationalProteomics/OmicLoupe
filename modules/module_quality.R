@@ -78,19 +78,23 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     design_cols_ref <- reactive({
-        colnames(design_ref())
+        colnames(rv$ddf_ref(rv, input))
+        # colnames(design_ref())
     })
     
     design_cols_comp <- reactive({
-        colnames(design_comp())
+        colnames(rv$ddf_comp(rv, input))
+        # colnames(design_comp())
     })
     
     data_cols_ref <- reactive({
-        colnames(data_ref())
+        colnames(rv$rdf_ref(rv, input))
+        # colnames(data_ref())
     })
     
     data_cols_comp <- reactive({
-        colnames(data_comp())
+        colnames(rv$rdf_comp(rv, input))
+        # colnames(data_comp())
     })
     
     sync_param_choices <- function() {
@@ -109,31 +113,31 @@ module_quality_server <- function(input, output, session, rv) {
         updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
     }
     
-    observeEvent(design_ref(), {
+    observeEvent(rv$ddf_ref(rv, input), {
         sync_param_choices()
     })
     
-    observeEvent(design_comp(), {
+    observeEvent(rv$ddf_comp(rv, input), {
         sync_param_choices()
     })
     
     # Reactivity
-    design_ref <- reactive({ 
-        if (!is.null(dataset_ind(rv, input, 1))) rv[[sprintf("design_%s", dataset_ind(rv, input, 1))]]()
-        else NULL
-    })
-    design_comp <- reactive({ 
-        if (!is.null(dataset_ind(rv, input, 2))) rv[[sprintf("design_%s", dataset_ind(rv, input, 2))]]() 
-        else NULL
-    })
-    data_ref <- reactive({ 
-        if (!is.null(dataset_ind(rv, input, 1))) rv[[sprintf("filedata_%s", dataset_ind(rv, input, 1))]]() 
-        else NULL
-    })
-    data_comp <- reactive({ 
-        if (!is.null(dataset_ind(rv, input, 2))) rv[[sprintf("filedata_%s", dataset_ind(rv, input, 2))]]() 
-        else NULL
-    })
+    # design_ref <- reactive({ 
+    #     if (!is.null(dataset_ind(rv, input, 1))) rv[[sprintf("design_%s", dataset_ind(rv, input, 1))]]()
+    #     else NULL
+    # })
+    # design_comp <- reactive({ 
+    #     if (!is.null(dataset_ind(rv, input, 2))) rv[[sprintf("design_%s", dataset_ind(rv, input, 2))]]() 
+    #     else NULL
+    # })
+    # data_ref <- reactive({ 
+    #     if (!is.null(dataset_ind(rv, input, 1))) rv[[sprintf("filedata_%s", dataset_ind(rv, input, 1))]]() 
+    #     else NULL
+    # })
+    # data_comp <- reactive({ 
+    #     if (!is.null(dataset_ind(rv, input, 2))) rv[[sprintf("filedata_%s", dataset_ind(rv, input, 2))]]() 
+    #     else NULL
+    # })
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
@@ -191,14 +195,7 @@ module_quality_server <- function(input, output, session, rv) {
         if (is.null(rv$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
-        # else if (is.null(samples_ref()) || length(samples_ref()) == 0) {
-        #     error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
-        # }
-        
-        # if (!is.null(rv$filename_2()) && (is.null(samples_comp()) || length(samples_comp()) == 0)) {
-        #     error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
-        # }
-        
+
         if (is.null(rv$design_1())) {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
         }
@@ -209,15 +206,15 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$bars <- renderPlot({ 
         
-        req(design_ref())
+        req(rv$ddf_ref(rv, input))
         req(reactive_long_sdf_ref())
         
         join_by_ref <- c("name"=ref_ddf_samplecol())
-        ddf_ref <- design_ref()
+        ddf_ref <- rv$ddf_ref(rv, input)
         long_sdf_ref <- reactive_long_sdf_ref()
         
         join_by_comp <- c("name"=comp_ddf_samplecol())
-        ddf_comp <- design_comp()
+        ddf_comp <- rv$ddf_comp(rv, input)
         long_sdf_comp <- reactive_long_sdf_comp()
         
         if (!input$show_missing) {
@@ -257,7 +254,7 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$boxplots <- renderPlot({ 
         
-        req(design_ref())
+        req(rv$ddf_ref(rv, input))
         req(reactive_long_sdf_ref())
         
         plt_ref <- ggplot(
@@ -284,7 +281,7 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     output$density <- renderPlot({ 
-        req(design_ref())
+        req(rv$ddf_ref(rv, input))
         req(reactive_long_sdf_ref())
         
         plt_ref <- ggplot(
@@ -309,12 +306,12 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$histograms <- renderPlot({ 
         
-        req(design_ref())
+        req(rv$ddf_ref(rv, input))
         req(reactive_long_sdf_ref())
         
         if (input$data_num_col_ref != "None") {
             # browser()
-            rdf_ref <- data_ref()
+            rdf_ref <- rv$rdf_ref(rv, input)
             target_color <- NULL
             if (input$data_cat_col_ref != "None") {
                 rdf_ref <- factor_prep_color_col(rdf_ref, input$data_cat_col_ref, input$max_color_cats)
@@ -329,7 +326,7 @@ module_quality_server <- function(input, output, session, rv) {
         }
         
         if (input$data_num_col_comp != "None") {
-            rdf_comp <- data_comp()
+            rdf_comp <- rv$rdf_comp(rv, input)
             target_color <- NULL
             if (input$data_cat_col_comp != "None") {
                 rdf_comp <- factor_prep_color_col(rdf_comp, input$data_cat_col_comp, input$max_color_cats)

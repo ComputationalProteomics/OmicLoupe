@@ -90,7 +90,21 @@ dataset_ind <- function(rv, input, field) {
     }
 }
 
-
+di <- function(rv, input, field) {
+    
+    if (is.null(rv$filename_1()) || rv$filename_1() == "") {
+        NULL
+    }
+    else if (input[[sprintf("dataset%s", field)]] == rv$filename_1()) {
+        1
+    }
+    else if (!is.null(rv$filename_2()) && input[[sprintf("dataset%s", field)]] == rv$filename_2()) {
+        2
+    }
+    else {
+        NULL
+    }
+}
 
 
 

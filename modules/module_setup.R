@@ -153,6 +153,39 @@ module_setup_server <- function(input, output, session) {
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
 
+    
+    # di_test <- function(rv, data_field, dataset_ind)
+    
+    retrieve_data <- function(rv, input, ind, data_pat) {
+        if (!is.null(di(rv, input, 1))) rv[[sprintf("%s_%s", data_pat, di(rv, input, 1))]]()
+        else NULL
+    }
+    
+    rv$rdf_ref <- function(rv, input) {
+        retrieve_data(rv, input, 1, "filedata")
+        # if (!is.null(di(rv, input, 1))) rv[[sprintf("filedata_%s", di(rv, input, 1))]]()
+        # else NULL
+    }
+    
+    rv$rdf_comp <- function(rv, input) {
+        retrieve_data(rv, input, 2, "filedata")
+        # if (!is.null(di(rv, input, 2))) rv[[sprintf("filedata_%s", di(rv, input, 2))]]()
+        # else NULL
+    }
+    
+    rv$ddf_ref <- function(rv, input) {
+        retrieve_data(rv, input, 1, "design")
+        # if (!is.null(di(rv, input, 1))) rv[[sprintf("design_%s", di(rv, input, 1))]]()
+        # else NULL
+    }
+
+    rv$ddf_comp <- function(rv, input) {
+        retrieve_data(rv, input, 2, "design")
+        # if (!is.null(di(rv, input, 2))) rv[[sprintf("design_%s", di(rv, input, 2))]]()
+        # else NULL
+    }
+    
+        
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
