@@ -77,42 +77,42 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     ########### REACTIVE ############
     
     design_ref <- reactive({ 
-        if (!is.null(dataset_ind(1))) {
-            reactive_vals[[sprintf("design_%s", dataset_ind(1))]]() 
+        if (!is.null(dataset_ind(reactive_vals, input, 1))) {
+            reactive_vals[[sprintf("design_%s", dataset_ind(reactive_vals, input, 1))]]() 
         }
         else {
             NULL
         }
     })
     design_comp <- reactive({ 
-        if (!is.null(dataset_ind(2))) {
-            reactive_vals[[sprintf("design_%s", dataset_ind(2))]]() 
+        if (!is.null(dataset_ind(reactive_vals, input, 2))) {
+            reactive_vals[[sprintf("design_%s", dataset_ind(reactive_vals, input, 2))]]() 
         }
         else {
             NULL
         }
     })
     data_ref <- reactive({ 
-        if (!is.null(dataset_ind(1))) {
-            reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() 
+        if (!is.null(dataset_ind(reactive_vals, input, 1))) {
+            reactive_vals[[sprintf("filedata_%s", dataset_ind(reactive_vals, input, 1))]]() 
         }
         else {
             NULL
         }
     })
     data_comp <- reactive({ 
-        if (!is.null(dataset_ind(2))) {
-            reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() 
+        if (!is.null(dataset_ind(reactive_vals, input, 2))) {
+            reactive_vals[[sprintf("filedata_%s", dataset_ind(reactive_vals, input, 2))]]() 
         }
         else {
             NULL
         }
     })
     samples_ref <- reactive({ 
-        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(1))]]]]$samples 
+        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(reactive_vals, input, 1))]]]]$samples 
     })
     samples_comp <- reactive({ 
-        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(2))]]]]$samples 
+        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(reactive_vals, input, 2))]]]]$samples 
     })
     
     design_cols_ref <- reactive({
@@ -191,21 +191,21 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     ########### FUNCTIONS ############
     
-    dataset_ind <- function(field) {
-        
-        if (is.null(reactive_vals$filename_1()) || reactive_vals$filename_1() == "") {
-            NULL
-        }
-        else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
-            1
-        }
-        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
-            2
-        }
-        else { 
-            NULL
-        }
-    }
+    # dataset_ind <- function(field) {
+    #     
+    #     if (is.null(reactive_vals$filename_1()) || reactive_vals$filename_1() == "") {
+    #         NULL
+    #     }
+    #     else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
+    #         1
+    #     }
+    #     else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
+    #         2
+    #     }
+    #     else { 
+    #         NULL
+    #     }
+    # }
     
     make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
         
