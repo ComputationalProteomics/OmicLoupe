@@ -218,13 +218,6 @@ module_setup_server <- function(input, output, session) {
         statcols(rv, data_field, contrast_field, prefix_index=data_ind)
     }
     
-    
-    
-    # rv$statcols_base <- function(rv, input_field) {
-    #     stop("Not implemented yet!")
-    #     rv$selected_cols_obj()[[input_field]]$statcols
-    # }
-
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value

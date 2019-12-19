@@ -88,35 +88,6 @@ module_plotly_server <- function(input, output, session, rv) {
     
     # ---------------- REACTIVE ---------------- 
     
-    # dataset_ref <- reactive({
-    #     reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() 
-    # })
-    # dataset_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
-    # samples_ref <- reactive({
-    #     ind <- dataset_ind(1)
-    #     paste0(
-    #         sprintf("d%s.", ind),
-    #         reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
-    #     )
-    # })
-    # samples_comp <- reactive({
-    #     ind <- dataset_ind(2)
-    #     paste0(
-    #         sprintf("d%s.", ind),
-    #         reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
-    #     )
-    # })
-    # 
-    # dataset_ref_cols <- reactive({
-    #     req(dataset_ref())
-    #     colnames(dataset_ref())
-    # })
-    # 
-    # dataset_comp_cols <- reactive({
-    #     req(dataset_comp())
-    #     colnames(dataset_comp())
-    # })
-    
     reactive_plot_df <- reactive({
         
         req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
@@ -170,6 +141,7 @@ module_plotly_server <- function(input, output, session, rv) {
             pca_df
         }
         else if (input$color_type == "Column") {
+            warning("This needs to be fixed!")
             base_df$ref.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(1), input$color_col_1)]]
             base_df$comp.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(2), input$color_col_2)]]
             base_df %>% arrange(ref.color_col)
@@ -200,7 +172,16 @@ module_plotly_server <- function(input, output, session, rv) {
         rv$selected_cols_obj() 
         input$dataset1 
         input$dataset2}, {
-            update_stat_inputs(session, rv, input$dataset1, input$dataset2)
+            # update_stat_inputs(session, rv, input$dataset1, input$dataset2)
+            if (is.null(rv$filename_1()) && is.null(rv$filename_2())) {
+                return()
+            }
+            
+            choices_1 <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
+            choices_2 <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
+            
+            updateSelectInput(session, "stat_base1", choices=choices_1, selected=choices_1[1])
+            updateSelectInput(session, "stat_base2", choices=choices_2, selected=choices_2[1])
         })
     
     observeEvent(rv$filedata_1(), {
