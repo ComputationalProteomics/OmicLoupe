@@ -13,8 +13,41 @@ setup_visual_ui <- function(id) {
         fluidPage(
             fluidRow(
                 column(4,
-                       data_display_ui_panel(ns),
-                       minimaps_panel(ns)
+                       # data_display_ui_panel(ns),
+                       # minimaps_panel(ns)
+                       
+                       wellPanel(
+                           selectInput(ns("color_type"), "Coloring type", choices=c("select", "threshold", "PCA loading"), selected="select"),
+                           column(6,
+                                  selectInput(ns("dataset1"), "Reference dataset", choices=c(), selected = ""),
+                                  selectInput(ns("dataset2"), "Compare dataset", choices=c(), selected = "")
+                           ),
+                           column(6,
+                                  selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
+                                  selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
+                           ),
+                           # selectInput(ns("reference_dataset"), "Reference dataset", choices=c(), selected = "dataset1"),
+                           fluidRow(
+                               column(9,
+                                      sliderInput(ns("pvalue_cutoff"), "P-value cutoff", value=0.05, step=0.01, min=0, max=1)
+                               ),
+                               column(3,
+                                      span(
+                                          selectInput(ns("pvalue_type_select"), choices = c("P.Value", "adj.P.Val"), selected = "P.Value", label = "P-value type"),
+                                          style="padding:20px"
+                                      )
+                               )
+                           ),
+                           sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
+                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
+                           checkboxInput(ns("toggle_minimaps"), "Display minimaps", value=FALSE)
+                       ),
+                       
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1", ns("toggle_minimaps")),
+                           plotOutput(ns("mini_pvalue_dist"), height = 200),
+                           plotOutput(ns("mini_fold_dist"), height = 200)
+                       )
                 ),
                 column(8,
                        verbatimTextOutput(ns("correlation_vals")),
@@ -102,8 +135,10 @@ module_visual_server <- function(input, output, session, reactive_vals) {
         
         out_string <- calculate_correlation_vals_string(
             reactive_vals$mapping_obj()$get_combined_dataset(), 
-            reactive_ref_statcols(), 
-            reactive_comp_statcols(),
+            rv$statcols_ref(rv, input$dataset1, input$stat_base1), 
+            rv$statcols_comp(rv, input$dataset2, input$stat_base2), 
+            # reactive_ref_statcols(), 
+            # reactive_comp_statcols(),
             input$pvalue_cutoff,
             input$fold_cutoff,
             input$pvalue_type_select

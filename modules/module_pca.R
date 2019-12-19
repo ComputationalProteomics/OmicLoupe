@@ -201,11 +201,11 @@ module_pca_server <- function(input, output, session, rv) {
         if (is.null(rv$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
-        else if (is.null(rv$samples_ref(rv, input$dataset1)) || length(rv$samples_ref(rv, input$dataset1)) == 0) {
+        else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
 
-        if (!is.null(rv$filename_2()) && (is.null(rv$samples_comp(rv, input$dataset2)) || length(rv$samples_comp(rv, input$dataset2)) == 0)) {
+        if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples_comp(rv, input$dataset2)) == 0)) {
             error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
         }
 

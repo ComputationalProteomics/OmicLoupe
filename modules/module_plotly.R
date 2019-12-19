@@ -119,8 +119,8 @@ module_plotly_server <- function(input, output, session, rv) {
     
     reactive_plot_df <- reactive({
         
-        req(reactive_ref_statcols())
-        req(reactive_comp_statcols())
+        req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
         
         if (input$color_type == "PCA") {
             combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
@@ -131,8 +131,8 @@ module_plotly_server <- function(input, output, session, rv) {
         
         base_df <- get_pass_thres_annot_data(
             combined_dataset,
-            reactive_ref_statcols(),
-            reactive_comp_statcols(),
+            rv$statcols_ref(rv, input$dataset1, input$stat_base1),
+            rv$statcols_comp(rv, input$dataset2, input$stat_base2),
             input$pvalue_cutoff,
             input$fold_cutoff,
             input$pvalue_type_select
@@ -143,12 +143,12 @@ module_plotly_server <- function(input, output, session, rv) {
         }
         else if (input$color_type == "PCA") {
             
-            req(rv$samples_ref(rv, input$dataset1))
-            req(rv$samples_comp(rv, input$dataset2))
+            req(rv$samples(rv, input$dataset1))
+            req(rv$samples(rv, input$dataset2))
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                rv$samples_ref(rv, input$dataset1),
+                rv$samples(rv, input$dataset1),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -158,7 +158,7 @@ module_plotly_server <- function(input, output, session, rv) {
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                rv$samples_comp(rv, input$dataset2),
+                rv$samples(rv, input$dataset2),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -180,37 +180,13 @@ module_plotly_server <- function(input, output, session, rv) {
     })
     
     plot_ref_df <- reactive({
-        req(reactive_ref_statcols())
-        get_plot_df(reactive_ref_statcols)
+        req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        get_plot_df(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
     })
     
     plot_comp_df <- reactive({
-        req(reactive_comp_statcols())
-        get_plot_df(reactive_comp_statcols)
-    })
-    
-    reactive_ref_statcols <- reactive({
-        req(input$dataset1)
-        req(input$stat_base1)
-        parse_stat_cols_for_visuals(
-            rv$filename_1(), 
-            rv$filename_2(), 
-            rv$selected_cols_obj(), 
-            input$dataset1, 
-            input$stat_base1
-        )
-    })
-    
-    reactive_comp_statcols <- reactive({
-        req(input$dataset2)
-        req(input$stat_base2)
-        parse_stat_cols_for_visuals(
-            rv$filename_1(), 
-            rv$filename_2(), 
-            rv$selected_cols_obj(), 
-            input$dataset2, 
-            input$stat_base2
-        )
+        req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        get_plot_df(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
     })
     
     # ---------------- OBSERVERS ---------------- 
@@ -269,16 +245,26 @@ module_plotly_server <- function(input, output, session, rv) {
     get_plot_df <- function(target_statcols, feature_col="target_col1") {
         
         plot_df <- data.frame(
-            fold = reactive_plot_df()[[target_statcols()$logFC]],
-            sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
+            fold = reactive_plot_df()[[target_statcols$logFC]],
+            sig = -log10(reactive_plot_df()[[target_statcols$P.Value]]),
             lab = rv$mapping_obj()[[feature_col]],
-            expr = reactive_plot_df()[[target_statcols()$AveExpr]],
-            pval = reactive_plot_df()[[target_statcols()$P.Value]],
+            expr = reactive_plot_df()[[target_statcols$AveExpr]],
+            pval = reactive_plot_df()[[target_statcols$P.Value]],
             pass_thres = reactive_plot_df()$pass_threshold_data,
             hover_text = reactive_plot_df()$comb_id,
             key = reactive_plot_df()$comb_id
         )
         
+        # plot_df <- data.frame(
+        #     fold = reactive_plot_df()[[target_statcols()$logFC]],
+        #     sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
+        #     lab = rv$mapping_obj()[[feature_col]],
+        #     expr = reactive_plot_df()[[target_statcols()$AveExpr]],
+        #     pval = reactive_plot_df()[[target_statcols()$P.Value]],
+        #     pass_thres = reactive_plot_df()$pass_threshold_data,
+        #     hover_text = reactive_plot_df()$comb_id,
+        #     key = reactive_plot_df()$comb_id
+        # )
         if (input$color_type == "PCA") {
             plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
             plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
@@ -389,10 +375,11 @@ module_plotly_server <- function(input, output, session, rv) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
         else {
-            if ((is.null(rv$samples_ref(rv, input$dataset1)) || is.null(rv$samples_comp(rv, input$dataset2))) && input$color_type == "PCA") {
+            if ((is.null(rv$samples(rv, input$dataset1)) || is.null(rv$samples(rv, input$dataset2))) && input$color_type == "PCA") {
                 error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
             }
-            if (is.null(reactive_ref_statcols()) || is.null(reactive_comp_statcols())) {
+            if (is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)) || is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2))) {
+                # if (is.null(reactive_ref_statcols()) || is.null(reactive_comp_statcols())) {
                 error_vect <- c(error_vect, "ref_statcols or comp_statcols not found, assign stat-columns at Setup page")
             }
         }
@@ -407,7 +394,6 @@ module_plotly_server <- function(input, output, session, rv) {
     
     output$plotly_volc1 <- renderPlotly({
         
-        # withProgress(message = "Testing progress", value = 0.5, {
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
@@ -440,8 +426,7 @@ module_plotly_server <- function(input, output, session, rv) {
             layout(dragmode="select") %>%
             toWebGL()
     })
-    # })
-    
+
     output$plotly_volc2 <- renderPlotly({
         
         plot_df <- plot_comp_df()

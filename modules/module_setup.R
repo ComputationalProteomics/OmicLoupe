@@ -182,44 +182,49 @@ module_setup_server <- function(input, output, session) {
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
 
-    # retrieve_data <- function(rv, input, ind, data_pat) {
-    #     if (!is.null(di(rv, input, 1))) rv[[sprintf("%s_%s", data_pat, di(rv, input, ind))]]()
-    #     else NULL
-    # }
-    
-    retrieve_data_new <- function(rv, input_field, ind, data_pat) {
+    retrieve_data <- function(rv, input_field, ind, data_pat) {
         if (!is.null(di_new(rv, input_field, 1))) rv[[sprintf("%s_%s", data_pat, di_new(rv, input_field, ind))]]()
         else NULL
     }
     
-    rv$rdf_ref <- function(rv, input_field) retrieve_data_new(rv, input_field, 1, "filedata")
-    rv$rdf_comp <- function(rv, input_field) retrieve_data_new(rv, input_field, 2, "filedata")
-    rv$ddf_ref <- function(rv, input_field) retrieve_data_new(rv, input_field, 1, "design")
-    rv$ddf_comp <- function(rv, input_field) retrieve_data_new(rv, input_field, 2, "design")
-    rv$rdf_cols_ref <- function(rv, input_field) colnames(retrieve_data_new(rv, input_field, 1, "filedata"))
-    rv$rdf_cols_comp <- function(rv, input_field) colnames(retrieve_data_new(rv, input_field, 2, "filedata"))
-    rv$ddf_cols_ref <- function(rv, input_field) colnames(retrieve_data_new(rv, input_field, 1, "design"))
-    rv$ddf_cols_comp <- function(rv, input_field) colnames(retrieve_data_new(rv, input_field, 2, "design"))
+    rv$rdf_ref <- function(rv, input_field) retrieve_data(rv, input_field, 1, "filedata")
+    rv$rdf_comp <- function(rv, input_field) retrieve_data(rv, input_field, 2, "filedata")
+    rv$ddf_ref <- function(rv, input_field) retrieve_data(rv, input_field, 1, "design")
+    rv$ddf_comp <- function(rv, input_field) retrieve_data(rv, input_field, 2, "design")
+    rv$rdf_cols_ref <- function(rv, input_field) colnames(retrieve_data(rv, input_field, 1, "filedata"))
+    rv$rdf_cols_comp <- function(rv, input_field) colnames(retrieve_data(rv, input_field, 2, "filedata"))
+    rv$ddf_cols_ref <- function(rv, input_field) colnames(retrieve_data(rv, input_field, 1, "design"))
+    rv$ddf_cols_comp <- function(rv, input_field) colnames(retrieve_data(rv, input_field, 2, "design"))
 
     rv$samples <- function(rv, input_field) { rv$selected_cols_obj()[[input_field]]$samples }
     
-    
-    rv$samples_ref <- function(rv, input_field) {
-        rv$selected_cols_obj()[[input_field]]$samples 
+    statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) { 
+        
+        dataset_stat_cols <- rv$selected_cols_obj()[[data_field]]$statcols
+        parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field)
+        if (!is.null(prefix_index)) {
+            parsed_cols <- lapply(parsed_cols, function(elem) { sprintf("d%s.%s", prefix_index, elem) })
+        }
+        parsed_cols
     }
     
-    rv$samples_comp <- function(rv, input_field) {
-        rv$selected_cols_obj()[[input_field]]$samples 
+    rv$statcols_ref <- function(rv, data_field, contrast_field) {
+        data_ind <- di_new(rv, data_field, 1)
+        statcols(rv, data_field, contrast_field, prefix_index=data_ind)
     }
     
-    rv$statcols <- function(rv, input_field) {
-        rv$selected_cols_obj()[[input_field]]$statcols
+    rv$statcols_comp <- function(rv, data_field, contrast_field) {
+        data_ind <- di_new(rv, data_field, 2)
+        statcols(rv, data_field, contrast_field, prefix_index=data_ind)
     }
     
-    rv$statcols_comp <- function() {}
-    rv$statcols_base_ref <- function() {}
-    rv$statcols_base_comp <- function() {}
     
+    
+    # rv$statcols_base <- function(rv, input_field) {
+    #     stop("Not implemented yet!")
+    #     rv$selected_cols_obj()[[input_field]]$statcols
+    # }
+
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
