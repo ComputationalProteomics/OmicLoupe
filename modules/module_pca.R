@@ -80,13 +80,13 @@ module_pca_server <- function(input, output, session, rv) {
         
         print("pca_obj1 triggered")
         
-        req(rv$rdf_ref(rv, input))
-        req(rv$ddf_ref(rv, input))
-        req(rv$samples_ref(rv, input))
+        req(rv$rdf_ref(rv, input$dataset1))
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(rv$samples_ref(rv, input$dataset1))
         
         calculate_pca_obj(
-            rv$rdf_ref(rv, input),
-            rv$samples_ref(rv, input),
+            rv$rdf_ref(rv, input$dataset1),
+            rv$samples_ref(rv, input$dataset1),
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -97,26 +97,13 @@ module_pca_server <- function(input, output, session, rv) {
         
         print("pca_obj2 triggered")
         
-        req(rv$rdf_comp(rv, input))
-        req(rv$ddf_comp(rv, input))
-        req(rv$samples_comp(rv, input))
+        req(rv$rdf_comp(rv, input$dataset2))
+        req(rv$ddf_comp(rv, input$dataset2))
+        req(rv$samples_comp(rv, input$dataset2))
         
-        # To trigger reactivity?
-        # var <- input$dataset2
-        
-        # var <- input$dataset1
-        # 
-        # calculate_pca_obj(
-        #     rv$rdf_comp_test(rv, c(input$sample_data1, input$sample_data2)),
-        #     rv$samples_comp(rv, input),
-        #     do_scale = input$scale_pca_data,
-        #     do_center = input$center_pca_data,
-        #     var_cut = input$variance_filter_data
-        # )
-
         calculate_pca_obj(
-            rv$rdf_comp(rv, input),
-            rv$samples_comp(rv, input),
+            rv$rdf_comp(rv, input$dataset2),
+            rv$samples_comp(rv, input$dataset2),
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -126,8 +113,8 @@ module_pca_server <- function(input, output, session, rv) {
     ########### OBSERVERS ############
     
     sync_pca_param_choices <- function() {
-        ref_choices <- c("None", rv$ddf_cols_ref(rv, input))
-        comp_choices <- c("None", rv$ddf_cols_comp(rv, input))
+        ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
+        comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
         updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
@@ -136,12 +123,12 @@ module_pca_server <- function(input, output, session, rv) {
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
     }
     
-    observeEvent(rv$ddf_ref(rv, input), {
+    observeEvent(rv$ddf_ref(rv, input$dataset1), {
         print("rv$ddf_ref triggered")
         sync_pca_param_choices()
     })
     
-    observeEvent(rv$ddf_comp(rv, input), {
+    observeEvent(rv$ddf_comp(rv, input$dataset2), {
         print("rv$ddf_comp triggered")
         sync_pca_param_choices()
     })
@@ -210,11 +197,11 @@ module_pca_server <- function(input, output, session, rv) {
         if (is.null(rv$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
-        else if (is.null(rv$samples_ref(rv, input)) || length(rv$samples_ref(rv, input)) == 0) {
+        else if (is.null(rv$samples_ref(rv, input$dataset1)) || length(rv$samples_ref(rv, input$dataset1)) == 0) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
 
-        if (!is.null(rv$filename_2()) && (is.null(rv$samples_comp(rv, input)) || length(rv$samples_comp(rv, input)) == 0)) {
+        if (!is.null(rv$filename_2()) && (is.null(rv$samples_comp(rv, input$dataset2)) || length(rv$samples_comp(rv, input$dataset2)) == 0)) {
             error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
         }
 
@@ -250,7 +237,7 @@ module_pca_server <- function(input, output, session, rv) {
         else sample_col <- NULL
         
         plt <- make_pca_plt(
-            rv$ddf_ref(rv, input),
+            rv$ddf_ref(rv, input$dataset1),
             pca_obj1(),
             input$pc_comp_1_data1,
             input$pc_comp_2_data1,
@@ -277,7 +264,7 @@ module_pca_server <- function(input, output, session, rv) {
         else sample_col <- NULL
         
         plt <- make_pca_plt(
-            rv$ddf_comp(rv, input),
+            rv$ddf_comp(rv, input$dataset2),
             pca_obj2(),
             input$pc_comp_1_data2,
             input$pc_comp_2_data2,

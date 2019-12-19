@@ -143,12 +143,12 @@ module_plotly_server <- function(input, output, session, rv) {
         }
         else if (input$color_type == "PCA") {
             
-            req(rv$samples_ref(rv, input))
-            req(rv$samples_comp(rv, input))
+            req(rv$samples_ref(rv, input$dataset1))
+            req(rv$samples_comp(rv, input$dataset2))
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                rv$samples_ref(rv, input),
+                rv$samples_ref(rv, input$dataset1),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -158,7 +158,7 @@ module_plotly_server <- function(input, output, session, rv) {
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                rv$samples_comp(rv, input),
+                rv$samples_comp(rv, input$dataset2),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -236,8 +236,8 @@ module_plotly_server <- function(input, output, session, rv) {
     observeEvent({
         input$dataset1
         input$dataset2}, {
-            ref_data_cols <- rv$rdf_cols_ref(rv, input)
-            comp_data_cols <- rv$rdf_cols_comp(rv, input)
+            ref_data_cols <- rv$rdf_cols_ref(rv, input$dataset1)
+            comp_data_cols <- rv$rdf_cols_comp(rv, input$dataset2)
             updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
             updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
         })
@@ -389,7 +389,7 @@ module_plotly_server <- function(input, output, session, rv) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
         else {
-            if ((is.null(rv$samples_ref(rv, input)) || is.null(rv$samples_comp(rv, input))) && input$color_type == "PCA") {
+            if ((is.null(rv$samples_ref(rv, input$dataset1)) || is.null(rv$samples_comp(rv, input$dataset2))) && input$color_type == "PCA") {
                 error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
             }
             if (is.null(reactive_ref_statcols()) || is.null(reactive_comp_statcols())) {

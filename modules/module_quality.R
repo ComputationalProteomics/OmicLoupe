@@ -78,26 +78,26 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     sync_param_choices <- function() {
-        ref_choices <- c("None", rv$ddf_cols_ref(rv, input))
-        comp_choices <- c("None", rv$ddf_cols_comp(rv, input))
+        ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
+        comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
         updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
         
-        ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input))
-        comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input))
+        ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
+        comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
         updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
         updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
         updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
         updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
     }
     
-    observeEvent(rv$ddf_ref(rv, input), {
+    observeEvent(rv$ddf_ref(rv, input$dataset1), {
         sync_param_choices()
     })
     
-    observeEvent(rv$ddf_comp(rv, input), {
+    observeEvent(rv$ddf_comp(rv, input$dataset2), {
         sync_param_choices()
     })
     
@@ -168,15 +168,15 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$bars <- renderPlot({ 
         
-        req(rv$ddf_ref(rv, input))
+        req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
         join_by_ref <- c("name"=ref_ddf_samplecol())
-        ddf_ref <- rv$ddf_ref(rv, input)
+        ddf_ref <- rv$ddf_ref(rv, input$dataset1)
         long_sdf_ref <- reactive_long_sdf_ref()
         
         join_by_comp <- c("name"=comp_ddf_samplecol())
-        ddf_comp <- rv$ddf_comp(rv, input)
+        ddf_comp <- rv$ddf_comp(rv, input$dataset2)
         long_sdf_comp <- reactive_long_sdf_comp()
         
         if (!input$show_missing) {
@@ -216,7 +216,7 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$boxplots <- renderPlot({ 
         
-        req(rv$ddf_ref(rv, input))
+        req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
         plt_ref <- ggplot(
@@ -243,7 +243,7 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     output$density <- renderPlot({ 
-        req(rv$ddf_ref(rv, input))
+        req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
         plt_ref <- ggplot(
@@ -268,11 +268,11 @@ module_quality_server <- function(input, output, session, rv) {
     
     output$histograms <- renderPlot({ 
         
-        req(rv$ddf_ref(rv, input))
+        req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
         if (input$data_num_col_ref != "None") {
-            rdf_ref <- rv$rdf_ref(rv, input)
+            rdf_ref <- rv$rdf_ref(rv, input$dataset1)
             target_color <- NULL
             if (input$data_cat_col_ref != "None") {
                 rdf_ref <- factor_prep_color_col(rdf_ref, input$data_cat_col_ref, input$max_color_cats)
@@ -286,7 +286,7 @@ module_quality_server <- function(input, output, session, rv) {
         }
         
         if (input$data_num_col_comp != "None") {
-            rdf_comp <- rv$rdf_comp(rv, input)
+            rdf_comp <- rv$rdf_comp(rv, input$dataset2)
             target_color <- NULL
             if (input$data_cat_col_comp != "None") {
                 rdf_comp <- factor_prep_color_col(rdf_comp, input$data_cat_col_comp, input$max_color_cats)
