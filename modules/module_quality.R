@@ -51,9 +51,15 @@ setup_quality_ui <- function(id) {
                     tabsetPanel(
                         id = ns("plot_tabs"),
                         type = "tabs",
-                        tabPanel("Boxplots", plotOutput(ns("boxplots"))),
+                        tabPanel("Boxplots", 
+                                 plotOutput(ns("boxplots1")),
+                                 plotOutput(ns("boxplots2"))
+                        ),
                         tabPanel("Density", plotOutput(ns("density"))),
-                        tabPanel("Barplots", plotOutput(ns("bars"))),
+                        tabPanel("Barplots", 
+                                 plotOutput(ns("bars1")),
+                                 plotOutput(ns("bars2"))
+                        ),
                         tabPanel("Histograms", plotOutput(ns("histograms")))
                     )
                 )
@@ -120,7 +126,7 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     reactive_long_sdf_comp <- reactive({
-        get_long(dataset_ind(rv, input, 1), rv, ref_ddf_samplecol())
+        get_long(dataset_ind(rv, input, 2), rv, comp_ddf_samplecol())
     })
     
     ref_ddf_samplecol <- reactive({
@@ -130,14 +136,6 @@ module_quality_server <- function(input, output, session, rv) {
     comp_ddf_samplecol <- reactive({
         rv[[sprintf("design_samplecol_%s", dataset_ind(rv, input, 2))]]()
     })
-    
-    # rdf_colorcol_ref <- reactive({
-    #     rv[[sprintf("data_cat_col%s", dataset_ind(rv, input, 1))]]
-    # })
-    # 
-    # rdf_colorcol_comp <- reactive({
-    #     rv[[sprintf("data_cat_col%s", dataset_ind(rv, input, 2))]]
-    # })
     
     # Illustrations
     ref_color <- reactive({
@@ -157,7 +155,7 @@ module_quality_server <- function(input, output, session, rv) {
         if (is.null(rv$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
-
+        
         if (is.null(rv$design_1())) {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
         }
@@ -166,7 +164,7 @@ module_quality_server <- function(input, output, session, rv) {
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
     
-    output$bars <- renderPlot({ 
+    output$bars1 <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -214,7 +212,7 @@ module_quality_server <- function(input, output, session, rv) {
         
     })
     
-    output$boxplots <- renderPlot({ 
+    output$boxplots1 <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -223,6 +221,22 @@ module_quality_server <- function(input, output, session, rv) {
             reactive_long_sdf_ref(), 
             aes_string(x="name", y="value", color=ref_color())) + 
             ggtitle("Boxplot ref.")
+        
+        if (!input$do_violin) {
+            target_geom <- geom_boxplot
+        }
+        else {
+            target_geom <- geom_violin
+        }
+        
+        plt_ref <- plt_ref + target_geom(na.rm=TRUE)
+        plt_ref
+    })
+
+    output$boxplots2 <- renderPlot({ 
+        
+        req(rv$ddf_comp(rv, input$dataset2))
+        req(reactive_long_sdf_comp())
         
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
@@ -236,12 +250,11 @@ module_quality_server <- function(input, output, session, rv) {
             target_geom <- geom_violin
         }
         
-        plt_ref <- plt_ref + target_geom(na.rm=TRUE)
         plt_comp <- plt_comp + target_geom(na.rm=TRUE)
-        
-        ggarrange(plt_ref, plt_comp, nrow=2, ncol=1)
+        plt_comp
     })
     
+        
     output$density <- renderPlot({ 
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
