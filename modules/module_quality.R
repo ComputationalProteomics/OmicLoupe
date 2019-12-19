@@ -52,15 +52,21 @@ setup_quality_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Boxplots", 
-                                 plotOutput(ns("boxplots1")),
-                                 plotOutput(ns("boxplots2"))
+                                 plotOutput(ns("boxplots_ref")),
+                                 plotOutput(ns("boxplots_comp"))
                         ),
-                        tabPanel("Density", plotOutput(ns("density"))),
+                        tabPanel("Density", 
+                                 plotOutput(ns("density_ref")),
+                                 plotOutput(ns("density_comp"))
+                        ),
                         tabPanel("Barplots", 
-                                 plotOutput(ns("bars1")),
-                                 plotOutput(ns("bars2"))
+                                 plotOutput(ns("bars_ref")),
+                                 plotOutput(ns("bars_comp"))
                         ),
-                        tabPanel("Histograms", plotOutput(ns("histograms")))
+                        tabPanel("Histograms", 
+                                 plotOutput(ns("histograms_ref")),
+                                 plotOutput(ns("histograms_comp"))
+                        )
                     )
                 )
             )
@@ -164,7 +170,7 @@ module_quality_server <- function(input, output, session, rv) {
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
     
-    output$bars1 <- renderPlot({ 
+    output$bars_ref <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -173,27 +179,18 @@ module_quality_server <- function(input, output, session, rv) {
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
         long_sdf_ref <- reactive_long_sdf_ref()
         
-        join_by_comp <- c("name"=comp_ddf_samplecol())
-        ddf_comp <- rv$ddf_comp(rv, input$dataset2)
-        long_sdf_comp <- reactive_long_sdf_comp()
-        
         if (!input$show_missing) {
             summed_data_ref <- long_sdf_ref %>% 
+                filter(!is.infinite(long_sdf_ref$value)) %>%
                 group_by(name) %>%
                 summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_ref)
-            summed_data_comp <- long_sdf_comp %>% 
-                group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_ref)
         }
         else {
             summed_data_ref <- long_sdf_ref %>%
+                filter(!is.infinite(long_sdf_ref$value)) %>%
                 mutate(value=is.na(value)) %>%
                 group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_comp)
-            summed_data_comp <- long_sdf_comp %>%
-                mutate(value=is.na(value)) %>%
-                group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
+                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_ref)
         }
         
         plt_ref <- ggplot(
@@ -202,17 +199,41 @@ module_quality_server <- function(input, output, session, rv) {
             geom_col() + 
             ggtitle("Barplot ref.")
         
+        plt_ref
+    })
+    
+    output$bars_comp <- renderPlot({
+        req(rv$ddf_comp(rv, input$dataset2))
+        req(reactive_long_sdf_comp())
+        
+        join_by_comp <- c("name"=comp_ddf_samplecol())
+        ddf_comp <- rv$ddf_comp(rv, input$dataset2)
+        long_sdf_comp <- reactive_long_sdf_comp()
+        
+        if (!input$show_missing) {
+            summed_data_comp <- long_sdf_comp %>% 
+                filter(!is.infinite(long_sdf_comp$value)) %>%
+                group_by(name) %>%
+                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
+        }
+        else {
+            summed_data_comp <- long_sdf_comp %>%
+                filter(!is.infinite(long_sdf_comp$value)) %>%
+                mutate(value=is.na(value)) %>%
+                group_by(name) %>%
+                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
+        }
+        
         plt_comp <- ggplot(
             summed_data_comp, 
             aes_string(x="name", y="value", fill=comp_color())) + 
             geom_col() + 
             ggtitle("Barplot comp.")
         
-        return(ggarrange(plt_ref, plt_comp, nrow=2, ncol=1))
-        
+        plt_comp
     })
-    
-    output$boxplots1 <- renderPlot({ 
+
+    output$boxplots_ref <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -233,7 +254,7 @@ module_quality_server <- function(input, output, session, rv) {
         plt_ref
     })
 
-    output$boxplots2 <- renderPlot({ 
+    output$boxplots_comp <- renderPlot({ 
         
         req(rv$ddf_comp(rv, input$dataset2))
         req(reactive_long_sdf_comp())
@@ -254,8 +275,7 @@ module_quality_server <- function(input, output, session, rv) {
         plt_comp
     })
     
-        
-    output$density <- renderPlot({ 
+    output$density_ref <- renderPlot({ 
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
@@ -263,12 +283,19 @@ module_quality_server <- function(input, output, session, rv) {
             reactive_long_sdf_ref(), 
             aes_string(x="value", group="name", color=ref_color())) + 
             geom_density(na.rm=TRUE) + ggtitle("Density ref.")
+
+        plt_ref
+    })
+    
+    output$density_comp <- renderPlot({ 
+        req(rv$ddf_comp(rv, input$dataset2))
+        req(reactive_long_sdf_comp())
+        
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
             aes_string(x="value", group="name", color=comp_color())) + 
             geom_density(na.rm=TRUE) + ggtitle("Density comp.")
-        
-        ggarrange(plt_ref, plt_comp, nrow=2, ncol=1)
+        plt_comp
     })
     
     factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count) {
@@ -279,7 +306,7 @@ module_quality_server <- function(input, output, session, rv) {
         rdf
     }
     
-    output$histograms <- renderPlot({ 
+    output$histograms_ref <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -297,6 +324,14 @@ module_quality_server <- function(input, output, session, rv) {
         else {
             plt_ref <- ggplot() + ggtitle("Empty histogram ref.")
         }
+
+        plt_ref
+    })
+    
+    output$histograms_comp <- renderPlot({ 
+        
+        req(rv$ddf_ref(rv, input$dataset2))
+        req(reactive_long_sdf_comp())
         
         if (input$data_num_col_comp != "None") {
             rdf_comp <- rv$rdf_comp(rv, input$dataset2)
@@ -312,7 +347,7 @@ module_quality_server <- function(input, output, session, rv) {
             plt_comp <- ggplot() + ggtitle("Empty histogram comp.")
         }
         
-        ggarrange(plt_ref, plt_comp, nrow=2, ncol=1)    
+        plt_comp
     })
 }
 

@@ -157,7 +157,9 @@ module_setup_server <- function(input, output, session) {
         if (is.null(infile)) {
             return(NULL)
         }
-        read_tsv(infile$datapath, col_types = cols())
+        raw_df <- read_tsv(infile$datapath, col_types = cols())
+        colnames(raw_df) <- make.names(colnames(raw_df))
+        raw_df
     }
     
     get_filename <- function(in_file) {
