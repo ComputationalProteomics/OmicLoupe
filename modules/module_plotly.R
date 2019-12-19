@@ -84,38 +84,38 @@ setup_plotly_ui <- function(id) {
 }
 
 
-module_plotly_server <- function(input, output, session, reactive_vals) {
+module_plotly_server <- function(input, output, session, rv) {
     
     # ---------------- REACTIVE ---------------- 
     
-    dataset_ref <- reactive({
-        reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() 
-    })
-    dataset_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
-    samples_ref <- reactive({
-        ind <- dataset_ind(1)
-        paste0(
-            sprintf("d%s.", ind),
-            reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
-        )
-    })
-    samples_comp <- reactive({
-        ind <- dataset_ind(2)
-        paste0(
-            sprintf("d%s.", ind),
-            reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
-        )
-    })
-    
-    dataset_ref_cols <- reactive({
-        req(dataset_ref())
-        colnames(dataset_ref())
-    })
-    
-    dataset_comp_cols <- reactive({
-        req(dataset_comp())
-        colnames(dataset_comp())
-    })
+    # dataset_ref <- reactive({
+    #     reactive_vals[[sprintf("filedata_%s", dataset_ind(1))]]() 
+    # })
+    # dataset_comp <- reactive({ reactive_vals[[sprintf("filedata_%s", dataset_ind(2))]]() })
+    # samples_ref <- reactive({
+    #     ind <- dataset_ind(1)
+    #     paste0(
+    #         sprintf("d%s.", ind),
+    #         reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
+    #     )
+    # })
+    # samples_comp <- reactive({
+    #     ind <- dataset_ind(2)
+    #     paste0(
+    #         sprintf("d%s.", ind),
+    #         reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", ind)]]]]$samples
+    #     )
+    # })
+    # 
+    # dataset_ref_cols <- reactive({
+    #     req(dataset_ref())
+    #     colnames(dataset_ref())
+    # })
+    # 
+    # dataset_comp_cols <- reactive({
+    #     req(dataset_comp())
+    #     colnames(dataset_comp())
+    # })
     
     reactive_plot_df <- reactive({
         
@@ -123,10 +123,10 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         req(reactive_comp_statcols())
         
         if (input$color_type == "PCA") {
-            combined_dataset <- reactive_vals$mapping_obj()$get_combined_dataset(full_entries=TRUE)
+            combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
         }
         else {
-            combined_dataset <- reactive_vals$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+            combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         }
         
         base_df <- get_pass_thres_annot_data(
@@ -143,12 +143,12 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         }
         else if (input$color_type == "PCA") {
             
-            req(samples_ref())
-            req(samples_comp())
+            req(rv$samples_ref(rv, input))
+            req(rv$samples_comp(rv, input))
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                samples_ref(),
+                rv$samples_ref(rv, input),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -158,7 +158,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                samples_comp(),
+                rv$samples_comp(rv, input),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -193,9 +193,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         req(input$dataset1)
         req(input$stat_base1)
         parse_stat_cols_for_visuals(
-            reactive_vals$filename_1(), 
-            reactive_vals$filename_2(), 
-            reactive_vals$selected_cols_obj(), 
+            rv$filename_1(), 
+            rv$filename_2(), 
+            rv$selected_cols_obj(), 
             input$dataset1, 
             input$stat_base1
         )
@@ -205,9 +205,9 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         req(input$dataset2)
         req(input$stat_base2)
         parse_stat_cols_for_visuals(
-            reactive_vals$filename_1(), 
-            reactive_vals$filename_2(), 
-            reactive_vals$selected_cols_obj(), 
+            rv$filename_1(), 
+            rv$filename_2(), 
+            rv$selected_cols_obj(), 
             input$dataset2, 
             input$stat_base2
         )
@@ -221,14 +221,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     })
     
     observeEvent({
-        reactive_vals$selected_cols_obj() 
+        rv$selected_cols_obj() 
         input$dataset1 
         input$dataset2}, {
-            update_stat_inputs(session, reactive_vals, input$dataset1, input$dataset2)
+            update_stat_inputs(session, rv, input$dataset1, input$dataset2)
         })
     
-    observeEvent(reactive_vals$filedata_1(), {
-        choices <- get_dataset_choices(reactive_vals)
+    observeEvent(rv$filedata_1(), {
+        choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
@@ -236,14 +236,14 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     observeEvent({
         input$dataset1
         input$dataset2}, {
-            ref_data_cols <- dataset_ref_cols()
-            comp_data_cols <- dataset_comp_cols()
+            ref_data_cols <- rv$rdf_cols_ref(rv, input)
+            comp_data_cols <- rv$rdf_cols_comp(rv, input)
             updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
             updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
         })
     
-    observeEvent(reactive_vals$filedata_2(), {
-        choices <- get_dataset_choices(reactive_vals)
+    observeEvent(rv$filedata_2(), {
+        choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
@@ -252,12 +252,12 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     dataset_ind <- function(field) {
         
-        req(reactive_vals$filename_1())
+        req(rv$filename_1())
         
-        if (!is.null(reactive_vals$filename_1()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
+        if (!is.null(rv$filename_1()) && input[[sprintf("dataset%s", field)]] == rv$filename_1()) {
             1
         }
-        else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
+        else if (!is.null(rv$filename_2()) && input[[sprintf("dataset%s", field)]] == rv$filename_2()) {
             2
         }
         else { 
@@ -271,7 +271,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
         plot_df <- data.frame(
             fold = reactive_plot_df()[[target_statcols()$logFC]],
             sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
-            lab = reactive_vals$mapping_obj()[[feature_col]],
+            lab = rv$mapping_obj()[[feature_col]],
             expr = reactive_plot_df()[[target_statcols()$AveExpr]],
             pval = reactive_plot_df()[[target_statcols()$P.Value]],
             pass_thres = reactive_plot_df()$pass_threshold_data,
@@ -331,8 +331,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             geom_point(alpha=alpha) +
             ggtitle(title)
         
-        # browser()
-        
         # plt <- plot_ly(
         #     plot_df,
         #     x = ~get(x_col),
@@ -387,11 +385,11 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     output$warnings <- renderUI({
         
         error_vect <- c()
-        if (is.null(reactive_vals$filename_1())) {
+        if (is.null(rv$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
         else {
-            if ((is.null(samples_ref()) || is.null(samples_comp())) && input$color_type == "PCA") {
+            if ((is.null(rv$samples_ref(rv, input)) || is.null(rv$samples_comp(rv, input))) && input$color_type == "PCA") {
                 error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
             }
             if (is.null(reactive_ref_statcols()) || is.null(reactive_comp_statcols())) {
@@ -399,7 +397,7 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
             }
         }
         
-        if (is.null(reactive_vals$design_1()) && input$color_type == "PCA") {
+        if (is.null(rv$design_1()) && input$color_type == "PCA") {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
         }
         
@@ -427,9 +425,6 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
                 cont_scale <- TRUE
             }
         }
-        
-        # incProgress(0.1, detail="Working")
-        # browser()
         
         make_scatter(
             plot_df, 
@@ -596,13 +591,13 @@ module_plotly_server <- function(input, output, session, reactive_vals) {
     
     output$target_data_dt = DT::renderDataTable({
         
-        req(reactive_vals$mapping_obj())
+        req(rv$mapping_obj())
         
         round_digits <- 3
         trunc_length <- 20
         
-        if (!is.null(reactive_vals$mapping_obj()$get_combined_dataset())) {
-            target_df <- reactive_vals$mapping_obj()$get_combined_dataset()
+        if (!is.null(rv$mapping_obj()$get_combined_dataset())) {
+            target_df <- rv$mapping_obj()$get_combined_dataset()
         }
         else {
             return()

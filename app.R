@@ -24,7 +24,9 @@ source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
 
 ui <- navbarPage(
+    
     theme = shinythemes::shinytheme("flatly"),
+    
     "OmicLoupe",
     id="navbar",
     setup_panel_ui("Setup"),

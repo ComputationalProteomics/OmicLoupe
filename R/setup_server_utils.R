@@ -65,7 +65,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             nrow(rv$mapping_obj()$get_combined_dataset())
         )
         if (rv$mapping_obj()$has_full_entries()) {
-            out_text <- sprintf("%s (%s full)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            out_text <- sprintf("%s (%s no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
         }
         # 
         
@@ -84,7 +84,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             nrow(rv$mapping_obj()$get_combined_dataset())
         )
         if (rv$mapping_obj()$has_full_entries()) {
-            out_text <- sprintf("%s (%s full)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            out_text <- sprintf("%s (%s no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
         }
         #
         
@@ -101,12 +101,17 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         ))
         
         # To function
-        out_text <- sprintf(
-            "Both datasets present and mapped, %s entries matched", 
-            nrow(rv$mapping_obj()$get_combined_dataset())
-        )
+        if (!is.null(rv$mapping_obj()$get_combined_dataset())) {
+            out_text <- sprintf(
+                "Both datasets present and mapped, %s entries matched", 
+                nrow(rv$mapping_obj()$get_combined_dataset())
+            )
+        }
+        else {
+            out_text <- "No samples mapped, check your data and your Feature columns!"
+        }
         if (rv$mapping_obj()$has_full_entries()) {
-            out_text <- sprintf("%s (%s full)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            out_text <- sprintf("%s (%s no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
         }
         #
         

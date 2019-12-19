@@ -72,66 +72,21 @@ setup_pca_ui <- function(id) {
     )
 }
 
-module_pca_server <- function(input, output, session, reactive_vals) {
+module_pca_server <- function(input, output, session, rv) {
     
     ########### REACTIVE ############
     
-    design_ref <- reactive({ 
-        if (!is.null(dataset_ind(reactive_vals, input, 1))) {
-            reactive_vals[[sprintf("design_%s", dataset_ind(reactive_vals, input, 1))]]() 
-        }
-        else {
-            NULL
-        }
-    })
-    design_comp <- reactive({ 
-        if (!is.null(dataset_ind(reactive_vals, input, 2))) {
-            reactive_vals[[sprintf("design_%s", dataset_ind(reactive_vals, input, 2))]]() 
-        }
-        else {
-            NULL
-        }
-    })
-    data_ref <- reactive({ 
-        if (!is.null(dataset_ind(reactive_vals, input, 1))) {
-            reactive_vals[[sprintf("filedata_%s", dataset_ind(reactive_vals, input, 1))]]() 
-        }
-        else {
-            NULL
-        }
-    })
-    data_comp <- reactive({ 
-        if (!is.null(dataset_ind(reactive_vals, input, 2))) {
-            reactive_vals[[sprintf("filedata_%s", dataset_ind(reactive_vals, input, 2))]]() 
-        }
-        else {
-            NULL
-        }
-    })
-    samples_ref <- reactive({ 
-        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(reactive_vals, input, 1))]]]]$samples 
-    })
-    samples_comp <- reactive({ 
-        reactive_vals$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(reactive_vals, input, 2))]]]]$samples 
-    })
-    
-    design_cols_ref <- reactive({
-        colnames(design_ref())
-    })
-    
-    design_cols_comp <- reactive({
-        colnames(design_comp())
-    })
-    
     pca_obj1 <- reactive({
         
-        req(data_ref())
-        req(design_ref())
-        req(samples_ref())
+        print("pca_obj1 triggered")
+        
+        req(rv$rdf_ref(rv, input))
+        req(rv$ddf_ref(rv, input))
+        req(rv$samples_ref(rv, input))
         
         calculate_pca_obj(
-            data_ref(),
-            samples_ref(),
+            rv$rdf_ref(rv, input),
+            rv$samples_ref(rv, input),
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -140,13 +95,28 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     
     pca_obj2 <- reactive({
         
-        req(data_comp())
-        req(design_comp())
-        req(samples_comp())
+        print("pca_obj2 triggered")
         
+        req(rv$rdf_comp(rv, input))
+        req(rv$ddf_comp(rv, input))
+        req(rv$samples_comp(rv, input))
+        
+        # To trigger reactivity?
+        # var <- input$dataset2
+        
+        # var <- input$dataset1
+        # 
+        # calculate_pca_obj(
+        #     rv$rdf_comp_test(rv, c(input$sample_data1, input$sample_data2)),
+        #     rv$samples_comp(rv, input),
+        #     do_scale = input$scale_pca_data,
+        #     do_center = input$center_pca_data,
+        #     var_cut = input$variance_filter_data
+        # )
+
         calculate_pca_obj(
-            data_comp(),
-            samples_comp(),
+            rv$rdf_comp(rv, input),
+            rv$samples_comp(rv, input),
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -156,8 +126,8 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     ########### OBSERVERS ############
     
     sync_pca_param_choices <- function() {
-        ref_choices <- c("None", design_cols_ref())
-        comp_choices <- c("None", design_cols_comp())
+        ref_choices <- c("None", rv$ddf_cols_ref(rv, input))
+        comp_choices <- c("None", rv$ddf_cols_comp(rv, input))
         updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
@@ -166,46 +136,32 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
     }
     
-    observeEvent(design_ref(), {
-        print("Design ref changed")
+    observeEvent(rv$ddf_ref(rv, input), {
+        print("rv$ddf_ref triggered")
         sync_pca_param_choices()
     })
     
-    observeEvent(design_comp(), {
-        print("Design comp changed")
+    observeEvent(rv$ddf_comp(rv, input), {
+        print("rv$ddf_comp triggered")
         sync_pca_param_choices()
     })
     
-    observeEvent(reactive_vals$filedata_1(), {
-        choices <- get_dataset_choices(reactive_vals)
+    observeEvent(rv$filedata_1(), {
+        print("rv$filedata_1() triggered")
+        choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    observeEvent(reactive_vals$filedata_2(), {
-        choices <- get_dataset_choices(reactive_vals)
+    observeEvent(rv$filedata_2(), {
+        print("rv$filedata_2() triggered")
+        choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
     
     ########### FUNCTIONS ############
-    
-    # dataset_ind <- function(field) {
-    #     
-    #     if (is.null(reactive_vals$filename_1()) || reactive_vals$filename_1() == "") {
-    #         NULL
-    #     }
-    #     else if (input[[sprintf("dataset%s", field)]] == reactive_vals$filename_1()) {
-    #         1
-    #     }
-    #     else if (!is.null(reactive_vals$filename_2()) && input[[sprintf("dataset%s", field)]] == reactive_vals$filename_2()) {
-    #         2
-    #     }
-    #     else { 
-    #         NULL
-    #     }
-    # }
     
     make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
         
@@ -251,18 +207,18 @@ module_pca_server <- function(input, output, session, reactive_vals) {
     output$warnings <- renderUI({
         
         error_vect <- c()
-        if (is.null(reactive_vals$filename_1())) {
+        if (is.null(rv$filename_1())) {
             error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
         }
-        else if (is.null(samples_ref()) || length(samples_ref()) == 0) {
+        else if (is.null(rv$samples_ref(rv, input)) || length(rv$samples_ref(rv, input)) == 0) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
 
-        if (!is.null(reactive_vals$filename_2()) && (is.null(samples_comp()) || length(samples_comp()) == 0)) {
+        if (!is.null(rv$filename_2()) && (is.null(rv$samples_comp(rv, input)) || length(rv$samples_comp(rv, input)) == 0)) {
             error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
         }
 
-        if (is.null(reactive_vals$design_1())) {
+        if (is.null(rv$design_1())) {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
         }
         
@@ -294,7 +250,7 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         else sample_col <- NULL
         
         plt <- make_pca_plt(
-            design_ref(),
+            rv$ddf_ref(rv, input),
             pca_obj1(),
             input$pc_comp_1_data1,
             input$pc_comp_2_data1,
@@ -321,7 +277,7 @@ module_pca_server <- function(input, output, session, reactive_vals) {
         else sample_col <- NULL
         
         plt <- make_pca_plt(
-            design_comp(),
+            rv$ddf_comp(rv, input),
             pca_obj2(),
             input$pc_comp_1_data2,
             input$pc_comp_2_data2,

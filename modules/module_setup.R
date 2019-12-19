@@ -8,6 +8,15 @@ setup_panel_ui <- function(id) {
         id,
         fluidPage(
             id = "outer_area",
+            tags$head(
+                tags$link(rel = "stylesheet", type = "text/css", href = "bootstrap")
+            ),
+            tags$style(
+                type = "text/css",
+                ".recolor_button { color: #fff; background-color: #337ab7; border-color: #2e6da4 }",
+                ".recolor_button:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4 }",
+                ".well { background-color: #F3F3F3; border-color: #AAAAAA; border-width: 1px; box-shadow: 2px 2px grey; }"
+            ),
             tags$style(
                 type = "text/css",
                 ".button_row { padding: 5px; }",
@@ -28,14 +37,32 @@ setup_panel_ui <- function(id) {
                            sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2")),
                            design_input_well(ns("design_file_2"), ns("design_sample_col_2"))
                        )
-                ),  
+                ),
                 column(3,
                        align="center",
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           action_button_row(ns("autodetect_cols"), "Autodetect"),
-                           action_button_row(ns("perform_map_button"), "Map datasets")
+                           # action_button_row(ns("autodetect_cols"), "Autodetect"),
+                           fluidRow(
+                               class = "button_row",
+                               actionButton(
+                                   ns("autodetect_cols"),
+                                   class = "recolor_button",
+                                   width = "80%",
+                                   "Autodetect"
+                               )
+                           ),
+                           fluidRow(
+                               class = "button_row",
+                               actionButton(
+                                   ns("perform_map_button"),
+                                   class = "recolor_button",
+                                   width = "80%",
+                                   "Map datasets"
+                               )
+                           )
+                           # action_button_row(ns("perform_map_button"), "Map datasets")
                        ),
                        wellPanel(
                            p("If using two datasets, assign matching feature column. If wanting PCA measures, assign sample columns."),
@@ -153,39 +180,40 @@ module_setup_server <- function(input, output, session) {
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
 
-    
-    # di_test <- function(rv, data_field, dataset_ind)
-    
     retrieve_data <- function(rv, input, ind, data_pat) {
-        if (!is.null(di(rv, input, 1))) rv[[sprintf("%s_%s", data_pat, di(rv, input, 1))]]()
+        if (!is.null(di(rv, input, 1))) rv[[sprintf("%s_%s", data_pat, di(rv, input, ind))]]()
         else NULL
     }
     
-    rv$rdf_ref <- function(rv, input) {
-        retrieve_data(rv, input, 1, "filedata")
-        # if (!is.null(di(rv, input, 1))) rv[[sprintf("filedata_%s", di(rv, input, 1))]]()
-        # else NULL
-    }
+    # retrieve_data_specific_input <- function(rv, input_vals, ind) {
+    # 
+    #     print(sprintf("Received fields: %s and %s", input_vals[1], input_vals[2]))
+    #             
+    #     NULL
+    #     # if (!is.null())
+    #     # 
+    #     # if (!is.null(di(rv, input, 1))) rv[[sprintf("%s_%s", data_pat, di(rv, input, 1))]]()
+    #     # else NULL
+    # }
     
-    rv$rdf_comp <- function(rv, input) {
-        retrieve_data(rv, input, 2, "filedata")
-        # if (!is.null(di(rv, input, 2))) rv[[sprintf("filedata_%s", di(rv, input, 2))]]()
-        # else NULL
-    }
-    
-    rv$ddf_ref <- function(rv, input) {
-        retrieve_data(rv, input, 1, "design")
-        # if (!is.null(di(rv, input, 1))) rv[[sprintf("design_%s", di(rv, input, 1))]]()
-        # else NULL
-    }
+    rv$rdf_ref <- function(rv, input) retrieve_data(rv, input, 1, "filedata")
+    rv$rdf_comp <- function(rv, input) retrieve_data(rv, input, 2, "filedata")
+    # rv$rdf_comp_test <- function(rv, input_vector) retrieve_data_specific_input(rv, input_vector, 2)
+    rv$ddf_ref <- function(rv, input) retrieve_data(rv, input, 1, "design")
+    rv$ddf_comp <- function(rv, input) retrieve_data(rv, input, 2, "design")
+    rv$rdf_cols_ref <- function(rv, input) colnames(retrieve_data(rv, input, 1, "filedata"))
+    rv$rdf_cols_comp <- function(rv, input) colnames(retrieve_data(rv, input, 2, "filedata"))
+    rv$ddf_cols_ref <- function(rv, input) colnames(retrieve_data(rv, input, 1, "design"))
+    rv$ddf_cols_comp <- function(rv, input) colnames(retrieve_data(rv, input, 2, "design"))
 
-    rv$ddf_comp <- function(rv, input) {
-        retrieve_data(rv, input, 2, "design")
-        # if (!is.null(di(rv, input, 2))) rv[[sprintf("design_%s", di(rv, input, 2))]]()
-        # else NULL
+    rv$samples_ref <- function(rv, input) {
+        rv$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(rv, input, 1))]]]]$samples 
     }
     
-        
+    rv$samples_comp <- function(rv, input) {
+        rv$selected_cols_obj()[[input[[sprintf("dataset%s", dataset_ind(rv, input, 2))]]]]$samples 
+    }
+    
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
@@ -335,7 +363,18 @@ module_setup_server <- function(input, output, session) {
         }
     }
     
-    autodetect_sample_cols <- function(ddf, sample_col, rdf, data_nbr, rv, filename) {
+    autodetect_sample_cols <- function(ddf, rdf, data_nbr, rv, filename) {
+        
+        full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
+        sample_col <- colnames(ddf)[which(full_match)[1]]
+
+        updateSelectInput(
+            session, 
+            sprintf("design_sample_col_%s", data_nbr), 
+            choices=colnames(rv[[sprintf("design_%s", data_nbr)]]()), 
+            selected = sample_col
+        )
+        
         samples_from_ddf <- ddf[[sample_col]]
         if (all(samples_from_ddf %in% colnames(rdf))) {
             message("All samples found!")
@@ -364,7 +403,6 @@ module_setup_server <- function(input, output, session) {
         if (input$design_sample_col_1 != "") {
             autodetect_sample_cols(
                 rv$design_1(),
-                input$design_sample_col_1,
                 rv$filedata_1(),
                 data_nbr = 1, 
                 rv, 
@@ -374,7 +412,6 @@ module_setup_server <- function(input, output, session) {
         if (input$design_sample_col_2 != "") {
             autodetect_sample_cols(
                 rv$design_2(),
-                input$design_sample_col_2,
                 rv$filedata_2(),
                 data_nbr = 2,
                 rv, 

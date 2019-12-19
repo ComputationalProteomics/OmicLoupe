@@ -77,36 +77,16 @@ module_quality_server <- function(input, output, session, rv) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    design_cols_ref <- reactive({
-        colnames(rv$ddf_ref(rv, input))
-        # colnames(design_ref())
-    })
-    
-    design_cols_comp <- reactive({
-        colnames(rv$ddf_comp(rv, input))
-        # colnames(design_comp())
-    })
-    
-    data_cols_ref <- reactive({
-        colnames(rv$rdf_ref(rv, input))
-        # colnames(data_ref())
-    })
-    
-    data_cols_comp <- reactive({
-        colnames(rv$rdf_comp(rv, input))
-        # colnames(data_comp())
-    })
-    
     sync_param_choices <- function() {
-        ref_choices <- c("None", design_cols_ref())
-        comp_choices <- c("None", design_cols_comp())
+        ref_choices <- c("None", rv$ddf_cols_ref(rv, input))
+        comp_choices <- c("None", rv$ddf_cols_comp(rv, input))
         updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
         
-        ref_data_choices <- c("None", data_cols_ref())
-        comp_data_choices <- c("None", data_cols_comp())
+        ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input))
+        comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input))
         updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
         updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
         updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
@@ -120,24 +100,6 @@ module_quality_server <- function(input, output, session, rv) {
     observeEvent(rv$ddf_comp(rv, input), {
         sync_param_choices()
     })
-    
-    # Reactivity
-    # design_ref <- reactive({ 
-    #     if (!is.null(dataset_ind(rv, input, 1))) rv[[sprintf("design_%s", dataset_ind(rv, input, 1))]]()
-    #     else NULL
-    # })
-    # design_comp <- reactive({ 
-    #     if (!is.null(dataset_ind(rv, input, 2))) rv[[sprintf("design_%s", dataset_ind(rv, input, 2))]]() 
-    #     else NULL
-    # })
-    # data_ref <- reactive({ 
-    #     if (!is.null(dataset_ind(rv, input, 1))) rv[[sprintf("filedata_%s", dataset_ind(rv, input, 1))]]() 
-    #     else NULL
-    # })
-    # data_comp <- reactive({ 
-    #     if (!is.null(dataset_ind(rv, input, 2))) rv[[sprintf("filedata_%s", dataset_ind(rv, input, 2))]]() 
-    #     else NULL
-    # })
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
@@ -169,13 +131,13 @@ module_quality_server <- function(input, output, session, rv) {
         rv[[sprintf("design_samplecol_%s", dataset_ind(rv, input, 2))]]()
     })
     
-    rdf_colorcol_ref <- reactive({
-        rv[[sprintf("data_cat_col%s", dataset_ind(rv, input, 1))]]
-    })
-    
-    rdf_colorcol_comp <- reactive({
-        rv[[sprintf("data_cat_col%s", dataset_ind(rv, input, 2))]]
-    })
+    # rdf_colorcol_ref <- reactive({
+    #     rv[[sprintf("data_cat_col%s", dataset_ind(rv, input, 1))]]
+    # })
+    # 
+    # rdf_colorcol_comp <- reactive({
+    #     rv[[sprintf("data_cat_col%s", dataset_ind(rv, input, 2))]]
+    # })
     
     # Illustrations
     ref_color <- reactive({
@@ -310,14 +272,12 @@ module_quality_server <- function(input, output, session, rv) {
         req(reactive_long_sdf_ref())
         
         if (input$data_num_col_ref != "None") {
-            # browser()
             rdf_ref <- rv$rdf_ref(rv, input)
             target_color <- NULL
             if (input$data_cat_col_ref != "None") {
                 rdf_ref <- factor_prep_color_col(rdf_ref, input$data_cat_col_ref, input$max_color_cats)
                 target_color <- input$data_cat_col_ref
             }
-            # ref_color <- data_color_ref(dataset_ind(rv, input, 1))
             plt_ref <- ggplot(rdf_ref, aes_string(x=input$data_num_col_ref, fill=target_color)) + 
                 geom_histogram(na.rm=TRUE, bins=input$hist_bins) + ggtitle("Histogram ref.")
         }
@@ -332,8 +292,6 @@ module_quality_server <- function(input, output, session, rv) {
                 rdf_comp <- factor_prep_color_col(rdf_comp, input$data_cat_col_comp, input$max_color_cats)
                 target_color <- input$data_cat_col_comp
             }
-            
-            # comp_color <- data_color_comp(dataset_ind(rv, input, 2))
             plt_comp <- ggplot(rdf_comp, aes_string(x=input$data_num_col_comp, fill=target_color)) + 
                 geom_histogram(na.rm=TRUE, bins=input$hist_bins) + ggtitle("Histogram comp.")
         }
