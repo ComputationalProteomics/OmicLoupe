@@ -82,11 +82,13 @@ module_pca_server <- function(input, output, session, rv) {
         
         req(rv$rdf_ref(rv, input$dataset1))
         req(rv$ddf_ref(rv, input$dataset1))
-        req(rv$samples_ref(rv, input$dataset1))
+        req(rv$samples(rv, input$dataset1))
+        # req(rv$samples_ref(rv, input$dataset1))
         
         calculate_pca_obj(
             rv$rdf_ref(rv, input$dataset1),
-            rv$samples_ref(rv, input$dataset1),
+            rv$samples(rv, input$dataset1),
+            # rv$samples_ref(rv, input$dataset1),
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -99,11 +101,13 @@ module_pca_server <- function(input, output, session, rv) {
         
         req(rv$rdf_comp(rv, input$dataset2))
         req(rv$ddf_comp(rv, input$dataset2))
-        req(rv$samples_comp(rv, input$dataset2))
+        req(rv$samples(rv, input$dataset2))
+        # req(rv$samples_comp(rv, input$dataset2))
         
         calculate_pca_obj(
             rv$rdf_comp(rv, input$dataset2),
-            rv$samples_comp(rv, input$dataset2),
+            rv$samples(rv, input$dataset2),
+            # rv$samples_comp(rv, input$dataset2),
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data

@@ -38,12 +38,7 @@ minimaps_panel <- function(ns) {
 }
 
 parse_stat_cols_for_visuals <- function(rv_filename1, rv_filename2, rv_selected_cols_obj, selected_dataset, selected_statbase) {
-    # parse_stat_cols_for_visuals <- function(reactive_vals, selected_dataset, selected_statbase) {
-        
-    # filenames <- c(
-    #     reactive_vals$filename_1(),
-    #     reactive_vals$filename_2()
-    # )
+    
     filenames <- c(
         rv_filename1,
         rv_filename2
@@ -52,7 +47,6 @@ parse_stat_cols_for_visuals <- function(rv_filename1, rv_filename2, rv_selected_
     selection_index <- which(filenames %in% selected_dataset)
     
     statcols <- rv_selected_cols_obj[[selected_dataset]]$statcols
-    # statcols <- reactive_vals$selected_cols_obj()[[selected_dataset]]$statcols
     parsed_cols <- parse_stat_cols(statcols, selected_statbase)
     d_parsed_cols <- lapply(parsed_cols, function(elem) { sprintf("d%s.%s", selection_index, elem) })
     d_parsed_cols
