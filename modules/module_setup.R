@@ -205,7 +205,9 @@ module_setup_server <- function(input, output, session) {
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]() 
     } 
     
-    rv$samples <- function(rv, input_field) { rv$selected_cols_obj()[[input_field]]$samples }
+    rv$samples <- function(rv, input_field, prefix="") { 
+        paste(prefix, rv$selected_cols_obj()[[input_field]]$samples, sep="") 
+    }
     
     statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) { 
         
@@ -456,7 +458,7 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent(rv$design_2(), {
         updateSelectInput(session, "design_sample_col_2", choices=colnames(rv$design_2()))
-        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_1()))
+        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()))
     })
     
     observeEvent({

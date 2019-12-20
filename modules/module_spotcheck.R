@@ -17,38 +17,40 @@ setup_spotcheck_ui <- function(id) {
                         fluidRow(
                             column(6,
                                    selectInput(ns("dataset1"), "Reference dataset", choices = c("[Unassigned]"), selected = "[Unassigned]"),
-                                   selectInput(ns("ref_cond"), "Ref. cond.", choices = c("[Unassigned]"), selected = "[Unassigned]"),
-                                   selectInput(ns("shown_fields_ref"), "Ref. shown fields", choices=c("[Unassigned]"), selected="[Unassigned]")
+                                   selectInput(ns("ref_cond"), "Ref. cond.", choices = c("[Unassigned]"), selected = "[Unassigned]")
                             ),
                             column(6,
                                    selectInput(ns("dataset2"), "Comp. dataset", choices = c("[Unassigned]"), selected = "[Unassigned]"),
-                                   selectInput(ns("comp_cond"), "Comp. cond.", choices = c("[Unassigned]"), selected = "[Unassigned]"),
-                                   selectInput(ns("shown_fields_comp"), "Comp. shown fields", choices=c("[Unassigned]"), selected="[Unassigned]")
+                                   selectInput(ns("comp_cond"), "Comp. cond.", choices = c("[Unassigned]"), selected = "[Unassigned]")
+                            )
+                        ),
+                        checkboxInput(ns("display_show_fields"), "Display column selects", value = FALSE),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 1", ns("display_show_fields")),
+                            fluidRow(
+                                selectInput(
+                                    ns("shown_fields"), 
+                                    "Display fields", 
+                                    choices=c("[Unassigned]"), 
+                                    selected="[Unassigned]",
+                                    multiple=TRUE, 
+                                )
                             )
                         ),
                         fluidRow(
-                            checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE),
-                            checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE),
-                            checkboxInput(ns("show_violin"), "Show violin", value=FALSE)
+                            column(4, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
+                            column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
+                            column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
                         )
                     ),
                     htmlOutput(ns("warnings")),
-                    textOutput(ns("test_table_select")),
-                    tabsetPanel(
-                        type = "tabs",
-                        tabPanel("Combined data", DT::DTOutput(ns("table_display_combined")))
-                        # tabPanel("Ref. data", DT::DTOutput(ns("table_display_ref"))),
-                        # tabPanel("Comp. data", DT::DTOutput(ns("table_display_comp")))
-                    ),
                     tabsetPanel(
                         type = "tabs",
                         tabPanel("Combined view", plotOutput(ns("spot_display_combined")))
-                        # tabPanel("Single views", 
-                        #          fluidRow(
-                        #              column(6, plotOutput(ns("spot_display_ref"))),
-                        #              column(6, plotOutput(ns("spot_display_comp")))
-                        #          )
-                        # )
+                    ),
+                    tabsetPanel(
+                        type = "tabs",
+                        tabPanel("Combined data", DT::DTOutput(ns("table_display_combined")))
                     )
                 )
             )
@@ -76,25 +78,11 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_spotcheck_server <- function(input, output, session, rv) {
     
-    output$test_table_select <- renderText({      
-        
-        target_row_ref <- "[unassigned]"
-        if ("table_display_ref_rows_selected" %in% names(input) && !is.null(input$table_display_ref_rows_selected)) {
-            target_row_ref <- input$table_display_ref_rows_selected[1]
-        }
-        
-        target_row_comp <- "[unassigned]"
-        if ("table_display_comp_rows_selected" %in% names(input) && !is.null(input$table_display_comp_rows_selected)) {
-            target_row_comp <- input$table_display_comp_rows_selected[1]
-        }
-        
-        sprintf("Target rows: %s and %s", target_row_ref, target_row_comp)
-    })
-    
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+
     })
     
     observeEvent(rv$filedata_2(), {
@@ -103,6 +91,16 @@ module_spotcheck_server <- function(input, output, session, rv) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
+    observeEvent({ rv$mapping_obj() }, {
+        
+        req(rv$mapping_obj()$get_combined_dataset())
+        comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
+        samples_ref <- rv$samples(rv, input$dataset1, prefix="d1.")
+        samples_comp <- rv$samples(rv, input$dataset2, prefix="d2.")
+        start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
+        updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select) 
+    })
+
     sync_param_choices <- function() {
         
         req(rv$ddf_ref(rv, input$dataset1))
@@ -118,7 +116,9 @@ module_spotcheck_server <- function(input, output, session, rv) {
         rv$ddf_ref(rv, input$dataset1)
         rv$ddf_comp(rv, input$dataset2)
         rv$design_condcol_1()
-        rv$design_condcol_2()}, {
+        rv$design_condcol_2()
+        input$dataset1
+        input$dataset2}, {
             sync_param_choices()
     })
     
@@ -126,6 +126,7 @@ module_spotcheck_server <- function(input, output, session, rv) {
         req(rv$mapping_obj())
         req(rv$mapping_obj()$get_combined_dataset())
         rv$mapping_obj()$get_combined_dataset() %>%
+            dplyr::select(input$shown_fields) %>%
             DT::datatable(
                 data=., 
                 selection=list(mode='single', selected=c(1)), 
@@ -163,7 +164,7 @@ module_spotcheck_server <- function(input, output, session, rv) {
         plt_df_comp <- tibble(
             sample=samples_comp,
             value=rdf_comp[input$table_display_combined_rows_selected, samples_comp] %>% unlist(),
-            cond=ddf_comp[[cond_comp]]
+            cond=ddf_comp[[cond_comp]] %>% as.factor()
         )
         plt_df_comp
     })
@@ -173,14 +174,14 @@ module_spotcheck_server <- function(input, output, session, rv) {
         target_row <- input$table_display_combined_rows_selected
 
         add_geoms <- function(plt, show_box, show_scatter, show_violin) {
+            if (show_violin) {
+                plt <- plt + geom_violin(na.rm = TRUE)
+            }
             if (show_box) {
                 plt <- plt + geom_boxplot(na.rm = TRUE)
             }
             if (show_scatter) {
                 plt <- plt + geom_point(na.rm = TRUE)
-            }
-            if (show_violin) {
-                plt <- plt + geom_violin(na.rm = TRUE)
             }
             plt
         }        
