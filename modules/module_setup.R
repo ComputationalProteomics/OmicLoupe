@@ -132,22 +132,22 @@ setup_panel_ui <- function(id) {
 
 module_setup_server <- function(input, output, session) {
 
-    output$dt_data1 = DT::renderDataTable({
+    output$dt_data1 <- DT::renderDataTable({
         req(rv$filedata_1)
         rv$filedata_1()
     })
         
-    output$dt_design1 = DT::renderDataTable({
+    output$dt_design1 <- DT::renderDataTable({
         req(rv$design_1)
         rv$design_1()
     })
     
-    output$dt_data2 = DT::renderDataTable({
+    output$dt_data2 <- DT::renderDataTable({
         req(rv$filedata_2)
         rv$filedata_2()
     })
     
-    output$dt_design2 = DT::renderDataTable({
+    output$dt_design2 <- DT::renderDataTable({
         req(rv$design_2)
         rv$design_2()
     })

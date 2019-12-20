@@ -47,7 +47,7 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_help_server, id="Help")
     callModule(module_quality_server, id="Quality", reactive_values)
     callModule(module_overlap_server, id="Overlap", reactive_values)
-    callModule(module_spotcheck_server, id="Spotcheck")
+    callModule(module_spotcheck_server, id="Spotcheck", reactive_values)
     callModule(module_ideas_server, id="Ideas")
 })
 

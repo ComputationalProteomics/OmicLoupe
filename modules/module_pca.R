@@ -112,7 +112,7 @@ module_pca_server <- function(input, output, session, rv) {
     
     ########### OBSERVERS ############
     
-    sync_pca_param_choices <- function() {
+    sync_param_choices <- function() {
         ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
         comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
         updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
@@ -125,12 +125,12 @@ module_pca_server <- function(input, output, session, rv) {
     
     observeEvent(rv$ddf_ref(rv, input$dataset1), {
         print("rv$ddf_ref triggered")
-        sync_pca_param_choices()
+        sync_param_choices()
     })
     
     observeEvent(rv$ddf_comp(rv, input$dataset2), {
         print("rv$ddf_comp triggered")
-        sync_pca_param_choices()
+        sync_param_choices()
     })
     
     observeEvent(rv$filedata_1(), {

@@ -25,10 +25,6 @@ setup_overlap_ui <- function(id) {
                                    selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val", "logFC"))
                             )
-                            # column(4,
-                            #        selectInput(ns("ref_contr_type"), "Ref. contr. type", choices = c("Dev"), selected = "Dev"),
-                            #        selectInput(ns("comp_contr_type"), "Comp. contr. type", choices = c("Dev"), selected = "Dev")
-                            # )
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -96,15 +92,6 @@ module_overlap_server <- function(input, output, session, rv) {
         venn$do_paired_expression_venn(ref_pass_list, comp_pass_list, title="Comp")
     })
     
-    reactive_plot_df <- reactive({
-        
-        req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
-        req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
-        
-        
-        # STUFF GOES HERE
-    })
-    
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
@@ -118,19 +105,20 @@ module_overlap_server <- function(input, output, session, rv) {
     })
     
     sync_param_choices <- function() {
-        ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
-        comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-        # updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
-        # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-        # updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
-        # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
-
-        ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
-        comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
-        updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-        updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-        updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
-        updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
+        warning("Empty overlap parameter sync for now")
+        # ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
+        # comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
+        # # updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
+        # # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
+        # # updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
+        # # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
+        # 
+        # ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
+        # comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
+        # updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
+        # updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
+        # updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
+        # updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
     }
 
     observeEvent(rv$ddf_ref(rv, input$dataset1), {

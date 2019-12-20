@@ -47,6 +47,23 @@ clear_fields <- function(session, filedata, field_ids) {
 
 do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2) {
 
+    warning("Finalize the refactor in this part (do_dataset_mapping)")
+    
+    get_output_text <- function(rv, type) {
+        if (type == "Dataset1" || type == "Dataset2" || type == "Both") {
+            out_text <- sprintf(
+                "%s present and mapped, %s entries matched", 
+                type, nrow(rv$mapping_obj()$get_combined_dataset())
+            )   
+        }
+        else if (type == "Combined") {
+            
+        }
+        else {
+            stop(sprintf("Unknown type state: %s", type))
+        }
+    }
+    
     if (is.null(rv$filedata_1()) && is.null(rv$filedata_2())) {
         output$perform_map_status <- renderText({
             sprintf("Both datasets needs to be present, missing both")
@@ -60,12 +77,13 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         ))
         
         # To function 
-        out_text <- sprintf(
-            "Dataset1 present and mapped, %s entries matched", 
-            nrow(rv$mapping_obj()$get_combined_dataset())
-        )
+        # out_text <- sprintf(
+        #     "Dataset1 present and mapped, %s entries matched", 
+        #     nrow(rv$mapping_obj()$get_combined_dataset())
+        # )
+        out_text <- get_output_text(rv, "Dataset1")
         if (rv$mapping_obj()$has_full_entries()) {
-            out_text <- sprintf("%s (%s no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
         }
         # 
         
@@ -79,12 +97,13 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         ))
         
         # To function
-        out_text <- sprintf(
-            "Dataset2 present and mapped, %s entries matched", 
-            nrow(rv$mapping_obj()$get_combined_dataset())
-        )
+        # out_text <- sprintf(
+        #     "Dataset2 present and mapped, %s entries matched", 
+        #     nrow(rv$mapping_obj()$get_combined_dataset())
+        # )
+        out_text <- get_output_text(rv, "Dataset2")
         if (rv$mapping_obj()$has_full_entries()) {
-            out_text <- sprintf("%s (%s no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
         }
         #
         
@@ -102,16 +121,17 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         
         # To function
         if (!is.null(rv$mapping_obj()$get_combined_dataset())) {
-            out_text <- sprintf(
-                "Both datasets present and mapped, %s entries matched", 
-                nrow(rv$mapping_obj()$get_combined_dataset())
-            )
+            # out_text <- sprintf(
+            #     "Both datasets present and mapped, %s entries matched", 
+            #     nrow(rv$mapping_obj()$get_combined_dataset())
+            # )
+            out_text <- get_output_text(rv, "Both")
         }
         else {
             out_text <- "No samples mapped, check your data and your Feature columns!"
         }
         if (rv$mapping_obj()$has_full_entries()) {
-            out_text <- sprintf("%s (%s no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+            out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
         }
         #
         
