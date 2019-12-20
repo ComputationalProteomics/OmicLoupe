@@ -213,6 +213,13 @@ module_setup_server <- function(input, output, session) {
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]() 
     } 
     
+    rv$ddf_samplecol_ref <- function(rv, input_field) {
+        rv[[sprintf("design_samplecol_%s", di_new(rv, input_field, 1))]]()
+    }
+    rv$ddf_samplecol_comp <- function(rv, input_field) {
+        rv[[sprintf("design_samplecol_%s", di_new(rv, input_field, 2))]]()
+    }
+    
     rv$samples <- function(rv, input_field, prefix="") { 
         paste(prefix, rv$selected_cols_obj()[[input_field]]$samples, sep="") 
     }

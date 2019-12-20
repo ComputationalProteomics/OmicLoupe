@@ -23,7 +23,7 @@ setup_quality_ui <- function(id) {
                             sprintf("input['%s'] == 'Boxplots'", ns("plot_tabs")),
                             fluidRow(
                                 column(4, checkboxInput(ns("do_violin"), "Do violin", value=FALSE)),
-                                column(4, checkboxInput(ns("rotate_label"), "Rotate label", value=FALSE)),
+                                column(4, checkboxInput(ns("rotate_label"), "Rotate label", value=TRUE)),
                                 column(4, checkboxInput(ns("order_on_cond"), "Order on condition", value=FALSE))
                             )
                         ),
@@ -249,7 +249,8 @@ module_quality_server <- function(input, output, session, rv) {
         plt_comp
     })
 
-    adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition) {
+    adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col) {
+        
         if (!do_violin) {
             target_geom <- geom_boxplot
         }
@@ -260,6 +261,16 @@ module_quality_server <- function(input, output, session, rv) {
         if (rotate_x_labels) {
             plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
         }
+        
+        if (order_on_condition) {
+            plt <- plt + scale_x_discrete(
+                limits=ddf %>% 
+                arrange(UQ(as.name(ddf_cond_col))) %>% 
+                dplyr::select(ddf_sample_col) %>% 
+                unlist()
+            )
+        }
+        
         plt + target_geom(na.rm=TRUE)
     }
     
@@ -273,7 +284,15 @@ module_quality_server <- function(input, output, session, rv) {
             aes_string(x="name", y="value", color=ref_color())) + 
             ggtitle("Boxplot ref.")
 
-        adjust_boxplot(plt_ref, input$do_violin, input$rotate_label, input$order_on_cond)
+        adjust_boxplot(
+            plt_ref, 
+            input$do_violin, 
+            input$rotate_label, 
+            input$order_on_cond,
+            rv$ddf_ref(rv, input$dataset1),
+            rv$ddf_samplecol_ref(rv, input$dataset1),
+            rv$ddf_condcol_ref(rv, input$dataset1)
+        )
     })
 
     output$boxplots_comp <- renderPlot({ 
@@ -286,7 +305,15 @@ module_quality_server <- function(input, output, session, rv) {
             aes_string(x="name", y="value", color=comp_color())) + 
             ggtitle("Boxplot comp.")
 
-        adjust_boxplot(plt_comp, input$do_violin, input$rotate_label, input$order_on_cond)
+        adjust_boxplot(
+            plt_comp, 
+            input$do_violin, 
+            input$rotate_label, 
+            input$order_on_cond,
+            rv$ddf_comp(rv, input$dataset2),
+            rv$ddf_samplecol_comp(rv, input$dataset2),
+            rv$ddf_condcol_comp(rv, input$dataset2)
+        )
     })
     
     output$density_ref <- renderPlot({ 
