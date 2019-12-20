@@ -21,7 +21,11 @@ setup_quality_ui <- function(id) {
                     wellPanel(
                         conditionalPanel(
                             sprintf("input['%s'] == 'Boxplots'", ns("plot_tabs")),
-                            checkboxInput(ns("do_violin"), "Do violin", value=FALSE)
+                            fluidRow(
+                                column(4, checkboxInput(ns("do_violin"), "Do violin", value=FALSE)),
+                                column(4, checkboxInput(ns("rotate_label"), "Rotate label", value=FALSE)),
+                                column(4, checkboxInput(ns("order_on_cond"), "Order on condition", value=FALSE))
+                            )
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Density'", ns("plot_tabs")),
@@ -90,11 +94,17 @@ module_quality_server <- function(input, output, session, rv) {
     })
     
     sync_param_choices <- function() {
+        
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(rv$ddf_comp(rv, input$dataset2))
+
         ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
         comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-        updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
+        
+        updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=rv$ddf_condcol_ref(rv, input$dataset1))
+        updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=rv$ddf_condcol_ref(rv, input$dataset2))
+        
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-        updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
         
         ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
@@ -105,7 +115,13 @@ module_quality_server <- function(input, output, session, rv) {
         updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
     }
     
-    observeEvent(rv$ddf_ref(rv, input$dataset1), {
+    observeEvent({
+        rv$ddf_ref(rv, input$dataset1)
+        rv$ddf_comp(rv, input$dataset2)
+        rv$design_condcol_1()
+        rv$design_condcol_2()
+        input$dataset1
+        input$dataset2}, {
         sync_param_choices()
     })
     
@@ -128,19 +144,19 @@ module_quality_server <- function(input, output, session, rv) {
     }
     
     reactive_long_sdf_ref <- reactive({
-        get_long(dataset_ind(rv, input, 1), rv, ref_ddf_samplecol())
+        get_long(di_new(rv, input$dataset1, 1), rv, ref_ddf_samplecol())
     })
     
     reactive_long_sdf_comp <- reactive({
-        get_long(dataset_ind(rv, input, 2), rv, comp_ddf_samplecol())
+        get_long(di_new(rv, input$dataset2, 2), rv, comp_ddf_samplecol())
     })
     
     ref_ddf_samplecol <- reactive({
-        rv[[sprintf("design_samplecol_%s", dataset_ind(rv, input, 1))]]()
+        rv[[sprintf("design_samplecol_%s", di_new(rv, input$dataset1, 1))]]()
     })
     
     comp_ddf_samplecol <- reactive({
-        rv[[sprintf("design_samplecol_%s", dataset_ind(rv, input, 2))]]()
+        rv[[sprintf("design_samplecol_%s", di_new(rv, input$dataset2, 2))]]()
     })
     
     # Illustrations
@@ -233,6 +249,20 @@ module_quality_server <- function(input, output, session, rv) {
         plt_comp
     })
 
+    adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition) {
+        if (!do_violin) {
+            target_geom <- geom_boxplot
+        }
+        else {
+            target_geom <- geom_violin
+        }
+        
+        if (rotate_x_labels) {
+            plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+        }
+        plt + target_geom(na.rm=TRUE)
+    }
+    
     output$boxplots_ref <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
@@ -242,16 +272,8 @@ module_quality_server <- function(input, output, session, rv) {
             reactive_long_sdf_ref(), 
             aes_string(x="name", y="value", color=ref_color())) + 
             ggtitle("Boxplot ref.")
-        
-        if (!input$do_violin) {
-            target_geom <- geom_boxplot
-        }
-        else {
-            target_geom <- geom_violin
-        }
-        
-        plt_ref <- plt_ref + target_geom(na.rm=TRUE)
-        plt_ref
+
+        adjust_boxplot(plt_ref, input$do_violin, input$rotate_label, input$order_on_cond)
     })
 
     output$boxplots_comp <- renderPlot({ 
@@ -263,16 +285,8 @@ module_quality_server <- function(input, output, session, rv) {
             reactive_long_sdf_comp(), 
             aes_string(x="name", y="value", color=comp_color())) + 
             ggtitle("Boxplot comp.")
-        
-        if (!input$do_violin) {
-            target_geom <- geom_boxplot
-        }
-        else {
-            target_geom <- geom_violin
-        }
-        
-        plt_comp <- plt_comp + target_geom(na.rm=TRUE)
-        plt_comp
+
+        adjust_boxplot(plt_comp, input$do_violin, input$rotate_label, input$order_on_cond)
     })
     
     output$density_ref <- renderPlot({ 
@@ -282,7 +296,8 @@ module_quality_server <- function(input, output, session, rv) {
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
             aes_string(x="value", group="name", color=ref_color())) + 
-            geom_density(na.rm=TRUE) + ggtitle("Density ref.")
+            geom_density(na.rm=TRUE) + 
+            ggtitle("Density ref.")
 
         plt_ref
     })
@@ -294,7 +309,8 @@ module_quality_server <- function(input, output, session, rv) {
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
             aes_string(x="value", group="name", color=comp_color())) + 
-            geom_density(na.rm=TRUE) + ggtitle("Density comp.")
+            geom_density(na.rm=TRUE) + 
+            ggtitle("Density comp.")
         plt_comp
     })
     

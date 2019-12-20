@@ -47,8 +47,6 @@ clear_fields <- function(session, filedata, field_ids) {
 
 do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2) {
 
-    warning("Finalize the refactor in this part (do_dataset_mapping)")
-    
     get_output_text <- function(rv, type) {
         if (type == "Dataset1" || type == "Dataset2" || type == "Both") {
             out_text <- sprintf(

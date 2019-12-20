@@ -33,7 +33,7 @@ setup_spotcheck_ui <- function(id) {
                                     "Display fields", 
                                     choices=c("[Unassigned]"), 
                                     selected="[Unassigned]",
-                                    multiple=TRUE, 
+                                    multiple=TRUE
                                 )
                             )
                         ),
@@ -207,14 +207,6 @@ module_spotcheck_server <- function(input, output, session, rv) {
         else {
             ggarrange(plt_comp, nrow=1, ncol=2)
         }
-    })
-    
-    output$spot_display_ref <- renderPlot({
-        ggplot() + ggtitle("Spot check figure (ref)")
-    })
-    
-    output$spot_display_comp <- renderPlot({
-        ggplot() + ggtitle("Spot check figure (comp)")
     })
     
     output$html <- renderUI({
