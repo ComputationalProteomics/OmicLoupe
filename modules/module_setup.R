@@ -13,8 +13,16 @@ setup_panel_ui <- function(id) {
             ),
             tags$style(
                 type = "text/css",
-                ".recolor_button { color: #fff; background-color: #337ab7; border-color: #2e6da4 }",
-                ".recolor_button:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4 }",
+                ".recolor_button { color: #fff; background-color: #337ab7; border-color: #2e6da4; }",
+                ".recolor_button:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
+                ".recolor_button:active:focus { color: #fff; background-color: #115895; border-color: #115895; }",
+                ".recolor_button:focus { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
+                
+                ".btn-file { color: #fff; background-color: #337ab7; border-color: #2e6da4; }",
+                ".btn-file:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
+                ".btn-file:active:focus { color: #fff; background-color: #115895; border-color: #115895; }",
+                ".btn-file:focus { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
+
                 ".well { background-color: #F3F3F3; border-color: #AAAAAA; border-width: 1px; box-shadow: 2px 2px grey; }"
             ),
             tags$style(
@@ -251,20 +259,25 @@ module_setup_server <- function(input, output, session) {
         data_nbr <- input$select_dataset
         filename <- rv[[sprintf("filename_%s", data_nbr)]]()
         
-        selected_samples <- column_selection_action(
-            input[[sprintf("data_selected_columns_%s", data_nbr)]],
-            rv$selected_cols_obj()[[filename]]$samples
-        )
-        
-        rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
-        
-        sync_select_inputs(
-            session,
-            sprintf("data_selected_columns_%s", data_nbr),
-            sprintf("sample_selected_%s", data_nbr),
-            rv[[sprintf("filedata_%s", data_nbr)]],
-            selected_samples
-        )
+        if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
+            selected_samples <- column_selection_action(
+                input[[sprintf("data_selected_columns_%s", data_nbr)]],
+                rv$selected_cols_obj()[[filename]]$samples
+            )
+            
+            rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
+            
+            sync_select_inputs(
+                session,
+                sprintf("data_selected_columns_%s", data_nbr),
+                sprintf("sample_selected_%s", data_nbr),
+                rv[[sprintf("filedata_%s", data_nbr)]],
+                selected_samples
+            )
+        }
+        else {
+            warning("Trying to select with nothing marked")
+        }
     })
     
     observeEvent(input$sample_deselect_button_1, {
@@ -272,19 +285,25 @@ module_setup_server <- function(input, output, session) {
         data_nbr <- input$select_dataset
         filename <- rv[[sprintf("filename_%s", data_nbr)]]()
         
-        selected_samples <- column_selection_action(
-            input[[sprintf("sample_selected_%s", data_nbr)]],            
-            rv$selected_cols_obj()[[rv$filename_1()]]$samples, 
-            is_deselect = TRUE
-        )
-        rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
-        sync_select_inputs(
-            session, 
-            sprintf("data_selected_columns_%s", data_nbr),
-            sprintf("sample_selected_%s", data_nbr),
-            rv$filedata_1, 
-            selected_samples
-        )
+        if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
+            selected_samples <- column_selection_action(
+                input[[sprintf("sample_selected_%s", data_nbr)]],            
+                rv$selected_cols_obj()[[rv$filename_1()]]$samples, 
+                is_deselect = TRUE
+            )
+            rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
+            sync_select_inputs(
+                session, 
+                sprintf("data_selected_columns_%s", data_nbr),
+                sprintf("sample_selected_%s", data_nbr),
+                rv$filedata_1, 
+                selected_samples
+            )
+        }
+        else {
+            warning("Trying to deselect with nothing marked, ignoring")
+        }
+        
     })
     
     update_statpatterns_display <- function(statpatterns, target_out) {
@@ -305,47 +324,57 @@ module_setup_server <- function(input, output, session) {
         data_nbr <- input$select_dataset
         filename <- rv[[sprintf("filename_%s", data_nbr)]]()
         
-        selected_statcols <- column_selection_action(
-            input[[sprintf("data_selected_columns_%s", data_nbr)]],
-            rv$selected_cols_obj()[[filename]]$statcols
-        )
-        
-        rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
-        sync_select_inputs(
-            session, 
-            sprintf("data_selected_columns_%s", data_nbr),
-            sprintf("statcols_selected_%s", data_nbr),
-            rv[[sprintf("filedata_%s", data_nbr)]],
-            selected_statcols
-        )
-        update_statpatterns_display(
-            rv$selected_cols_obj()[[filename]]$statpatterns, 
-            sprintf("found_stat_patterns_%s", data_nbr)
-        )
+        if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
+            selected_statcols <- column_selection_action(
+                input[[sprintf("data_selected_columns_%s", data_nbr)]],
+                rv$selected_cols_obj()[[filename]]$statcols
+            )
+            
+            rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
+            sync_select_inputs(
+                session, 
+                sprintf("data_selected_columns_%s", data_nbr),
+                sprintf("statcols_selected_%s", data_nbr),
+                rv[[sprintf("filedata_%s", data_nbr)]],
+                selected_statcols
+            )
+            update_statpatterns_display(
+                rv$selected_cols_obj()[[filename]]$statpatterns, 
+                sprintf("found_stat_patterns_%s", data_nbr)
+            )
+        }
+        else {
+            warning("Trying to select with nothing marked, ignoring...")
+        }
     })
     
     observeEvent(input$stat_deselect_button_1, {
         data_nbr <- input$select_dataset
         filename <- rv[[sprintf("filename_%s", data_nbr)]]()
         
-        selected_statcols <- column_selection_action(
-            input[[sprintf("statcols_selected_%s", data_nbr)]],
-            rv$selected_cols_obj()[[filename]]$statcols,
-            is_deselect = TRUE
-        )
-        
-        rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
-        sync_select_inputs(
-            session, 
-            sprintf("data_selected_columns_%s", data_nbr),
-            sprintf("statcols_selected_%s", data_nbr),
-            rv[[sprintf("filedata_%s", data_nbr)]],
-            selected_statcols
-        )
-        update_statpatterns_display(
-            rv$selected_cols_obj()[[filename]]$statpatterns, 
-            sprintf("found_stat_patterns_%s", data_nbr)
-        )
+        if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
+            selected_statcols <- column_selection_action(
+                input[[sprintf("statcols_selected_%s", data_nbr)]],
+                rv$selected_cols_obj()[[filename]]$statcols,
+                is_deselect = TRUE
+            )
+            
+            rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
+            sync_select_inputs(
+                session, 
+                sprintf("data_selected_columns_%s", data_nbr),
+                sprintf("statcols_selected_%s", data_nbr),
+                rv[[sprintf("filedata_%s", data_nbr)]],
+                selected_statcols
+            )
+            update_statpatterns_display(
+                rv$selected_cols_obj()[[filename]]$statpatterns, 
+                sprintf("found_stat_patterns_%s", data_nbr)
+            )
+        }
+        else {
+            warning("Trying to deselect with nothing marked, ignoring")
+        }
     })
     
     observeEvent(input$feature_col_1, {

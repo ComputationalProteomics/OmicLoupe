@@ -3,6 +3,7 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, select_s
         fileInput(
             upload_id, 
             "Choose data file (TSV)",
+            # class = "file_browser_button",
             multiple = FALSE,
             accept = c("test/tsv", ".tsv")
         ),
