@@ -29,13 +29,13 @@ setup_panel_ui <- function(id) {
                            sprintf("input['%s'] == 1", ns("select_dataset")),
                            h3("Dataset 1"),
                            sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1")),
-                           design_input_well(ns("design_file_1"), ns("design_sample_col_1"))
+                           design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
                        ),
                        conditionalPanel(
                            sprintf("input['%s'] == 2", ns("select_dataset")),
                            h3("Dataset 2"),
                            sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2")),
-                           design_input_well(ns("design_file_2"), ns("design_sample_col_2"))
+                           design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
                        )
                 ),
                 column(3,
@@ -177,6 +177,8 @@ module_setup_server <- function(input, output, session) {
     rv$design_2 <- reactive(load_data(input$design_file_2))
     rv$design_samplecol_1 <- reactive(input$design_sample_col_1)
     rv$design_samplecol_2 <- reactive(input$design_sample_col_2)
+    rv$design_condcol_1 <- reactive(input$design_cond_col_1)
+    rv$design_condcol_2 <- reactive(input$design_cond_col_2)
     rv$selected_cols_obj <- reactiveVal(list())
     rv$filename_1 <- reactive(get_filename(input$data_file_1))
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
@@ -196,6 +198,13 @@ module_setup_server <- function(input, output, session) {
     rv$ddf_cols_ref <- function(rv, input_field) colnames(retrieve_data(rv, input_field, 1, "design"))
     rv$ddf_cols_comp <- function(rv, input_field) colnames(retrieve_data(rv, input_field, 2, "design"))
 
+    rv$ddf_condcol_ref <- function(rv, input_field) { 
+        rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 1))]]()
+    } 
+    rv$ddf_condcol_comp <- function(rv, input_field) { 
+        rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]() 
+    } 
+    
     rv$samples <- function(rv, input_field) { rv$selected_cols_obj()[[input_field]]$samples }
     
     statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) { 
@@ -442,10 +451,12 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent(rv$design_1(), {
         updateSelectInput(session, "design_sample_col_1", choices=colnames(rv$design_1()))
+        updateSelectInput(session, "design_cond_col_1", choices=colnames(rv$design_1()))
     })
     
     observeEvent(rv$design_2(), {
         updateSelectInput(session, "design_sample_col_2", choices=colnames(rv$design_2()))
+        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_1()))
     })
     
     observeEvent({

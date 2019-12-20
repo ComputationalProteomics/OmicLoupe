@@ -24,7 +24,7 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, select_s
     )
 }
 
-design_input_well <- function(design_upload_id, sample_col_id) {
+design_input_well <- function(design_upload_id, sample_col_id, cond_col_id) {
     wellPanel(
         fileInput(
             design_upload_id, 
@@ -35,6 +35,13 @@ design_input_well <- function(design_upload_id, sample_col_id) {
         selectInput(
             sample_col_id,
             "Select sample column",
+            choices = c(""),
+            multiple = FALSE,
+            selectize = FALSE
+        ),
+        selectInput(
+            cond_col_id,
+            "Select default condition",
             choices = c(""),
             multiple = FALSE,
             selectize = FALSE

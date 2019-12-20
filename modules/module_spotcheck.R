@@ -104,25 +104,22 @@ module_spotcheck_server <- function(input, output, session, rv) {
     })
     
     sync_param_choices <- function() {
+        
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(rv$ddf_comp(rv, input$dataset2))
+
         ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
         comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-        updateSelectInput(session, "ref_cond", choices = ref_choices, selected=ref_choices[1])
-        # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-        updateSelectInput(session, "comp_cond", choices = comp_choices, selected=comp_choices[1])
-        # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
-
-        # ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
-        # comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
-        # updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-        # updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-        # updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
-        # updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
+        updateSelectInput(session, "ref_cond", choices = ref_choices, selected=rv$ddf_condcol_ref(rv, input$dataset1))
+        updateSelectInput(session, "comp_cond", choices = comp_choices, selected=rv$ddf_condcol_comp(rv, input$dataset2))
     }
     
     observeEvent({
         rv$ddf_ref(rv, input$dataset1)
-        rv$ddf_comp(rv, input$dataset2) }, {
-        sync_param_choices()
+        rv$ddf_comp(rv, input$dataset2)
+        rv$design_condcol_1()
+        rv$design_condcol_2()}, {
+            sync_param_choices()
     })
     
     output$table_display_combined <- DT::renderDataTable({
@@ -134,24 +131,6 @@ module_spotcheck_server <- function(input, output, session, rv) {
                 selection=list(mode='single', selected=c(1)), 
                 options=list(pageLength=10))
     })
-    
-    # output$table_display_ref <- DT::renderDataTable({
-    #     req(rv$rdf_ref(rv, input$dataset1))
-    #     rv$rdf_ref(rv, input$dataset1) %>%
-    #         DT::datatable(
-    #             data=., 
-    #             selection=list(mode='single', selected=c(1)), 
-    #             options=list(pageLength=10))
-    # })
-    # 
-    # output$table_display_comp <- DT::renderDataTable({
-    #     req(rv$rdf_ref(rv, input$dataset2))
-    #     rv$rdf_ref(rv, input$dataset2) %>%
-    #         DT::datatable(
-    #             data=., 
-    #             selection=list(mode='single', selected=c(1)), 
-    #             options=list(pageLength=10))
-    # })
     
     plot_df_ref <- reactive({
         req(rv$rdf_ref(rv, input$dataset1))
