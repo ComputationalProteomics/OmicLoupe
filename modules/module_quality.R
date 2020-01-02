@@ -271,7 +271,8 @@ module_quality_server <- function(input, output, session, rv) {
             )
         }
         
-        plt + target_geom(na.rm=TRUE)
+        plt <- plt + target_geom(na.rm=TRUE)
+        plt
     }
     
     output$boxplots_ref <- renderPlot({ 
@@ -291,7 +292,8 @@ module_quality_server <- function(input, output, session, rv) {
             input$order_on_cond,
             rv$ddf_ref(rv, input$dataset1),
             rv$ddf_samplecol_ref(rv, input$dataset1),
-            rv$ddf_condcol_ref(rv, input$dataset1)
+            input$color_data_ref
+            # rv$ddf_condcol_ref(rv, input$dataset1)
         )
     })
 
@@ -312,7 +314,8 @@ module_quality_server <- function(input, output, session, rv) {
             input$order_on_cond,
             rv$ddf_comp(rv, input$dataset2),
             rv$ddf_samplecol_comp(rv, input$dataset2),
-            rv$ddf_condcol_comp(rv, input$dataset2)
+            input$color_data_comp
+            # rv$ddf_condcol_comp(rv, input$dataset2)
         )
     })
     

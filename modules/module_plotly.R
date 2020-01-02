@@ -119,7 +119,7 @@ module_plotly_server <- function(input, output, session, rv) {
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                rv$samples(rv, input$dataset1),
+                paste(sprintf("d%s", dataset_ind(1)), rv$samples(rv, input$dataset1), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -129,7 +129,7 @@ module_plotly_server <- function(input, output, session, rv) {
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                rv$samples(rv, input$dataset2),
+                paste(sprintf("d%s", dataset_ind(2)), rv$samples(rv, input$dataset2), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
