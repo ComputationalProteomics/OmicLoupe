@@ -79,7 +79,7 @@ Venn <- R6Class(
             plt
         },
         
-        do_paired_expression_venn = function(col1_w_fold, col2_w_fold, title="", colors=c("#AAAAAA", "#0C81A2")) {
+        do_paired_expression_venn = function(col1_w_fold, col2_w_fold, title="", colors=c("#CCCCCC", "#CCCCCC"), highlight="A&B") {
 
             both_sig_names <- intersect(col1_w_fold %>% names(), col2_w_fold %>% names())
             
@@ -116,12 +116,65 @@ Venn <- R6Class(
                 ) +
                 ggplot2::coord_fixed() +
                 ggplot2::theme_void() +
-                ggplot2::theme(legend.position = 'bottom', legend.direction='vertical') +
-                ggplot2::scale_fill_manual(values = colors) +
+                ggplot2::theme(legend.position = 'bottom', legend.direction='vertical')
+            
+            fill_color <- "darkgreen"
+            
+            if (!is.null(highlight)) {
+                if (highlight == "A&B") {
+                    colors <- c(fill_color, fill_color)
+                }
+                else if (highlight == "A|B") {
+                    yvals <- seq(-sqrt(2), sqrt(2), 0.001)
+                    xvals <- sqrt(2.25 - yvals^2) - 0.5
+                    yvals <- c(yvals, rev(yvals))
+                    xvals <- c(xvals, -xvals)
+                    combo <- data.frame(x = xvals, y = yvals)
+                    plt <- plt + ggplot2::geom_polygon(data=combo, aes(x=x, y=y), fill=fill_color, alpha=0.5) 
+                }
+                else if (highlight == "A") {
+                    theta <- seq(70, 290, 10)
+                    outer_x <- 1.5 * cos(theta * pi / 180)
+                    outer_y <- 1.5 * sin(theta * pi / 180)
+                    
+                    inner_theta <- rev(seq(110, 250, 10))
+                    inner_x <- 1.5 * cos(inner_theta * pi / 180)
+                    inner_y <- 1.5 * sin(inner_theta * pi / 180)
+                    
+                    x <- c(inner_x+0.5, outer_x-0.5)
+                    y <- c(inner_y, outer_y)
+                    
+                    combo <- data.frame(x = x, y = y)
+                    plt <- plt + ggplot2::geom_polygon(data=combo, aes(x=x, y=y), fill=fill_color, alpha=0.5)
+                }
+                else if (highlight == "B") {
+                    theta <- seq(70, 290, 10)
+                    outer_x <- 1.5 * cos(theta * pi / 180)
+                    outer_y <- 1.5 * sin(theta * pi / 180)
+                    
+                    inner_theta <- rev(seq(110, 250, 10))
+                    inner_x <- 1.5 * cos(inner_theta * pi / 180)
+                    inner_y <- 1.5 * sin(inner_theta * pi / 180)
+                    
+                    x <- c(-(inner_x+0.5), -(outer_x-0.5))
+                    y <- c(inner_y, outer_y)
+                    
+                    combo <- data.frame(x = x, y = y)
+                    plt <- plt + ggplot2::geom_polygon(data=combo, aes(x=x, y=y), fill=fill_color, alpha=0.5)
+                    
+                }
+                else {
+                    stop(sprintf("Unknown highlight: %s", highlight))
+                }
+            }
+            
+            plt <- plt + ggplot2::scale_fill_manual(values = colors) +
                 ggplot2::scale_colour_manual(values = colors, guide = FALSE) +
                 ggplot2::labs(fill = NULL) +
                 ggplot2::annotate("text", x = df.vdc$x, y = df.vdc$y, label = df.vdc$label, size = 5) +
                 ggplot2::ggtitle(title)
+            
+            # ggsave(plt, filename = "~/Desktop/out.png")
             
             plt
         }

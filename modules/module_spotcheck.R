@@ -100,7 +100,24 @@ module_spotcheck_server <- function(input, output, session, rv) {
         start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
         updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select) 
     })
+    
+    # observeEvent(rv$selected_feature(), {
+    #     if (input$table_display_combined_rows_selected != rv$selected_feature()) {
+    #         
+    #     }
+    #     # rv$selected_feature(input$table_display_rows_selected)
+    # })
 
+    selected_id_reactive <- reactive({
+        rv$mapping_obj()$get_combined_dataset()[input$table_display_combined_rows_selected, ]$comb_id %>% as.character()
+    })
+    
+    observeEvent(input$table_display_combined_rows_selected, {
+        message("Observed!")
+        rv$selected_feature(selected_id_reactive())
+        message("Now the value is: ", rv$selected_feature())
+    })
+    
     sync_param_choices <- function() {
         
         req(rv$ddf_ref(rv, input$dataset1))
@@ -125,11 +142,21 @@ module_spotcheck_server <- function(input, output, session, rv) {
     output$table_display_combined <- DT::renderDataTable({
         req(rv$mapping_obj())
         req(rv$mapping_obj()$get_combined_dataset())
-        rv$mapping_obj()$get_combined_dataset() %>%
+        
+        shown_data <- rv$mapping_obj()$get_combined_dataset()
+        
+        if (is.null(rv$selected_feature())) {
+            selected_row_nbr <- 1
+        }
+        else {
+            selected_row_nbr <- which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
+        }
+        
+        shown_data %>%
             dplyr::select(input$shown_fields) %>%
             DT::datatable(
                 data=., 
-                selection=list(mode='single', selected=c(1)), 
+                selection=list(mode='single', selected=c(selected_row_nbr)), 
                 options=list(pageLength=10))
     })
     
@@ -146,7 +173,7 @@ module_spotcheck_server <- function(input, output, session, rv) {
         plt_df_ref <- tibble(
             sample=samples_ref,
             value=rdf_ref[input$table_display_combined_rows_selected, samples_ref] %>% unlist(),
-            cond=ddf_ref[[cond_ref]]
+            cond=ddf_ref[[cond_ref]] %>% as.factor()
         )
         plt_df_ref
     })

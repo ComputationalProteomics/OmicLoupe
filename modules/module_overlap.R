@@ -15,15 +15,16 @@ setup_overlap_ui <- function(id) {
                     12,
                     wellPanel(
                         fluidRow(
-                            column(4,
+                            column(6,
                                    selectInput(ns("dataset1"), "Reference dataset", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("dataset2"), "Comp. dataset", choices = c("Dev"), selected = "Dev"),
-                                   sliderInput(ns("threshold"), "Threshold", min=0, max=1, step=0.01, value=0.05)
+                                   sliderInput(ns("threshold"), "Threshold", min=0, max=1, step=0.01, value=0.05),
+                                   selectInput(ns("select_target"), "Select target", choices=c("A", "B", "A&B", "A|B"), selected = "A&B")
                             ),
-                            column(4,
+                            column(6,
                                    selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"),
-                                   selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val", "logFC"))
+                                   selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val"))
                             )
                         )
                     ),
@@ -32,7 +33,8 @@ setup_overlap_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Venn",
-                                 plotOutput(ns("venn"))
+                                 plotOutput(ns("venn")),
+                                 DT::DTOutput(ns("table_display"))
                                  # plotOutput(ns("venn_comp"))
                         ),
                         tabPanel("Upset",
@@ -65,22 +67,37 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_overlap_server <- function(input, output, session, rv) {
     
-    output$venn <- renderPlot({
-
+    selected_id_reactive <- reactive({
+        output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
+    })
+    
+    observeEvent(input$table_display_rows_selected, {
+        
+        message("Observed!")
+        rv$selected_feature(selected_id_reactive())
+        message("Now the value is: ", rv$selected_feature())
+    })
+    
+    ref_pass_reactive <- reactive({
+        
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
-        
-        ref_sig_field <- rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value
-        comp_sig_field <- rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$P.Value
-        
+        ref_sig_field <- rv$statcols_ref(rv, input$dataset1, input$ref_contrast)[[input$contrast_type]]
         ref_fold_field <- rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC
-        comp_fold_field <- rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$logFC
-        
+
         ref_pass_tbl <- combined_dataset %>% 
             filter(UQ(as.name(ref_sig_field)) < input$threshold) %>% 
             dplyr::select(c("comb_id", ref_fold_field)) %>%
             rename(fold=ref_fold_field) %>%
             mutate(comb_id=as.character(comb_id))
         ref_pass_list <- setNames(as.list(ref_pass_tbl$fold), ref_pass_tbl$comb_id)
+        ref_pass_list
+    })
+    
+    comp_pass_reactive <- reactive({
+        
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+        comp_sig_field <- rv$statcols_comp(rv, input$dataset2, input$comp_contrast)[[input$contrast_type]]
+        comp_fold_field <- rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$logFC
         
         comp_pass_tbl <- combined_dataset %>% 
             filter(UQ(as.name(comp_sig_field)) < input$threshold) %>% 
@@ -88,8 +105,77 @@ module_overlap_server <- function(input, output, session, rv) {
             rename(fold=comp_fold_field) %>%
             mutate(comb_id=as.character(comb_id))
         comp_pass_list <- setNames(as.list(comp_pass_tbl$fold), comp_pass_tbl$comb_id)
+        comp_pass_list
+    })
+    
+    output_table_reactive <- reactive({
+        ref_pass <- names(ref_pass_reactive())
+        comp_pass <- names(comp_pass_reactive())
         
-        venn$do_paired_expression_venn(ref_pass_list, comp_pass_list, title="Comp")
+        if (input$select_target == "A&B") {
+            target_ids <- union(ref_pass, comp_pass)
+        }
+        else if (input$select_target == "A|B") {
+            target_ids <- intersect(ref_pass, comp_pass)
+        }
+        else if (input$select_target == "A") {
+            target_ids <- setdiff(ref_pass, comp_pass)
+        }
+        else if (input$select_target == "B") {
+            target_ids <- setdiff(comp_pass, ref_pass)
+        }
+        else {
+            stop(sprintf("Unknown input$select_target: %s", input$select_target))
+        }
+        
+        rv$mapping_obj()$get_combined_dataset() %>%
+            filter(comb_id %in% target_ids)
+    })
+    
+    output$table_display <- DT::renderDataTable({
+
+        output_table_reactive() %>%
+            DT::datatable(
+                data=.,
+                selection=list(mode='single', selected=c(1)),
+                options=list(pageLength=10)
+            )
+        
+        # ref_pass <- names(ref_pass_reactive())
+        # comp_pass <- names(comp_pass_reactive())
+        # 
+        # if (input$select_target == "A&B") {
+        #     target_ids <- union(ref_pass, comp_pass)
+        # }
+        # else if (input$select_target == "A|B") {
+        #     target_ids <- intersect(ref_pass, comp_pass)
+        # }
+        # else if (input$select_target == "A") {
+        #     target_ids <- setdiff(ref_pass, comp_pass)
+        # }
+        # else if (input$select_target == "B") {
+        #     target_ids <- setdiff(comp_pass, ref_pass)
+        # }
+        # else {
+        #     stop(sprintf("Unknown input$select_target: %s", input$select_target))
+        # }
+        # 
+        # rv$mapping_obj()$get_combined_dataset() %>%
+        #     filter(comb_id %in% target_ids) %>%
+        #     DT::datatable(
+        #         data=.,
+        #         selection=list(mode='single', selected=c(1)),
+        #         options=list(pageLength=10)
+        #     )
+    })
+    
+    output$venn <- renderPlot({
+
+        venn$do_paired_expression_venn(
+            ref_pass_reactive(), 
+            comp_pass_reactive(), 
+            title="Comp", 
+            highlight = input$select_target)
     })
     
     observeEvent(rv$filedata_1(), {
@@ -128,6 +214,7 @@ module_overlap_server <- function(input, output, session, rv) {
     observeEvent(rv$ddf_comp(rv, input$dataset2), {
         sync_param_choices()
     })
+
     
     observeEvent({
         rv$selected_cols_obj() 
