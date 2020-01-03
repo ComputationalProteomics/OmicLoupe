@@ -82,12 +82,14 @@ module_quality_server <- function(input, output, session, rv) {
     
     # Observers
     observeEvent(rv$filedata_1(), {
+        message("observeEvent(rv$filedata_1()")
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
     observeEvent(rv$filedata_2(), {
+        message("observeEvent(rv$filedata_2()")
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
@@ -95,6 +97,7 @@ module_quality_server <- function(input, output, session, rv) {
     
     sync_param_choices <- function() {
         
+        message("sync_param_choices")
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$ddf_comp(rv, input$dataset2))
 
@@ -122,24 +125,28 @@ module_quality_server <- function(input, output, session, rv) {
         rv$design_condcol_2()
         input$dataset1
         input$dataset2}, {
-        sync_param_choices()
+            message("observe sync_param_choices")
+            sync_param_choices()
     })
     
     observeEvent(rv$ddf_comp(rv, input$dataset2), {
+        message("observe ddf_comp")
         sync_param_choices()
     })
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
+        message("get_long")
         dataset <- rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]
         sample_cols <- rv$mapping_obj()[[sprintf("samples%s", data_ind)]]
         sdf <- dataset[, sample_cols]
         ddf <- rv[[sprintf("design_%s", data_ind)]]()
+        ddf$name <- ddf[[ddf_samplecol]]
         
-        join_by <- c("name"=ddf_samplecol)
+        # join_by <- c("name"=ddf_samplecol)
         long_sdf <- sdf %>%
             pivot_longer(sample_cols) %>%
-            inner_join(ddf, by=join_by)
+            inner_join(ddf, by="name")
         long_sdf
     }
     
@@ -276,6 +283,8 @@ module_quality_server <- function(input, output, session, rv) {
     }
     
     output$boxplots_ref <- renderPlot({ 
+        
+        # browser()
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
