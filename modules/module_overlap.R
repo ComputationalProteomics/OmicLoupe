@@ -32,7 +32,9 @@ setup_overlap_ui <- function(id) {
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
-                            selectInput(ns("upset_comparisons"), "Upset choices", choices = c("Dev"), selected="Dev", multiple = TRUE)
+                            selectInput(ns("upset_ref_comparisons"), "Upset ref. choices", choices = c("Dev"), selected="Dev", multiple = TRUE),
+                            selectInput(ns("upset_comp_comparisons"), "Upset comp. choices", choices = c("Dev"), selected="Dev", multiple = TRUE),
+                            numericInput(ns("upset_max_comps"), "Upset comparison count", min = 1, value = 10)
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -132,60 +134,58 @@ module_overlap_server <- function(input, output, session, rv) {
     
     output$upset <- renderPlot({
         
-        browser()
+        # browser()
+        # ref_stat_patterns <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
         
-        library(UpSetR)
-        
-        ref_stat_patterns <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
-        
-        ref_names_list <- lapply(ref_stat_patterns, function(stat_pattern, dataset, contrast_type) {
+        ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
             parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
         }, dataset=input$dataset1, contrast_type=input$contrast_type)
         
         if (input$dataset1 != input$dataset2) {
-            comp_stat_patterns <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
-            comp_names_list <- lapply(comp_stat_patterns, function(stat_pattern, dataset, contrast_type) {
+            # comp_stat_patterns <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
+            comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
                 parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
             }, dataset=input$dataset2, contrast_type=input$contrast_type)
             
             plot_list <- c(ref_names_list, comp_names_list)
             names(plot_list) <- c(
-                paste("d1", ref_stat_patterns, sep="."),
-                paste("d2", comp_stat_patterns, sep=".")
+                paste("d1", input$upset_ref_comparisons, sep="."),
+                paste("d2", input$upset_comp_comparisons, sep=".")
+            )
+            metadata <- data.frame(
+                comparison = c(names(plot_list)),
+                data_source = c(
+                    rep("d1", length(input$upset_ref_comparisons)),
+                    rep("d2", length(input$upset_comp_comparisons))
+                )
+            )
+            upset_metadata_obj <- list(
+                data = metadata,
+                plots = list(list(
+                    type = "matrix_rows", 
+                    column = "data_source",
+                    colors = c(d1 = "navy", d2 = "red"),
+                    alpha=0.2
+                ))
             )
         }
         else {
             plot_list <- ref_names_list
-            names(plot_list) <- ref_stat_patterns
+            names(plot_list) <- input$upset_ref_comparisons
+            upset_metadata_obj <- NULL
         }
         
-        # ref_data <- ref_pass_reactive()
-        # comp_data <- comp_pass_reactive()
-        # 
-        # in_list <- list(
-        #     ref = names(ref_data),
-        #     comp = names(comp_data)
-        # )
-    
-        plt <- upset(fromList(plot_list), order.by="freq")
+        # browser()
         
+        plt <- UpSetR::upset(
+            UpSetR::fromList(plot_list), 
+            set.metadata = upset_metadata_obj,
+            order.by="freq", 
+            text.scale=2, 
+            nsets = input$upset_max_comps
+        )
         plt
-        
-        # png(file="~/Desktop/out.png")
-        # plt
-        # dev.off()
-        
-        
-        # ggsave(plt, filename = "~/Desktop/out.png")
-        
-        
-        # 1. Get hands on the data
-        # 2. Get the upset running
-        # 3. Anything more needs linking in?
-        # 4. Link to interface
-        # 5. Test it
-        
-    })
+    }, height = 800)
     
     output$table_display <- DT::renderDataTable({
 
@@ -269,7 +269,9 @@ module_overlap_server <- function(input, output, session, rv) {
             
             updateSelectInput(session, "ref_contrast", choices=choices_1, selected=choices_1[1])
             updateSelectInput(session, "comp_contrast", choices=choices_2, selected=choices_2[1])
-        })
+            updateSelectInput(session, "upset_ref_comparisons", choices=choices_1, selected=choices_1)
+            updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=choices_2)
+    })
     
     output$warnings <- renderUI({
         
