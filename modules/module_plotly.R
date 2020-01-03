@@ -12,7 +12,6 @@ MY_COLORS <- c("grey50", "blue", "red", "orange")
 setup_plotly_ui <- function(id) {
     
     ns <- NS(id)
-    # tags$head(tags$style(HTML(mycss)))
     tabPanel(
         id,
         fluidPage(

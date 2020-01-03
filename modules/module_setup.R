@@ -452,7 +452,7 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent(input$autodetect_cols, {
         autodetect_stat_cols()
-        if (input$design_sample_col_1 != "") {
+        if (!is.null(input$design_sample_col_1) && input$design_sample_col_1 != "") {
             autodetect_sample_cols(
                 rv$design_1(),
                 rv$filedata_1(),
@@ -461,7 +461,7 @@ module_setup_server <- function(input, output, session) {
                 rv$filename_1()
             )
         }
-        if (input$design_sample_col_2 != "") {
+        if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "") {
             autodetect_sample_cols(
                 rv$design_2(),
                 rv$filedata_2(),
@@ -501,19 +501,17 @@ module_setup_server <- function(input, output, session) {
     observeEvent({
         input$perform_map_button
     }, {
-        print("Doing dataset mapping")
-
         selcol1 <- NULL
-        if (length(rv$selected_cols_obj()) > 0) {
-            selcol_list <- rv$selected_cols_obj()[[1]]
+        if (!is.null(input$data_file_1)) {
+            selcol_list <- rv$selected_cols_obj()[[input$data_file_1$name]]
             if ("samples" %in% names(selcol_list)) {
                 selcol1 <- selcol_list$samples
             }
         }
 
         selcol2 <- NULL
-        if (length(rv$selected_cols_obj()) > 1) {
-            selcol2_list <- rv$selected_cols_obj()[[2]]
+        if (!is.null(input$data_file_2)) {
+            selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
             if ("samples" %in% names(selcol2_list)) {
                 selcol2 <- selcol2_list$samples
             }

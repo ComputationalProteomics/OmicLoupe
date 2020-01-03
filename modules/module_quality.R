@@ -136,7 +136,17 @@ module_quality_server <- function(input, output, session, rv) {
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
-        message("get_long")
+        if (is.null(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]])) {
+            stop("Datasets not properly mapped, stopping")
+        }
+        
+        if (is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])) {
+            stop("Samples not properly mapped, stopping")
+        }
+        
+        # req(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]])
+        # req(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])
+        
         dataset <- rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]
         sample_cols <- rv$mapping_obj()[[sprintf("samples%s", data_ind)]]
         sdf <- dataset[, sample_cols]

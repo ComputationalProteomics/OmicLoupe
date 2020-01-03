@@ -151,9 +151,20 @@ module_spotcheck_server <- function(input, output, session, rv) {
         else {
             selected_row_nbr <- which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
         }
-        
+
+        round_digits <- 3
+        trunc_length <- 20
+                
         shown_data %>%
             dplyr::select(input$shown_fields) %>%
+            mutate_if(
+                is.character,
+                ~str_trunc(., trunc_length)
+            ) %>%
+            mutate_if(
+                is.numeric,
+                ~round(., round_digits)
+            ) %>%
             DT::datatable(
                 data=., 
                 selection=list(mode='single', selected=c(selected_row_nbr)), 

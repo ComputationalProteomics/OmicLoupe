@@ -19,13 +19,20 @@ setup_overlap_ui <- function(id) {
                                    selectInput(ns("dataset1"), "Reference dataset", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("dataset2"), "Comp. dataset", choices = c("Dev"), selected = "Dev"),
                                    sliderInput(ns("threshold"), "Threshold", min=0, max=1, step=0.01, value=0.05),
-                                   selectInput(ns("select_target"), "Select target", choices=c("A", "B", "A&B", "A|B"), selected = "A&B")
+                                   conditionalPanel(
+                                       sprintf("input['%s'] == 'Venn'", ns("plot_tabs")),
+                                       selectInput(ns("select_target"), "Select target", choices=c("A", "B", "A&B", "A|B"), selected = "A&B")
+                                   )
                             ),
                             column(6,
                                    selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val"))
                             )
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
+                            selectInput(ns("upset_comparisons"), "Upset choices", choices = c("Dev"), selected="Dev", multiple = TRUE)
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -38,8 +45,7 @@ setup_overlap_ui <- function(id) {
                                  # plotOutput(ns("venn_comp"))
                         ),
                         tabPanel("Upset",
-                                plotOutput(ns("upset_ref")),
-                                plotOutput(ns("upset_comp"))
+                                plotOutput(ns("upset"))
                         )
                     )
                 )
@@ -78,34 +84,26 @@ module_overlap_server <- function(input, output, session, rv) {
         message("Now the value is: ", rv$selected_feature())
     })
     
-    ref_pass_reactive <- reactive({
-        
+    parse_contrast_pass_list <- function(target_data, target_contrast, contrast_type) {
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
-        ref_sig_field <- rv$statcols_ref(rv, input$dataset1, input$ref_contrast)[[input$contrast_type]]
-        ref_fold_field <- rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC
-
-        ref_pass_tbl <- combined_dataset %>% 
-            filter(UQ(as.name(ref_sig_field)) < input$threshold) %>% 
-            dplyr::select(c("comb_id", ref_fold_field)) %>%
-            rename(fold=ref_fold_field) %>%
+        sig_field <- rv$statcols_ref(rv, target_data, target_contrast)[[contrast_type]]
+        fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
+        
+        pass_tbl <- combined_dataset %>% 
+            filter(UQ(as.name(sig_field)) < input$threshold) %>% 
+            dplyr::select(c("comb_id", fold_field)) %>%
+            rename(fold=fold_field) %>%
             mutate(comb_id=as.character(comb_id))
-        ref_pass_list <- setNames(as.list(ref_pass_tbl$fold), ref_pass_tbl$comb_id)
-        ref_pass_list
+        pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
+        pass_list
+    }
+    
+    ref_pass_reactive <- reactive({
+        parse_contrast_pass_list(input$dataset1, input$ref_contrast, input$contrast_type)
     })
     
     comp_pass_reactive <- reactive({
-        
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
-        comp_sig_field <- rv$statcols_comp(rv, input$dataset2, input$comp_contrast)[[input$contrast_type]]
-        comp_fold_field <- rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$logFC
-        
-        comp_pass_tbl <- combined_dataset %>% 
-            filter(UQ(as.name(comp_sig_field)) < input$threshold) %>% 
-            dplyr::select(c("comb_id", comp_fold_field)) %>%
-            rename(fold=comp_fold_field) %>%
-            mutate(comb_id=as.character(comb_id))
-        comp_pass_list <- setNames(as.list(comp_pass_tbl$fold), comp_pass_tbl$comb_id)
-        comp_pass_list
+        parse_contrast_pass_list(input$dataset2, input$comp_contrast, input$contrast_type)
     })
     
     output_table_reactive <- reactive({
@@ -132,41 +130,82 @@ module_overlap_server <- function(input, output, session, rv) {
             filter(comb_id %in% target_ids)
     })
     
+    output$upset <- renderPlot({
+        
+        browser()
+        
+        library(UpSetR)
+        
+        ref_stat_patterns <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
+        
+        ref_names_list <- lapply(ref_stat_patterns, function(stat_pattern, dataset, contrast_type) {
+            parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
+        }, dataset=input$dataset1, contrast_type=input$contrast_type)
+        
+        if (input$dataset1 != input$dataset2) {
+            comp_stat_patterns <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
+            comp_names_list <- lapply(comp_stat_patterns, function(stat_pattern, dataset, contrast_type) {
+                parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
+            }, dataset=input$dataset2, contrast_type=input$contrast_type)
+            
+            plot_list <- c(ref_names_list, comp_names_list)
+            names(plot_list) <- c(
+                paste("d1", ref_stat_patterns, sep="."),
+                paste("d2", comp_stat_patterns, sep=".")
+            )
+        }
+        else {
+            plot_list <- ref_names_list
+            names(plot_list) <- ref_stat_patterns
+        }
+        
+        # ref_data <- ref_pass_reactive()
+        # comp_data <- comp_pass_reactive()
+        # 
+        # in_list <- list(
+        #     ref = names(ref_data),
+        #     comp = names(comp_data)
+        # )
+    
+        plt <- upset(fromList(plot_list), order.by="freq")
+        
+        plt
+        
+        # png(file="~/Desktop/out.png")
+        # plt
+        # dev.off()
+        
+        
+        # ggsave(plt, filename = "~/Desktop/out.png")
+        
+        
+        # 1. Get hands on the data
+        # 2. Get the upset running
+        # 3. Anything more needs linking in?
+        # 4. Link to interface
+        # 5. Test it
+        
+    })
+    
     output$table_display <- DT::renderDataTable({
 
+        round_digits <- 3
+        trunc_length <- 20
+        
         output_table_reactive() %>%
+            mutate_if(
+                is.character,
+                ~str_trunc(., trunc_length)
+            ) %>%
+            mutate_if(
+                is.numeric,
+                ~round(., round_digits)
+            ) %>%
             DT::datatable(
                 data=.,
                 selection=list(mode='single', selected=c(1)),
                 options=list(pageLength=10)
             )
-        
-        # ref_pass <- names(ref_pass_reactive())
-        # comp_pass <- names(comp_pass_reactive())
-        # 
-        # if (input$select_target == "A&B") {
-        #     target_ids <- union(ref_pass, comp_pass)
-        # }
-        # else if (input$select_target == "A|B") {
-        #     target_ids <- intersect(ref_pass, comp_pass)
-        # }
-        # else if (input$select_target == "A") {
-        #     target_ids <- setdiff(ref_pass, comp_pass)
-        # }
-        # else if (input$select_target == "B") {
-        #     target_ids <- setdiff(comp_pass, ref_pass)
-        # }
-        # else {
-        #     stop(sprintf("Unknown input$select_target: %s", input$select_target))
-        # }
-        # 
-        # rv$mapping_obj()$get_combined_dataset() %>%
-        #     filter(comb_id %in% target_ids) %>%
-        #     DT::datatable(
-        #         data=.,
-        #         selection=list(mode='single', selected=c(1)),
-        #         options=list(pageLength=10)
-        #     )
     })
     
     output$venn <- renderPlot({
