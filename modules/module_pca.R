@@ -78,8 +78,6 @@ module_pca_server <- function(input, output, session, rv) {
     
     pca_obj1 <- reactive({
         
-        print("pca_obj1 triggered")
-        
         req(rv$rdf_ref(rv, input$dataset1))
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$samples(rv, input$dataset1))
@@ -94,8 +92,6 @@ module_pca_server <- function(input, output, session, rv) {
     })
     
     pca_obj2 <- reactive({
-        
-        print("pca_obj2 triggered")
         
         req(rv$rdf_comp(rv, input$dataset2))
         req(rv$ddf_comp(rv, input$dataset2))
@@ -124,24 +120,20 @@ module_pca_server <- function(input, output, session, rv) {
     }
     
     observeEvent(rv$ddf_ref(rv, input$dataset1), {
-        print("rv$ddf_ref triggered")
         sync_param_choices()
     })
     
     observeEvent(rv$ddf_comp(rv, input$dataset2), {
-        print("rv$ddf_comp triggered")
         sync_param_choices()
     })
     
     observeEvent(rv$filedata_1(), {
-        print("rv$filedata_1() triggered")
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
     observeEvent(rv$filedata_2(), {
-        print("rv$filedata_2() triggered")
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
@@ -201,7 +193,7 @@ module_pca_server <- function(input, output, session, rv) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
 
-        if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples_comp(rv, input$dataset2)) == 0)) {
+        if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
             error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
         }
 

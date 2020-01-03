@@ -32,17 +32,26 @@ setup_panel_ui <- function(id) {
             ),
             fluidRow(
                 column(4,
-                       selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1),
+                       fluidRow(
+                           column(6, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
+                           column(6, span(checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE), style="padding:10px;"))
+                       ),
                        conditionalPanel(
                            sprintf("input['%s'] == 1", ns("select_dataset")),
                            h3("Dataset 1"),
-                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1")),
-                           design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
+                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"))
                        ),
                        conditionalPanel(
                            sprintf("input['%s'] == 2", ns("select_dataset")),
                            h3("Dataset 2"),
-                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2")),
+                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"))
+                       ),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1 || input['%s'] == 1", ns("select_dataset"), ns("matched_samples")),
+                           design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
+                       ),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 2 && input['%s'] != 1", ns("select_dataset"), ns("matched_samples")),
                            design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
                        )
                 ),
@@ -182,7 +191,14 @@ module_setup_server <- function(input, output, session) {
     rv$filedata_1 <- reactive(load_data(input$data_file_1))
     rv$filedata_2 <- reactive(load_data(input$data_file_2))
     rv$design_1 <- reactive(load_data(input$design_file_1))
-    rv$design_2 <- reactive(load_data(input$design_file_2))
+    rv$design_2 <- reactive({
+        if (!input$matched_samples) {
+            load_data(input$design_file_2)
+        }
+        else {
+            load_data(input$design_file_1)
+        }
+    })
     rv$design_samplecol_1 <- reactive(input$design_sample_col_1)
     rv$design_samplecol_2 <- reactive(input$design_sample_col_2)
     rv$design_condcol_1 <- reactive(input$design_cond_col_1)
@@ -490,12 +506,16 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent(rv$design_1(), {
         updateSelectInput(session, "design_sample_col_1", choices=colnames(rv$design_1()))
-        updateSelectInput(session, "design_cond_col_1", choices=colnames(rv$design_1()))
+        if (length(colnames(rv$design_1())) > 1) start_cond <- colnames(rv$design_1())[2]
+        else start_cond <- colnames(rv$design_1())[1]
+        updateSelectInput(session, "design_cond_col_1", choices=colnames(rv$design_1()), selected = start_cond)
     })
     
     observeEvent(rv$design_2(), {
         updateSelectInput(session, "design_sample_col_2", choices=colnames(rv$design_2()))
-        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()))
+        if (length(colnames(rv$design_2())) > 1) start_cond <- colnames(rv$design_2())[2]
+        else start_cond <- colnames(rv$design_2())[1]
+        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()), selected = start_cond)
     })
     
     observeEvent({
