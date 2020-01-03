@@ -60,7 +60,6 @@ setup_panel_ui <- function(id) {
                        wellPanel(
                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           # action_button_row(ns("autodetect_cols"), "Autodetect"),
                            fluidRow(
                                class = "button_row",
                                actionButton(
@@ -79,7 +78,6 @@ setup_panel_ui <- function(id) {
                                    "Map datasets"
                                )
                            )
-                           # action_button_row(ns("perform_map_button"), "Map datasets")
                        ),
                        wellPanel(
                            p("If using two datasets, assign matching feature column. If wanting PCA measures, assign sample columns."),
@@ -208,6 +206,7 @@ module_setup_server <- function(input, output, session) {
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
     rv$selected_feature <- reactiveVal(NULL)
+    rv$correlations <- reactiveVal(NULL)
 
     retrieve_data <- function(rv, input_field, ind, data_pat) {
         if (!is.null(di_new(rv, input_field, 1))) rv[[sprintf("%s_%s", data_pat, di_new(rv, input_field, ind))]]()
@@ -543,7 +542,8 @@ module_setup_server <- function(input, output, session) {
             input$feature_col_2, 
             output, 
             selcol1,
-            selcol2
+            selcol2,
+            input$matched_samples
         )
     })
         

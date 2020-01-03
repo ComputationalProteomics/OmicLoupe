@@ -13,8 +13,10 @@ MapObject <- R6Class("MapObject", list(
     
     samples1 = NULL,
     samples2 = NULL,
+    
+    correlations = NULL,
 
-    initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, samples2=NULL) {
+    initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, samples2=NULL, matched=FALSE) {
         
         self$dataset1 <- dataset1 %>% arrange(UQ(as.name(target_col1)))
         self$target_col1 <- target_col1
@@ -39,6 +41,42 @@ MapObject <- R6Class("MapObject", list(
                 warning("Invalid samples, not all present in colnames")
             }
             self$samples2 <- samples2
+        }
+        
+        if (matched) {
+            message("Calculating correlations")
+            ref_rdf <- self$dataset1
+            comp_rdf <- self$dataset2
+            
+            ref_id_col <- ref_rdf %>% dplyr::select(self$target_col1) %>% unlist() %>% unname()
+            comp_id_col <- comp_rdf %>% dplyr::select(self$target_col2) %>% unlist() %>% unname()
+            
+            joint_ids <- ref_id_col[ref_id_col %in% comp_id_col]
+            
+            ref_rdf_joint <- ref_rdf %>% 
+                filter(UQ(as.name(self$target_col1)) %in% joint_ids) %>% 
+                arrange(UQ(as.name(self$target_col1)))
+            comp_rdf_joint <- comp_rdf %>% 
+                filter(UQ(as.name(self$target_col2)) %in% joint_ids) %>% 
+                arrange(UQ(as.name(self$target_col2)))
+            
+            ref_sdf_joint <- ref_rdf_joint %>% dplyr::select(self$samples1)
+            comp_sdf_joint <- comp_rdf_joint %>% dplyr::select(self$samples2)
+            
+            corr_types <- c("pearson", "spearman", "kendall")
+            corrs <- lapply(
+                corr_types,
+                function(corr_type) {
+                    pearson_corr <- mapply(
+                        cor,
+                        ref_sdf_joint %>% t() %>% data.frame(),
+                        comp_sdf_joint %>% t() %>% data.frame(),
+                        MoreArgs = list("use" = "complete.obs", "method" = corr_type)
+                    )
+                }
+            )
+            names(corrs) <- corr_types
+            self$correlations <- corrs
         }
     },
     get_full_entries = function(dataset, samples) {
@@ -82,7 +120,11 @@ MapObject <- R6Class("MapObject", list(
             
             out_df1 <- self$dataset1[self$joint_indices1, ]
             out_df2 <- self$dataset2[self$joint_indices2, ]
-            
+
+            if (!is.null(self$correlations)) {
+                out_df2 <- cbind(out_df2, do.call("cbind", self$correlations))
+            }
+                        
             if (full_entries) {
                 out_df1_full_entries <- out_df1 %>% self$get_full_entries(self$samples1)
                 out_df2_full_entries <- out_df2 %>% self$get_full_entries(self$samples2)

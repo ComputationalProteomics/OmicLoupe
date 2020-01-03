@@ -45,7 +45,7 @@ clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
 }
 
-do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2) {
+do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2, matched_samples) {
 
     get_output_text <- function(rv, type) {
         if (type == "Dataset1" || type == "Dataset2" || type == "Both") {
@@ -97,7 +97,8 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             rv$filedata_2(), 
             feature_col_2,
             samples1=sample_cols1,
-            samples2=sample_cols2
+            samples2=sample_cols2,
+            matched=matched_samples
         ))
         
         if (!is.null(rv$mapping_obj()$get_combined_dataset())) {

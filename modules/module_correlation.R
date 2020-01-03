@@ -9,14 +9,7 @@ setup_correlation_ui <- function(id) {
                        htmlOutput(ns("html"))
                 ),
                 htmlOutput(ns("warnings")),
-                tabsetPanel(
-                    type = "tabs",
-                    tabPanel("Combined view", plotOutput(ns("spot_display_combined")))
-                ),
-                tabsetPanel(
-                    type = "tabs",
-                    tabPanel("Combined data", DT::DTOutput(ns("table_display_combined")))
-                )
+                plotOutput(ns("correlation_histograms"))
             )
         )
     )
@@ -42,6 +35,18 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_correlation_server <- function(input, output, session, rv) {
     
+    output$correlation_histograms <- renderPlot({
+        
+        comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=F)
+        
+        ggpubr::ggarrange(
+            ggplot(comb_df, aes(x=d2.pearson)) + geom_histogram(bins=100, na.rm=TRUE),
+            ggplot(comb_df, aes(x=d2.spearman)) + geom_histogram(bins=100, na.rm=TRUE),
+            ggplot(comb_df, aes(x=d2.kendall)) + geom_histogram(bins=100, na.rm=TRUE),
+            nrow=3
+        )
+    }, height = 800)
+    
     output$html <- renderUI({
         HTML(parse_vector_to_bullets(c(
             "Show correlation histograms",
@@ -49,13 +54,5 @@ module_correlation_server <- function(input, output, session, rv) {
         )))
     })
 }
-
-
-
-
-
-
-
-
 
 
