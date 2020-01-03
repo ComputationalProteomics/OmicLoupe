@@ -126,7 +126,7 @@ setup_panel_ui <- function(id) {
                        )
                 )
             ),
-            plotlyOutput(ns("plotly_test")),
+            # plotlyOutput(ns("plotly_test")),
             h3("Table views"),
             tabsetPanel(
                 type = "tabs",
@@ -141,36 +141,36 @@ setup_panel_ui <- function(id) {
 
 module_setup_server <- function(input, output, session) {
 
-    output$plotly_test <- renderPlotly({
-        plt <- plot_ly(
-            x=c(1, 2, 3), 
-            y=c(1, 1, 1), 
-            text=c("A", "AB", "B"), 
-            mode="text", 
-            textfont=list(color="black", size=18, family="Arial")
-        )
-        plt_layout <- layout(
-            plt, 
-            title="Shapes title",
-            shapes = list(
-                list(
-                    type = "circle",
-                    xref = 'x', x0 = 1, x1 = 2.5,
-                    yref = 'y', y0 = -0.75, y1 = 0.75,
-                    fillcolor = 'rgb(50, 20, 90)', line = list(color = 'rgb(50, 20, 90)'),
-                    opacity = 0.2
-                ),
-                list(
-                    type = "circle",
-                    xref = 'x', x0 = 1.5, x1 = 3,
-                    yref = 'y', y0 = -0.75, y1 = 0.75,
-                    fillcolor = 'rgb(50, 20, 90)', line = list(color = 'rgb(50, 20, 90)'),
-                    opacity = 0.2
-                )
-            )
-        )
-        plt_layout
-    })
+    # output$plotly_test <- renderPlotly({
+    #     plt <- plot_ly(
+    #         x=c(1, 2, 3), 
+    #         y=c(1, 1, 1), 
+    #         text=c("A", "AB", "B"), 
+    #         mode="text", 
+    #         textfont=list(color="black", size=18, family="Arial")
+    #     )
+    #     plt_layout <- layout(
+    #         plt, 
+    #         title="Shapes title",
+    #         shapes = list(
+    #             list(
+    #                 type = "circle",
+    #                 xref = 'x', x0 = 1, x1 = 2.5,
+    #                 yref = 'y', y0 = -0.75, y1 = 0.75,
+    #                 fillcolor = 'rgb(50, 20, 90)', line = list(color = 'rgb(50, 20, 90)'),
+    #                 opacity = 0.2
+    #             ),
+    #             list(
+    #                 type = "circle",
+    #                 xref = 'x', x0 = 1.5, x1 = 3,
+    #                 yref = 'y', y0 = -0.75, y1 = 0.75,
+    #                 fillcolor = 'rgb(50, 20, 90)', line = list(color = 'rgb(50, 20, 90)'),
+    #                 opacity = 0.2
+    #             )
+    #         )
+    #     )
+    #     plt_layout
+    # })
     
     output$dt_data1 <- DT::renderDataTable({
         req(rv$filedata_1)
