@@ -30,116 +30,142 @@ setup_panel_ui <- function(id) {
                 ".button_row { padding: 5px; }",
                 "#column_select_noselectize { height: 500px; }"
             ),
-            fluidRow(
-                column(4,
-                       fluidRow(
-                           column(6, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
-                           column(6, span(checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE), style="padding:10px;"))
-                       ),
-                       conditionalPanel(
-                           sprintf("input['%s'] == 1", ns("select_dataset")),
-                           h3("Dataset 1"),
-                           sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"))
-                       ),
-                       conditionalPanel(
-                           sprintf("input['%s'] == 2", ns("select_dataset")),
-                           h3("Dataset 2"),
-                           sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"))
-                       ),
-                       conditionalPanel(
-                           sprintf("input['%s'] == 1 || input['%s'] == 1", ns("select_dataset"), ns("matched_samples")),
-                           design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
-                       ),
-                       conditionalPanel(
-                           sprintf("input['%s'] == 2 && input['%s'] != 1", ns("select_dataset"), ns("matched_samples")),
-                           design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
-                       )
-                ),
-                column(3,
-                       align="center",
-                       wellPanel(
-                           select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
-                           select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                           fluidRow(
-                               class = "button_row",
-                               actionButton(
-                                   ns("autodetect_cols"),
-                                   class = "recolor_button",
-                                   width = "80%",
-                                   "Autodetect"
-                               )
-                           ),
-                           fluidRow(
-                               class = "button_row",
-                               actionButton(
-                                   ns("perform_map_button"),
-                                   class = "recolor_button",
-                                   width = "80%",
-                                   "Map datasets"
-                               )
-                           )
-                       ),
-                       wellPanel(
-                           p("If using two datasets, assign matching feature column. If wanting PCA measures, assign sample columns."),
-                           textOutput(ns("perform_map_status"))
-                       )
-                ),
-                column(5,
-                       conditionalPanel(
-                           sprintf("input['%s'] == 1", ns("select_dataset")),
-                           h3("Dataset 1"),
-                           wellPanel(
-                               selectInput(
-                                   ns("sample_selected_1"),
-                                   "Sample columns",
-                                   choices = c(""),
-                                   multiple = TRUE,
-                                   selectize = FALSE,
-                                   size = 12
-                               ),
-                               selectInput(
-                                   ns("statcols_selected_1"),
-                                   "Stat cols",
-                                   choices = c(""),
-                                   multiple = TRUE,
-                                   selectize = FALSE,
-                                   size = 12
-                               ),
-                               textOutput(ns("found_stat_patterns_1"))
-                           )
-                       ),
-                       conditionalPanel(
-                           sprintf("input['%s'] == 2", ns("select_dataset")),
-                           h3("Dataset 2"),
-                           wellPanel(
-                               selectInput(
-                                   ns("sample_selected_2"),
-                                   "Sample columns",
-                                   choices = c(""),
-                                   multiple = TRUE,
-                                   selectize = FALSE,
-                                   size = 12
-                               ),
-                               selectInput(
-                                   ns("statcols_selected_2"),
-                                   "Stat cols",
-                                   choices = c(""),
-                                   multiple = TRUE,
-                                   selectize = FALSE,
-                                   size = 12
-                               ),
-                               textOutput(ns("found_stat_patterns_2"))
-                           )
-                       )
-                )
-            ),
-            h3("Table views"),
+            
             tabsetPanel(
+                id = ns("setup_panels"),
                 type = "tabs",
-                tabPanel("Data 1", DT::DTOutput(ns("dt_data1"))),
-                tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
-                tabPanel("Data 2", DT::DTOutput(ns("dt_data2"))),
-                tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
+                tabPanel("LoadData", 
+                         h3("Load data"),
+                         fluidRow(
+                             column(4,
+                                    fluidRow(
+                                        column(6, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
+                                        column(6, span(checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE), style="padding:10px;"))
+                                    ),
+                                    conditionalPanel(
+                                        sprintf("input['%s'] == 1", ns("select_dataset")),
+                                        h3("Dataset 1"),
+                                        sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"))
+                                    ),
+                                    conditionalPanel(
+                                        sprintf("input['%s'] == 2", ns("select_dataset")),
+                                        h3("Dataset 2"),
+                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"))
+                                    ),
+                                    conditionalPanel(
+                                        sprintf("input['%s'] == 1 || input['%s'] == 1", ns("select_dataset"), ns("matched_samples")),
+                                        design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
+                                    ),
+                                    conditionalPanel(
+                                        sprintf("input['%s'] == 2 && input['%s'] != 1", ns("select_dataset"), ns("matched_samples")),
+                                        design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
+                                    )
+                             ),
+                             column(3,
+                                    align="center",
+                                    wellPanel(
+                                        select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
+                                        select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
+                                        fluidRow(
+                                            class = "button_row",
+                                            actionButton(
+                                                ns("autodetect_cols"),
+                                                class = "recolor_button",
+                                                width = "80%",
+                                                "Autodetect"
+                                            )
+                                        ),
+                                        fluidRow(
+                                            class = "button_row",
+                                            actionButton(
+                                                ns("perform_map_button"),
+                                                class = "recolor_button",
+                                                width = "80%",
+                                                "Map datasets"
+                                            )
+                                        )
+                                    ),
+                                    wellPanel(
+                                        p("If using two datasets, assign matching feature column. If wanting PCA measures, assign sample columns."),
+                                        textOutput(ns("perform_map_status"))
+                                    )
+                             ),
+                             column(5,
+                                    conditionalPanel(
+                                        sprintf("input['%s'] == 1", ns("select_dataset")),
+                                        h3("Dataset 1"),
+                                        wellPanel(
+                                            selectInput(
+                                                ns("sample_selected_1"),
+                                                "Sample columns",
+                                                choices = c(""),
+                                                multiple = TRUE,
+                                                selectize = FALSE,
+                                                size = 12
+                                            ),
+                                            selectInput(
+                                                ns("statcols_selected_1"),
+                                                "Stat cols",
+                                                choices = c(""),
+                                                multiple = TRUE,
+                                                selectize = FALSE,
+                                                size = 12
+                                            ),
+                                            textOutput(ns("found_stat_patterns_1"))
+                                        )
+                                    ),
+                                    conditionalPanel(
+                                        sprintf("input['%s'] == 2", ns("select_dataset")),
+                                        h3("Dataset 2"),
+                                        wellPanel(
+                                            selectInput(
+                                                ns("sample_selected_2"),
+                                                "Sample columns",
+                                                choices = c(""),
+                                                multiple = TRUE,
+                                                selectize = FALSE,
+                                                size = 12
+                                            ),
+                                            selectInput(
+                                                ns("statcols_selected_2"),
+                                                "Stat cols",
+                                                choices = c(""),
+                                                multiple = TRUE,
+                                                selectize = FALSE,
+                                                size = 12
+                                            ),
+                                            textOutput(ns("found_stat_patterns_2"))
+                                        )
+                                    )
+                             )
+                         )
+                ),
+                tabPanel("TableSetup", 
+                    h3("Table setup"),
+                    wellPanel(
+                        fluidRow(
+                            column(
+                                12,
+                                column(6, numericInput(ns("trunc_length"), "Truncate strings longer than", value = 20)),
+                                column(6, numericInput(ns("round_digits"), "Round numbers digits", value = 3)),
+                                selectInput(
+                                    ns("shown_fields"), 
+                                    "Display fields", 
+                                    choices=c("[Unassigned]"), 
+                                    selected="[Unassigned]",
+                                    multiple=TRUE
+                                )
+                            )
+                        )
+                    ),
+                    tabsetPanel(
+                        type = "tabs",
+                        tabPanel("Mapped data", DT::DTOutput(ns("dt_data1"))),
+                        tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
+                        # tabPanel("Data 2", DT::DTOutput(ns("dt_data2"))),
+                        tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
+                    )
+                )
             )
         )
     )
@@ -147,9 +173,56 @@ setup_panel_ui <- function(id) {
 
 module_setup_server <- function(input, output, session) {
     
+    observeEvent(rv$mapping_obj(), {
+        req(rv$mapping_obj()$get_combined_dataset())
+        
+        comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
+        samples_ref <- NULL
+        if (!is.null(input$data_file_1)) {
+            samples_ref <- rv$samples(rv, input$data_file_1$name, prefix="d1.")
+        }
+        
+        samples_comp <- NULL
+        if (!is.null(input$data_file_2)) {
+            samples_comp <- rv$samples(rv, input$data_file_2$name, prefix="d2.")
+        }
+        start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
+        updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select)
+    })
+    
     output$dt_data1 <- DT::renderDataTable({
-        req(rv$filedata_1)
-        rv$filedata_1()
+        # req(rv$filedata_1)
+        # rv$filedata_1() 
+        
+        req(rv$mapping_obj())
+        req(rv$mapping_obj()$get_combined_dataset())
+        
+        shown_data <- rv$mapping_obj()$get_combined_dataset()
+        
+        if (is.null(rv$selected_feature())) {
+            selected_row_nbr <- 1
+        }
+        else {
+            selected_row_nbr <- which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
+        }
+        
+        # round_digits <- 3
+        # trunc_length <- 20
+        
+        shown_data %>%
+            dplyr::select(input$shown_fields) %>%
+            mutate_if(
+                is.character,
+                ~str_trunc(., input$trunc_length)
+            ) %>%
+            mutate_if(
+                is.numeric,
+                ~round(., input$round_digits)
+            ) %>%
+            DT::datatable(
+                data=., 
+                selection=list(mode='single', selected=c(selected_row_nbr)), 
+                options=list(pageLength=10))
     })
         
     output$dt_design1 <- DT::renderDataTable({
@@ -157,10 +230,10 @@ module_setup_server <- function(input, output, session) {
         rv$design_1()
     })
     
-    output$dt_data2 <- DT::renderDataTable({
-        req(rv$filedata_2)
-        rv$filedata_2()
-    })
+    # output$dt_data2 <- DT::renderDataTable({
+    #     req(rv$filedata_2)
+    #     rv$filedata_2()
+    # })
     
     output$dt_design2 <- DT::renderDataTable({
         req(rv$design_2)

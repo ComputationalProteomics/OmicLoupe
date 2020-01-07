@@ -24,19 +24,19 @@ setup_spotcheck_ui <- function(id) {
                                    selectInput(ns("comp_cond"), "Comp. cond.", choices = c("[Unassigned]"), selected = "[Unassigned]")
                             )
                         ),
-                        checkboxInput(ns("display_show_fields"), "Display column selects", value = FALSE),
-                        conditionalPanel(
-                            sprintf("input['%s'] == 1", ns("display_show_fields")),
-                            fluidRow(
-                                selectInput(
-                                    ns("shown_fields"), 
-                                    "Display fields", 
-                                    choices=c("[Unassigned]"), 
-                                    selected="[Unassigned]",
-                                    multiple=TRUE
-                                )
-                            )
-                        ),
+                        # checkboxInput(ns("display_show_fields"), "Display column selects", value = FALSE),
+                        # conditionalPanel(
+                        #     sprintf("input['%s'] == 1", ns("display_show_fields")),
+                        #     fluidRow(
+                        #         selectInput(
+                        #             ns("shown_fields"), 
+                        #             "Display fields", 
+                        #             choices=c("[Unassigned]"), 
+                        #             selected="[Unassigned]",
+                        #             multiple=TRUE
+                        #         )
+                        #     )
+                        # ),
                         fluidRow(
                             column(4, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
                             column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
@@ -91,15 +91,15 @@ module_spotcheck_server <- function(input, output, session, rv) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    observeEvent({ rv$mapping_obj() }, {
-        
-        req(rv$mapping_obj()$get_combined_dataset())
-        comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
-        samples_ref <- rv$samples(rv, input$dataset1, prefix="d1.")
-        samples_comp <- rv$samples(rv, input$dataset2, prefix="d2.")
-        start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
-        updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select) 
-    })
+    # observeEvent({ rv$mapping_obj() }, {
+    #     
+    #     req(rv$mapping_obj()$get_combined_dataset())
+    #     comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
+    #     samples_ref <- rv$samples(rv, input$dataset1, prefix="d1.")
+    #     samples_comp <- rv$samples(rv, input$dataset2, prefix="d2.")
+    #     start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
+    #     # updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select) 
+    # })
     
     # observeEvent(rv$selected_feature(), {
     #     if (input$table_display_combined_rows_selected != rv$selected_feature()) {

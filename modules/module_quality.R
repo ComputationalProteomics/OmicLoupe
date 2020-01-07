@@ -125,14 +125,8 @@ module_quality_server <- function(input, output, session, rv) {
         rv$design_condcol_2()
         input$dataset1
         input$dataset2}, {
-            message("observe sync_param_choices")
             sync_param_choices()
     })
-    
-    # observeEvent(rv$ddf_comp(rv, input$dataset2), {
-    #     message("observe ddf_comp")
-    #     sync_param_choices()
-    # })
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
@@ -143,9 +137,6 @@ module_quality_server <- function(input, output, session, rv) {
         if (is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])) {
             stop("Samples not properly mapped, stopping")
         }
-        
-        # req(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]])
-        # req(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])
         
         dataset <- rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]
         sample_cols <- rv$mapping_obj()[[sprintf("samples%s", data_ind)]]

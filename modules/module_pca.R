@@ -148,7 +148,6 @@ module_pca_server <- function(input, output, session, rv) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    
     ########### FUNCTIONS ############
     
     make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
