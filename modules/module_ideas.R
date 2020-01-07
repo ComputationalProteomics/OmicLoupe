@@ -34,7 +34,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-module_ideas_server <- function(input, output, session) {
+module_ideas_server <- function(input, output, session, module_name) {
     
     output$important_points <- renderUI({
         

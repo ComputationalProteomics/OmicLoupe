@@ -44,7 +44,6 @@ setup_overlap_ui <- function(id) {
                         tabPanel("Venn",
                                  plotOutput(ns("venn")),
                                  DT::DTOutput(ns("table_display"))
-                                 # plotOutput(ns("venn_comp"))
                         ),
                         tabPanel("Upset",
                                 plotOutput(ns("upset"))
@@ -73,7 +72,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-module_overlap_server <- function(input, output, session, rv) {
+module_overlap_server <- function(input, output, session, rv, module_name) {
     
     selected_id_reactive <- reactive({
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
@@ -82,7 +81,7 @@ module_overlap_server <- function(input, output, session, rv) {
     observeEvent(input$table_display_rows_selected, {
         
         message("Observed!")
-        rv$selected_feature(selected_id_reactive())
+        rv$set_selected_feature(selected_id_reactive(), module_name)
         message("Now the value is: ", rv$selected_feature())
     })
     
@@ -134,15 +133,11 @@ module_overlap_server <- function(input, output, session, rv) {
     
     output$upset <- renderPlot({
         
-        # browser()
-        # ref_stat_patterns <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
-        
         ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
             parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
         }, dataset=input$dataset1, contrast_type=input$contrast_type)
         
         if (input$dataset1 != input$dataset2) {
-            # comp_stat_patterns <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
             comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
                 parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
             }, dataset=input$dataset2, contrast_type=input$contrast_type)
@@ -175,8 +170,6 @@ module_overlap_server <- function(input, output, session, rv) {
             upset_metadata_obj <- NULL
         }
         
-        # browser()
-        
         plt <- UpSetR::upset(
             UpSetR::fromList(plot_list), 
             set.metadata = upset_metadata_obj,
@@ -188,24 +181,7 @@ module_overlap_server <- function(input, output, session, rv) {
     }, height = 800)
     
     output$table_display <- DT::renderDataTable({
-
-        round_digits <- 3
-        trunc_length <- 20
-        
-        output_table_reactive() %>%
-            mutate_if(
-                is.character,
-                ~str_trunc(., trunc_length)
-            ) %>%
-            mutate_if(
-                is.numeric,
-                ~round(., round_digits)
-            ) %>%
-            DT::datatable(
-                data=.,
-                selection=list(mode='single', selected=c(1)),
-                options=list(pageLength=10)
-            )
+        rv$dt_parsed_data(rv, output_table_reactive())
     })
     
     output$venn <- renderPlot({
@@ -230,7 +206,7 @@ module_overlap_server <- function(input, output, session, rv) {
     })
     
     sync_param_choices <- function() {
-        warning("Empty overlap parameter sync for now")
+        warning("Empty overlap parameter sync for now, probably needed for updating datasets!")
         # ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
         # comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
         # # updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])

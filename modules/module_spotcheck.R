@@ -24,19 +24,6 @@ setup_spotcheck_ui <- function(id) {
                                    selectInput(ns("comp_cond"), "Comp. cond.", choices = c("[Unassigned]"), selected = "[Unassigned]")
                             )
                         ),
-                        # checkboxInput(ns("display_show_fields"), "Display column selects", value = FALSE),
-                        # conditionalPanel(
-                        #     sprintf("input['%s'] == 1", ns("display_show_fields")),
-                        #     fluidRow(
-                        #         selectInput(
-                        #             ns("shown_fields"), 
-                        #             "Display fields", 
-                        #             choices=c("[Unassigned]"), 
-                        #             selected="[Unassigned]",
-                        #             multiple=TRUE
-                        #         )
-                        #     )
-                        # ),
                         fluidRow(
                             column(4, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
                             column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
@@ -46,11 +33,11 @@ setup_spotcheck_ui <- function(id) {
                     htmlOutput(ns("warnings")),
                     tabsetPanel(
                         type = "tabs",
-                        tabPanel("Combined view", plotOutput(ns("spot_display_combined")))
+                        tabPanel("Combined view", plotOutput(ns("spot_display_combined")) %>% withSpinner())
                     ),
                     tabsetPanel(
                         type = "tabs",
-                        tabPanel("Combined data", DT::DTOutput(ns("table_display_combined")))
+                        tabPanel("Combined data", DT::DTOutput(ns("table_display")))
                     )
                 )
             )
@@ -76,7 +63,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-module_spotcheck_server <- function(input, output, session, rv) {
+module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)
@@ -91,31 +78,13 @@ module_spotcheck_server <- function(input, output, session, rv) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    # observeEvent({ rv$mapping_obj() }, {
-    #     
-    #     req(rv$mapping_obj()$get_combined_dataset())
-    #     comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
-    #     samples_ref <- rv$samples(rv, input$dataset1, prefix="d1.")
-    #     samples_comp <- rv$samples(rv, input$dataset2, prefix="d2.")
-    #     start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
-    #     # updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select) 
-    # })
-    
-    # observeEvent(rv$selected_feature(), {
-    #     if (input$table_display_combined_rows_selected != rv$selected_feature()) {
-    #         
-    #     }
-    #     # rv$selected_feature(input$table_display_rows_selected)
-    # })
-
     selected_id_reactive <- reactive({
-        rv$mapping_obj()$get_combined_dataset()[input$table_display_combined_rows_selected, ]$comb_id %>% as.character()
+        rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% 
+            as.character()
     })
     
-    observeEvent(input$table_display_combined_rows_selected, {
-        message("Observed!")
-        rv$selected_feature(selected_id_reactive())
-        message("Now the value is: ", rv$selected_feature())
+    observeEvent(input$table_display_rows_selected, {
+        rv$set_selected_feature(selected_id_reactive(), module_name)
     })
     
     sync_param_choices <- function() {
@@ -139,36 +108,10 @@ module_spotcheck_server <- function(input, output, session, rv) {
             sync_param_choices()
     })
     
-    output$table_display_combined <- DT::renderDataTable({
+    output$table_display <- DT::renderDataTable({
         req(rv$mapping_obj())
         req(rv$mapping_obj()$get_combined_dataset())
-        
-        shown_data <- rv$mapping_obj()$get_combined_dataset()
-        
-        if (is.null(rv$selected_feature())) {
-            selected_row_nbr <- 1
-        }
-        else {
-            selected_row_nbr <- which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
-        }
-
-        round_digits <- 3
-        trunc_length <- 20
-                
-        shown_data %>%
-            dplyr::select(input$shown_fields) %>%
-            mutate_if(
-                is.character,
-                ~str_trunc(., trunc_length)
-            ) %>%
-            mutate_if(
-                is.numeric,
-                ~round(., round_digits)
-            ) %>%
-            DT::datatable(
-                data=., 
-                selection=list(mode='single', selected=c(selected_row_nbr)), 
-                options=list(pageLength=10))
+        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
     })
     
     plot_df_ref <- reactive({
@@ -183,7 +126,7 @@ module_spotcheck_server <- function(input, output, session, rv) {
         
         plt_df_ref <- tibble(
             sample=samples_ref,
-            value=rdf_ref[input$table_display_combined_rows_selected, samples_ref] %>% unlist(),
+            value=rdf_ref[input$table_display_rows_selected, samples_ref] %>% unlist(),
             cond=ddf_ref[[cond_ref]] %>% as.factor()
         )
         plt_df_ref
@@ -201,7 +144,7 @@ module_spotcheck_server <- function(input, output, session, rv) {
         
         plt_df_comp <- tibble(
             sample=samples_comp,
-            value=rdf_comp[input$table_display_combined_rows_selected, samples_comp] %>% unlist(),
+            value=rdf_comp[input$table_display_rows_selected, samples_comp] %>% unlist(),
             cond=ddf_comp[[cond_comp]] %>% as.factor()
         )
         plt_df_comp
@@ -209,7 +152,7 @@ module_spotcheck_server <- function(input, output, session, rv) {
     
     output$spot_display_combined <- renderPlot({
         
-        target_row <- input$table_display_combined_rows_selected
+        target_row <- input$table_display_rows_selected
 
         add_geoms <- function(plt, show_box, show_scatter, show_violin) {
             if (show_violin) {
@@ -245,14 +188,6 @@ module_spotcheck_server <- function(input, output, session, rv) {
         else {
             ggarrange(plt_comp, nrow=1, ncol=2)
         }
-    })
-    
-    output$html <- renderUI({
-        HTML(parse_vector_to_bullets(c(
-            "Allow rapidly switch here after identifying features in other tab",
-            "Intensity illustration across characteristic from design (boxplot / scatter)",
-            "Profile illustrations allowing display of multiple features (sorted on design condition)"
-        )))
     })
 }
 

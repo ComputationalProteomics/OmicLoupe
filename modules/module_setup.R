@@ -160,9 +160,8 @@ setup_panel_ui <- function(id) {
                     ),
                     tabsetPanel(
                         type = "tabs",
-                        tabPanel("Mapped data", DT::DTOutput(ns("dt_data1"))),
+                        tabPanel("Mapped data", DT::DTOutput(ns("table_display"))),
                         tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
-                        # tabPanel("Data 2", DT::DTOutput(ns("dt_data2"))),
                         tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
                     )
                 )
@@ -171,7 +170,7 @@ setup_panel_ui <- function(id) {
     )
 }
 
-module_setup_server <- function(input, output, session) {
+module_setup_server <- function(input, output, session, module_name) {
     
     observeEvent(rv$mapping_obj(), {
         req(rv$mapping_obj()$get_combined_dataset())
@@ -203,13 +202,35 @@ module_setup_server <- function(input, output, session) {
         ))
     })
     
-    output$dt_data1 <- DT::renderDataTable({
+    selected_id_reactive <- reactive({
+        rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% as.character()
+    })
+
+    observeEvent(input$table_display_rows_selected, {
+        rv$set_selected_feature(selected_id_reactive(), module_name)
+    })
+    
+    output$table_display <- DT::renderDataTable({
 
         req(rv$mapping_obj())
         req(rv$mapping_obj()$get_combined_dataset())
-
-        rv$dt_parsed_data(rv)
+        message("Refreshing table_display")
+        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
     })
+    
+    # observeEvent(rv$selected_feature(), {
+    #     req(rv$mapping_obj())
+    #     req(rv$mapping_obj()$get_combined_dataset())
+    #     
+    #     if (rv$selected_feature_module() != module_name) {
+    #         message("Performing refresh")
+    #         # This part must be setting up a link!
+    #         output$table_display <- DT::renderDataTable(rv$dt_parsed_data_w_row(rv, rv$mapping_obj()$get_combined_dataset()))
+    #     }
+    #     else {
+    #         message("Ignoring update, identified as coming from feature change within module")
+    #     }
+    # })
         
     output$dt_design1 <- DT::renderDataTable({
         req(rv$design_1)

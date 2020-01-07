@@ -78,7 +78,7 @@ setup_quality_ui <- function(id) {
     )
 }
 
-module_quality_server <- function(input, output, session, rv) {
+module_quality_server <- function(input, output, session, rv, module_name) {
     
     # Observers
     observeEvent(rv$filedata_1(), {

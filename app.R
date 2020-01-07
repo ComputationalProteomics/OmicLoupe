@@ -8,7 +8,6 @@ library(stringr)
 options(shiny.maxRequestSize=100*1024^2)
 
 source("modules/module_setup.R")
-# source("modules/module_vis.R")
 source("modules/module_plotly.R")
 source("modules/module_pca.R")
 source("modules/module_help.R")
@@ -44,15 +43,15 @@ ui <- navbarPage(
 
 server <- shinyServer(function(session, input, output) {
     
-    reactive_values <- callModule(module_setup_server, id="Setup")
-    callModule(module_plotly_server, id="Plotly", reactive_values)
-    callModule(module_pca_server, id="PCA", reactive_values)
-    callModule(module_help_server, id="Help")
-    callModule(module_quality_server, id="Quality", reactive_values)
-    callModule(module_overlap_server, id="Overlap", reactive_values)
-    callModule(module_spotcheck_server, id="Spotcheck", reactive_values)
-    callModule(module_correlation_server, id="Correlation", reactive_values)
-    callModule(module_ideas_server, id="Ideas")
+    reactive_values <- callModule(module_setup_server, id="Setup", module_name="Setup")
+    callModule(module_plotly_server, id="Plotly", rv=reactive_values, module_name="Plotly")
+    callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
+    callModule(module_help_server, id="Help", module_name="Help")
+    callModule(module_quality_server, id="Quality", rv=reactive_values, module_name="Quality")
+    callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap")
+    callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="Spotcheck")
+    callModule(module_correlation_server, id="Correlation", rv=reactive_values, module_name="Correlation")
+    callModule(module_ideas_server, id="Ideas", module_name="Ideas")
 })
 
 shinyApp(ui = ui, server = server)

@@ -72,7 +72,7 @@ setup_pca_ui <- function(id) {
     )
 }
 
-module_pca_server <- function(input, output, session, rv) {
+module_pca_server <- function(input, output, session, rv, module_name) {
     
     ########### REACTIVE ############
     

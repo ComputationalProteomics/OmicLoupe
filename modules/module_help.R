@@ -23,7 +23,7 @@ setup_help_ui <- function(id) {
     )
 }
 
-module_help_server <- function(input, output, session) {
+module_help_server <- function(input, output, session, module_name) {
 
     output$setup_image <- renderImage({
         filename <- normalizePath(file.path("./doc", "setup_screen.png"))

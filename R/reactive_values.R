@@ -1,11 +1,3 @@
-# get_filename <- function(in_file) {
-#     infile <- in_file
-#     if (is.null(infile)) {
-#         return(NULL)
-#     }
-#     stringi::stri_extract_first(str = infile$name, regex = ".*")
-# }
-
 setup_reactive_values_obj <- function(input) {
     
     get_filename <- function(in_file) {
@@ -47,6 +39,13 @@ setup_reactive_values_obj <- function(input) {
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
     rv$selected_feature <- reactiveVal(NULL)
+    rv$selected_feature_module <- reactiveVal(NULL)
+    
+    rv$set_selected_feature <- function(feature, module_name) {
+        rv$selected_feature(feature)
+        rv$selected_feature_module(module_name)
+    }
+    
     rv$correlations <- reactiveVal(NULL)
     
     retrieve_data <- function(rv, input_field, ind, data_pat) {
@@ -83,18 +82,36 @@ setup_reactive_values_obj <- function(input) {
         paste(prefix, rv$selected_cols_obj()[[input_field]]$samples, sep="") 
     }
     
-    rv$dt_parsed_data <- function(rv) {
+    rv$calculate_preselect_index <- function(rv, shown_data) {
+        if (is.null(rv$selected_feature())) {
+            1
+        }
+        else {
+            which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
+        }
+    }
+    
+    rv$dt_parsed_data <- function(rv, shown_data) {
         
         table_settings <- rv$table_settings()
-        shown_data <- rv$mapping_obj()$get_combined_dataset()
+        # shown_data <- rv$mapping_obj()$get_combined_dataset()
         
         if (is.null(rv$selected_feature())) {
             selected_row_nbr <- 1
         }
         else {
-            selected_row_nbr <- which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
+            target_index <- which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
+            if (length(target_index) == 0) {
+                selected_row_nbr <- 1
+            }
+            else {
+                selected_row_nbr <- target_index
+            }
         }
-        
+
+        page_length <- 10
+        display_pos <- selected_row_nbr - (selected_row_nbr %% page_length)
+                
         shown_data %>%
             dplyr::select(table_settings$shown_fields) %>%
             mutate_if(
@@ -104,13 +121,11 @@ setup_reactive_values_obj <- function(input) {
             mutate_if(
                 is.numeric,
                 ~round(., table_settings$round_digits)
-            ) %>%
-            DT::datatable(
+            ) %>% DT::datatable(
                 data=., 
-                selection=list(mode='single', selected=c(selected_row_nbr)), 
-                options=list(pageLength=10))
+                selection=list(mode='single', selected=c(selected_row_nbr)),
+                options=list(pageLength=page_length, displayStart=display_pos))
     }
     
     rv
-    
 }

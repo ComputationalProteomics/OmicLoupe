@@ -33,11 +33,11 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-module_correlation_server <- function(input, output, session, rv) {
+module_correlation_server <- function(input, output, session, rv, module_name) {
     
     output$correlation_histograms <- renderPlot({
         
-        comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=F)
+        comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         
         ggpubr::ggarrange(
             ggplot(comb_df, aes(x=d2.pearson)) + geom_histogram(bins=100, na.rm=TRUE),

@@ -77,13 +77,13 @@ setup_plotly_ui <- function(id) {
                        )
                 )
             ),
-            DT::DTOutput(ns("target_data_dt"))
+            DT::DTOutput(ns("table_display"))
         )
     )
 }
 
 
-module_plotly_server <- function(input, output, session, rv) {
+module_plotly_server <- function(input, output, session, rv, module_name) {
     
     # ---------------- REACTIVE ---------------- 
     
@@ -554,34 +554,30 @@ module_plotly_server <- function(input, output, session, rv) {
             toWebGL()
     })
     
-    output$target_data_dt = DT::renderDataTable({
-        
-        req(rv$mapping_obj())
-        
-        round_digits <- 3
-        trunc_length <- 20
-        
-        if (!is.null(rv$mapping_obj()$get_combined_dataset())) {
-            target_df <- rv$mapping_obj()$get_combined_dataset()
-        }
-        else {
-            return()
-        }
-        
+    get_target_df <- function(rv) {
+        target_df <- rv$mapping_obj()$get_combined_dataset()
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
             target_df <- target_df[target_df$comb_id %in% event.data$key, ] 
         }
+        target_df
+    }
+    
+    selected_id_reactive <- reactive({
+        get_target_df(rv)[input$table_display_rows_selected, ]$comb_id %>% as.character()
+    })
+    
+    observeEvent(input$table_display_rows_selected, {
+        rv$set_selected_feature(selected_id_reactive(), module_name)
+    })
+    
+    output$table_display = DT::renderDataTable({
         
-        target_df %>%
-            mutate_if(
-                is.character,
-                ~str_trunc(., trunc_length)
-            ) %>%
-            mutate_if(
-                is.numeric,
-                ~round(., round_digits)
-            )
+        req(rv$mapping_obj())
+        req(rv$mapping_obj()$get_combined_dataset())
+
+        target_df <- get_target_df(rv)
+        rv$dt_parsed_data(rv, target_df)
     })
 }
 
