@@ -8,11 +8,29 @@ setup_panel_ui <- function(id) {
         id,
         fluidPage(
             id = "outer_area",
+            useShinyjs(),
+            useShinyalert(),
             tags$head(
                 tags$link(rel = "stylesheet", type = "text/css", href = "bootstrap")
             ),
             tags$style(
                 type = "text/css",
+                
+                ".recolor_button { color: #fff; background-color: #337ab7; border-color: #2e6da4; }",
+                ".recolor_button:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
+                ".recolor_button:active:focus { color: #fff; background-color: #115895; border-color: #115895; }",
+                ".recolor_button:focus { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
+                
+                ".recolor_button_red { color: #fff; background-color: #aa0000; border-color: #aa0000; }",
+                ".recolor_button_red:hover { color: #fff; background-color: #aa0000; border-color: #aa0000; }",
+                ".recolor_button_red:active:focus { color: #fff; background-color: #aa0000; border-color: #aa0000; }",
+                ".recolor_button_red:focus { color: #fff; background-color: #aa0000; border-color: #aa0000; }",
+                
+                ".recolor_button_yellow { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
+                ".recolor_button_yellow:hover { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
+                ".recolor_button_yellow:active:focus { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
+                ".recolor_button_yellow:focus { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
+                
                 ".recolor_button { color: #fff; background-color: #337ab7; border-color: #2e6da4; }",
                 ".recolor_button:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
                 ".recolor_button:active:focus { color: #fff; background-color: #115895; border-color: #115895; }",
@@ -22,7 +40,7 @@ setup_panel_ui <- function(id) {
                 ".btn-file:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
                 ".btn-file:active:focus { color: #fff; background-color: #115895; border-color: #115895; }",
                 ".btn-file:focus { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
-
+                
                 ".well { background-color: #F3F3F3; border-color: #AAAAAA; border-width: 1px; box-shadow: 2px 2px grey; }"
             ),
             tags$style(
@@ -35,7 +53,7 @@ setup_panel_ui <- function(id) {
                 id = ns("setup_panels"),
                 type = "tabs",
                 tabPanel("LoadData", 
-                         h3("Load data"),
+                         fluidRow(h3("Load data"), actionButton(ns("help"), "", icon=icon("question"))),
                          fluidRow(
                              column(4,
                                     fluidRow(
@@ -72,14 +90,14 @@ setup_panel_ui <- function(id) {
                                                 ns("autodetect_cols"),
                                                 class = "recolor_button",
                                                 width = "80%",
-                                                "Autodetect"
+                                                "Detect columns"
                                             )
                                         ),
                                         fluidRow(
                                             class = "button_row",
                                             actionButton(
                                                 ns("perform_map_button"),
-                                                class = "recolor_button",
+                                                class = "recolor_button_red",
                                                 width = "80%",
                                                 "Map datasets"
                                             )
@@ -141,36 +159,70 @@ setup_panel_ui <- function(id) {
                          )
                 ),
                 tabPanel("TableSetup", 
-                    h3("Table setup"),
-                    wellPanel(
-                        fluidRow(
-                            column(
-                                12,
-                                column(6, numericInput(ns("trunc_length"), "Truncate strings longer than", value = 20)),
-                                column(6, numericInput(ns("round_digits"), "Round numbers digits", value = 3)),
-                                selectInput(
-                                    ns("shown_fields"), 
-                                    "Display fields", 
-                                    choices=c("[Unassigned]"), 
-                                    selected="[Unassigned]",
-                                    multiple=TRUE
-                                )
-                            )
-                        )
-                    ),
-                    tabsetPanel(
-                        type = "tabs",
-                        tabPanel("Mapped data", DT::DTOutput(ns("table_display"))),
-                        tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
-                        tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
-                    )
+                         h3("Table setup"),
+                         wellPanel(
+                             fluidRow(
+                                 column(
+                                     12,
+                                     column(6, numericInput(ns("trunc_length"), "Truncate strings longer than", value = 20)),
+                                     column(6, numericInput(ns("round_digits"), "Round numbers digits", value = 3)),
+                                     selectInput(
+                                         ns("shown_fields"), 
+                                         "Display fields", 
+                                         choices=c("[Unassigned]"), 
+                                         selected="[Unassigned]",
+                                         multiple=TRUE
+                                     )
+                                 )
+                             )
+                         ),
+                         tabsetPanel(
+                             type = "tabs",
+                             tabPanel("Mapped data", DT::DTOutput(ns("table_display"))),
+                             tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
+                             tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
+                         )
                 )
             )
         )
     )
 }
 
+parse_vector_to_bullets <- function(vect, number=TRUE) {
+    html_string <- paste0(
+        "<li>",
+        paste(vect, collapse="</li><li>"),
+        "</li>"
+    )
+    
+    if (!number) {
+        list_style <- "ul"
+    }
+    else {
+        list_style <- "ol"
+    }
+    
+    sprintf("<%s>%s</%s>", list_style, html_string, list_style)
+}
+
 module_setup_server <- function(input, output, session, module_name) {
+    
+    # <ol><li>Upload at least one dataset file and design file (format instructions)</li></ol>
+    
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Setup page",
+            text = sprintf("Expected workflow: %s", 
+                           parse_vector_to_bullets(c(
+                               "Upload one or more dataset files together with respective design files (further instructions on file formats under 'Help')", 
+                               "Assign sample columns in the dataset file(s), normally using the 'Detect columns' button", 
+                               "Assign statistical columns, normally using the 'Detect columns' button. Note that these should follow a format outlined under 'Help'",
+                               "Finally, if more than one dataset - perform mapping which will match feature columns from the two datasets",
+                               "If running matched samples click the 'Matched samples' button and use only one design matrix, this will unlock the 'Correlation' tab"
+                           ))), 
+            html = TRUE
+        )
+    })
     
     observeEvent(rv$mapping_obj(), {
         req(rv$mapping_obj()$get_combined_dataset())
@@ -194,7 +246,6 @@ module_setup_server <- function(input, output, session, module_name) {
         input$round_digits
         input$shown_fields
     }, {
-        message("Updating table settings")
         rv$table_settings(list(
             trunc_length = input$trunc_length,
             round_digits = input$round_digits,
@@ -205,16 +256,15 @@ module_setup_server <- function(input, output, session, module_name) {
     selected_id_reactive <- reactive({
         rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% as.character()
     })
-
+    
     observeEvent(input$table_display_rows_selected, {
         rv$set_selected_feature(selected_id_reactive(), module_name)
     })
     
     output$table_display <- DT::renderDataTable({
-
+        
         req(rv$mapping_obj())
         req(rv$mapping_obj()$get_combined_dataset())
-        message("Refreshing table_display")
         rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
     })
     
@@ -231,7 +281,7 @@ module_setup_server <- function(input, output, session, module_name) {
     #         message("Ignoring update, identified as coming from feature change within module")
     #     }
     # })
-        
+    
     output$dt_design1 <- DT::renderDataTable({
         req(rv$design_1)
         rv$design_1()
@@ -439,7 +489,7 @@ module_setup_server <- function(input, output, session, module_name) {
         
         full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
         sample_col <- colnames(ddf)[which(full_match)[1]]
-
+        
         updateSelectInput(
             session, 
             sprintf("design_sample_col_%s", data_nbr), 
@@ -535,7 +585,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 selcol1 <- selcol_list$samples
             }
         }
-
+        
         selcol2 <- NULL
         if (!is.null(input$data_file_2)) {
             selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
@@ -553,10 +603,25 @@ module_setup_server <- function(input, output, session, module_name) {
             selcol2,
             input$matched_samples
         )
-    })
         
-    observeEvent(rv$mapping_obj, {
-        message("Mapping object obtained!")
+    })
+    
+    observeEvent(rv$mapping_obj(), {
+        req(!is.null(rv$mapping_obj()))
+        shinyjs::removeClass("perform_map_button", "recolor_button_red")
+        shinyjs::addClass("perform_map_button", "recolor_button")
+    })
+    
+    observeEvent({
+        input$data_file_1
+        input$data_file_2
+        input$design_file_1
+        input$design_file_2
+    }, {
+        message("Testing")
+        shinyjs::removeClass("perform_map_button", "recolor_button")
+        shinyjs::removeClass("perform_map_button", "recolor_button_red")
+        shinyjs::addClass("perform_map_button", "recolor_button_yellow")
     })
     
     return(rv)
