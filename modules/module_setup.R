@@ -453,7 +453,6 @@ module_setup_server <- function(input, output, session, module_name) {
         
         samples_from_ddf <- ddf[[sample_col]]
         if (all(samples_from_ddf %in% colnames(rdf))) {
-            message("All samples found!")
             sync_select_inputs(
                 session, 
                 sprintf("data_selected_columns_%s", data_nbr),

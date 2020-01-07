@@ -39,10 +39,19 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         
         comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         
+        make_corr_hist <- function(target_df, aes_x, title, bins=100) {
+            mean_corr <- mean(target_df[[aes_x]], na.rm=TRUE)
+            ggplot(target_df, aes_string(x=aes_x)) +
+                geom_histogram(bins=bins, na.rm=TRUE) +
+                geom_vline(xintercept = mean_corr, na.rm=TRUE) +
+                ggtitle(sprintf("%s (mean %s)", title, round(mean_corr, 3))) +
+                xlim(-1, 1)
+        }
+
         ggpubr::ggarrange(
-            ggplot(comb_df, aes(x=d2.pearson)) + geom_histogram(bins=100, na.rm=TRUE),
-            ggplot(comb_df, aes(x=d2.spearman)) + geom_histogram(bins=100, na.rm=TRUE),
-            ggplot(comb_df, aes(x=d2.kendall)) + geom_histogram(bins=100, na.rm=TRUE),
+            make_corr_hist(comb_df, "d2.pearson", "Pearson"),
+            make_corr_hist(comb_df, "d2.spearman", "Spearman"),
+            make_corr_hist(comb_df, "d2.kendall", "Kendall"),
             nrow=3
         )
     }, height = 800)
