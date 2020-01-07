@@ -109,23 +109,32 @@ module_pca_server <- function(input, output, session, rv) {
     ########### OBSERVERS ############
     
     sync_param_choices <- function() {
+        
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(rv$ddf_comp(rv, input$dataset2))
+        
         ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
         comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-        updateSelectInput(session, "color_data1", choices = ref_choices, selected=ref_choices[1])
+        
+        updateSelectInput(session, "color_data1", choices = ref_choices, selected=rv$ddf_condcol_ref(rv, input$dataset1))
+        updateSelectInput(session, "color_data2", choices = comp_choices, selected=rv$ddf_condcol_ref(rv, input$dataset2))
+        
         updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
-        updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-        updateSelectInput(session, "color_data2", choices = comp_choices, selected=comp_choices[1])
         updateSelectInput(session, "shape_data2", choices = comp_choices, selected=comp_choices[1])
+        
+        updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
     }
     
-    observeEvent(rv$ddf_ref(rv, input$dataset1), {
-        sync_param_choices()
-    })
-    
-    observeEvent(rv$ddf_comp(rv, input$dataset2), {
-        sync_param_choices()
-    })
+    observeEvent({
+        rv$ddf_ref(rv, input$dataset1)
+        rv$ddf_comp(rv, input$dataset2)
+        rv$design_condcol_1()
+        rv$design_condcol_2()
+        input$dataset1
+        input$dataset2}, {
+            sync_param_choices()
+        })
     
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)

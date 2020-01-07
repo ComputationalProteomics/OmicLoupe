@@ -261,6 +261,7 @@ module_setup_server <- function(input, output, session) {
     }
     
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
+        
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
         
@@ -442,6 +443,10 @@ module_setup_server <- function(input, output, session) {
             selected = sample_col
         )
         
+        if (is.null(ddf)) {
+            stop("Data frame is NULL, invalid input provided!")
+        }
+        
         samples_from_ddf <- ddf[[sample_col]]
         if (all(samples_from_ddf %in% colnames(rdf))) {
             message("All samples found!")
@@ -467,7 +472,7 @@ module_setup_server <- function(input, output, session) {
     
     observeEvent(input$autodetect_cols, {
         autodetect_stat_cols()
-        if (!is.null(input$design_sample_col_1) && input$design_sample_col_1 != "") {
+        if (!is.null(input$design_sample_col_1) && input$design_sample_col_1 != "" && !is.null(rv$filedata_1())) {
             autodetect_sample_cols(
                 rv$design_1(),
                 rv$filedata_1(),
@@ -476,7 +481,7 @@ module_setup_server <- function(input, output, session) {
                 rv$filename_1()
             )
         }
-        if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "") {
+        if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "" && !is.null(rv$filedata_2())) {
             autodetect_sample_cols(
                 rv$design_2(),
                 rv$filedata_2(),

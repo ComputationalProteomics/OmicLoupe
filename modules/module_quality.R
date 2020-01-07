@@ -129,10 +129,10 @@ module_quality_server <- function(input, output, session, rv) {
             sync_param_choices()
     })
     
-    observeEvent(rv$ddf_comp(rv, input$dataset2), {
-        message("observe ddf_comp")
-        sync_param_choices()
-    })
+    # observeEvent(rv$ddf_comp(rv, input$dataset2), {
+    #     message("observe ddf_comp")
+    #     sync_param_choices()
+    # })
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
