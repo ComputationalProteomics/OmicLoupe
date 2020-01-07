@@ -56,20 +56,20 @@ setup_quality_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Boxplots", 
-                                 plotOutput(ns("boxplots_ref")),
-                                 plotOutput(ns("boxplots_comp"))
+                                 plotOutput(ns("boxplots_ref")) %>% withSpinner(),
+                                 plotOutput(ns("boxplots_comp")) %>% withSpinner()
                         ),
                         tabPanel("Density", 
-                                 plotOutput(ns("density_ref")),
-                                 plotOutput(ns("density_comp"))
+                                 plotOutput(ns("density_ref")) %>% withSpinner(),
+                                 plotOutput(ns("density_comp")) %>% withSpinner()
                         ),
                         tabPanel("Barplots", 
-                                 plotOutput(ns("bars_ref")),
-                                 plotOutput(ns("bars_comp"))
+                                 plotOutput(ns("bars_ref")) %>% withSpinner(),
+                                 plotOutput(ns("bars_comp")) %>% withSpinner()
                         ),
                         tabPanel("Histograms", 
-                                 plotOutput(ns("histograms_ref")),
-                                 plotOutput(ns("histograms_comp"))
+                                 plotOutput(ns("histograms_ref")) %>% withSpinner(),
+                                 plotOutput(ns("histograms_comp")) %>% withSpinner()
                         )
                     )
                 )
