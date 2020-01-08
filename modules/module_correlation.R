@@ -35,7 +35,7 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
                 geom_histogram(bins=bins, na.rm=TRUE) +
                 geom_vline(xintercept = mean_corr, na.rm=TRUE) +
                 ggtitle(sprintf("%s (mean %s)", title, round(mean_corr, 3))) +
-                xlim(-1, 1)
+                xlim(-1, 1) + xlab("Correlation") + ylab("Count")
         }
 
         ggpubr::ggarrange(
@@ -56,10 +56,6 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
             error_vect <- c(error_vect, 
                 "No correlations assigned, this requires two matched datasets and that the 'Matched samples' setting in 'Setup' is assigned.")
         }
-        
-        # if (is.null(rv$design_1())) {
-        #     error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        # }
         
         total_text <- paste(error_vect, collapse="<br>")
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))

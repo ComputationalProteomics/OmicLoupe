@@ -7,7 +7,7 @@ setup_ideas_ui <- function(id) {
                 column(8,
                        h4("Important points"),
                        htmlOutput(ns("important_points")),
-                       h4("Priority points"),
+                       h4("Medium points"),
                        htmlOutput(ns("priority_points")),
                        h4("Potential points"),
                        htmlOutput(ns("potential_points"))
@@ -40,8 +40,10 @@ module_ideas_server <- function(input, output, session, module_name) {
         
         HTML(parse_vector_to_bullets(c(
             "More flexible way to assign statistical columns",
+            "PCA: Allowing selection of subsets for which a recalculated PCA is shown - For instance omission of outliers",
             "Download tables",
-            "Download figures buttons"
+            "Download figures buttons",
+            "For datasets with redundant IDs - should more clever ways of mapping being allowed?"
         )))
     })
     
@@ -65,6 +67,8 @@ module_ideas_server <- function(input, output, session, module_name) {
             "Alternative view for scatter plot: Full screen one of the plots",
             "Think about documentation: Work through the help page, and do video at some point",
             "PCA: Illustrating PC distributions",
+            "Histogram: Binning of continuous as alternative for coloring",
+            "Histogram: Interatively show what type each column is for rapid overview",
             "PCA: Integrate more closely with scatter distribution by showing at same page",
             "Performing Hive plot or Circular plot as 'master illustration' overviewing the two datasets globally",
             "Do measures of similarity across datasets, such as correlation of fold changes or p-value orders",

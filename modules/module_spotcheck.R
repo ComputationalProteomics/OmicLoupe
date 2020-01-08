@@ -187,6 +187,28 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
 
         ggarrange(plt_ref, plt_comp, nrow=1, ncol=2)
     })
+    
+    output$warnings <- renderUI({
+        
+        error_vect <- c()
+        if (is.null(rv$filename_1())) {
+            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+        }
+        else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
+            error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
+        }
+        
+        if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
+            error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
+        }
+        
+        if (is.null(rv$design_1())) {
+            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+        }
+        
+        total_text <- paste(error_vect, collapse="<br>")
+        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    })
 }
 
 

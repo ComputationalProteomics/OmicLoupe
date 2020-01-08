@@ -91,7 +91,7 @@ setup_reactive_values_obj <- function(input) {
         }
     }
     
-    rv$dt_parsed_data <- function(rv, shown_data) {
+    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE) {
         
         table_settings <- rv$table_settings()
         # shown_data <- rv$mapping_obj()$get_combined_dataset()
@@ -112,8 +112,7 @@ setup_reactive_values_obj <- function(input) {
         page_length <- 10
         display_pos <- selected_row_nbr - (selected_row_nbr %% page_length)
                 
-        shown_data %>%
-            dplyr::select(table_settings$shown_fields) %>%
+        parsed_shown_data <- shown_data %>%
             mutate_if(
                 is.character,
                 ~str_trunc(., table_settings$trunc_length)
@@ -121,10 +120,20 @@ setup_reactive_values_obj <- function(input) {
             mutate_if(
                 is.numeric,
                 ~round(., table_settings$round_digits)
-            ) %>% DT::datatable(
-                data=., 
-                selection=list(mode='single', selected=c(selected_row_nbr)),
-                options=list(pageLength=page_length, displayStart=display_pos))
+            ) 
+        
+        if (with_row_selection) {
+            parsed_shown_data %>% 
+                dplyr::select(table_settings$shown_fields) %>%
+                    DT::datatable(data=., 
+                    selection=list(mode='single', selected=c(selected_row_nbr)),
+                    options=list(pageLength=page_length, displayStart=display_pos))
+        }
+        else {
+            parsed_shown_data
+        }
+        
+
     }
     
     rv

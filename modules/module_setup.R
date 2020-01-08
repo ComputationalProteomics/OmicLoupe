@@ -193,11 +193,11 @@ setup_panel_ui <- function(id) {
                          ),
                          tabsetPanel(
                              type = "tabs",
+                             tabPanel("Mapped data", DT::DTOutput(ns("table_display"))),
                              tabPanel("Raw data 1", DT::DTOutput(ns("raw_data1"))),
                              tabPanel("Raw data 2", DT::DTOutput(ns("raw_data2"))),
                              tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
-                             tabPanel("Design 2", DT::DTOutput(ns("dt_design2"))),
-                             tabPanel("Mapped data", DT::DTOutput(ns("table_display")))
+                             tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
                          )
                 )
             )
@@ -274,12 +274,13 @@ module_setup_server <- function(input, output, session, module_name) {
     
     output$raw_data1 <- DT::renderDataTable({
         req(rv$filedata_1())
-        rv$filedata_1()
+        rv$dt_parsed_data(rv, rv$filedata_1(), with_row_selection=FALSE)
     })
     
     output$raw_data2 <- DT::renderDataTable({
         req(rv$filedata_2())
         rv$filedata_2()
+        rv$dt_parsed_data(rv, rv$filedata_1(), with_row_selection=FALSE)
     })
     
     output$dt_design1 <- DT::renderDataTable({
@@ -381,7 +382,6 @@ module_setup_server <- function(input, output, session, module_name) {
         else {
             warning("Trying to deselect with nothing marked, ignoring")
         }
-        
     })
     
     update_statpatterns_display <- function(statpatterns, target_out) {

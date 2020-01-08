@@ -85,6 +85,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     })
     
     parse_contrast_pass_list <- function(target_data, target_contrast, contrast_type) {
+        
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         sig_field <- rv$statcols_ref(rv, target_data, target_contrast)[[contrast_type]]
         fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
@@ -107,6 +108,10 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     })
     
     output_table_reactive <- reactive({
+        
+        req(rv$mapping_obj())
+        req(rv$mapping_obj()$get_combined_dataset())
+        
         ref_pass <- names(ref_pass_reactive())
         comp_pass <- names(comp_pass_reactive())
         
