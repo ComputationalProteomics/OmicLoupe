@@ -19,9 +19,10 @@ setup_spotcheck_ui <- function(id) {
                             )
                         ),
                         fluidRow(
-                            column(4, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
-                            column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
-                            column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
+                            column(3, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
+                            column(3, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
+                            column(3, checkboxInput(ns("show_violin"), "Show violin", value=FALSE)),
+                            column(3, checkboxInput(ns("show_labels"), "Show labels", value=FALSE))
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -120,6 +121,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         req(rv$rdf_ref(rv, input$dataset1))
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$samples(rv, input$dataset1))
+        req(input$table_display_rows_selected)
         
         rdf_ref <- rv$rdf_ref(rv, input$dataset1)
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
@@ -138,6 +140,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         req(rv$rdf_comp(rv, input$dataset2))
         req(rv$ddf_comp(rv, input$dataset2))
         req(rv$samples(rv, input$dataset2))
+        req(input$table_display_rows_selected)
         
         rdf_comp <- rv$rdf_comp(rv, input$dataset2)
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
@@ -154,9 +157,11 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
     output$spot_display_combined <- renderPlot({
         
+        req(plot_df_ref())
+        req(plot_df_comp())
+        
         target_row <- input$table_display_rows_selected
-
-        add_geoms <- function(plt, show_box, show_scatter, show_violin) {
+        add_geoms <- function(plt, show_box, show_scatter, show_violin, show_labels) {
             if (show_violin) {
                 plt <- plt + geom_violin(na.rm = TRUE)
             }
@@ -166,30 +171,21 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             if (show_scatter) {
                 plt <- plt + geom_point(na.rm = TRUE)
             }
+            if (show_labels) {
+                plt <- plt + geom_text_repel(na.rm = TRUE)
+            }
             plt
-        }        
-        
-        if (!is.null(plot_df_ref())) {
-            plt_ref_base <- ggplot(plot_df_ref(), aes(x=cond, y=value, color=cond)) + 
-                ggtitle(sprintf("Spot check feature: %s", target_row))
-            plt_ref <- add_geoms(plt_ref_base, input$show_boxplot, input$show_scatter, input$show_violin)
         }
         
-        if (!is.null(plot_df_comp())) {
-            plt_comp_base <- ggplot(plot_df_comp(), aes(x=cond, y=value, color=cond)) + 
-                ggtitle(sprintf("Spot check feature: %s", target_row))
-            plt_comp <- add_geoms(plt_comp_base, input$show_boxplot, input$show_scatter, input$show_violin)
-        }
+        plt_ref_base <- ggplot(plot_df_ref(), aes(x=cond, y=value, color=cond, label=sample)) + 
+            ggtitle(sprintf("Spot check feature: %s", target_row))
+        plt_ref <- add_geoms(plt_ref_base, input$show_boxplot, input$show_scatter, input$show_violin, input$show_labels)
 
-        if (!is.null(plot_df_ref()) && !is.null(plot_df_comp())) {
-            ggarrange(plt_ref, plt_comp, nrow=1, ncol=2)
-        }
-        else if (!is.null(plot_df_ref())) {
-            ggarrange(plt_ref, nrow=1, ncol=2)
-        }
-        else {
-            ggarrange(plt_comp, nrow=1, ncol=2)
-        }
+        plt_comp_base <- ggplot(plot_df_comp(), aes(x=cond, y=value, color=cond, label=sample)) + 
+            ggtitle(sprintf("Spot check feature: %s", target_row))
+        plt_comp <- add_geoms(plt_comp_base, input$show_boxplot, input$show_scatter, input$show_violin, input$show_labels)
+
+        ggarrange(plt_ref, plt_comp, nrow=1, ncol=2)
     })
 }
 

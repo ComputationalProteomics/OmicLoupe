@@ -31,10 +31,10 @@ setup_panel_ui <- function(id) {
                 ".recolor_button_gray:active:focus { color: #fff; background-color: #aaa; border-color: #aaa; }",
                 ".recolor_button_gray:focus { color: #fff; background-color: #bbb; border-color: #bbb; }",
                 
-                ".recolor_button_yellow { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
-                ".recolor_button_yellow:hover { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
-                ".recolor_button_yellow:active:focus { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
-                ".recolor_button_yellow:focus { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
+                ".recolor_button_yellow { color: #fff; background-color: #aa0; border-color: #aa0; }",
+                ".recolor_button_yellow:hover { color: #fff; background-color: #aa0; border-color: #aa0; }",
+                ".recolor_button_yellow:active:focus { color: #fff; background-color: #aa0; border-color: #aa0; }",
+                ".recolor_button_yellow:focus { color: #fff; background-color: #aa0; border-color: #aa0; }",
                 
                 ".recolor_button { color: #fff; background-color: #337ab7; border-color: #2e6da4; }",
                 ".recolor_button:hover { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
@@ -51,21 +51,30 @@ setup_panel_ui <- function(id) {
                 ".help:active:focus { color: #000; background-color: #fff; border-color: #ccc; }",
                 ".help:focus { color: #000; background-color: #fff; border-color: #ccc; }",
                 
-                ".well { background-color: #F3F3F3; border-color: #AAAAAA; border-width: 1px; box-shadow: 2px 2px grey; }"
+                ".well { background-color: #F3F3F3; border-color: #aaa; border-width: 1px; box-shadow: 2px 2px grey; }"
             ),
             tags$style(
                 type = "text/css",
                 ".button_row { padding: 5px; }",
                 "#column_select_noselectize { height: 500px; }"
             ),
-
+            
             tabsetPanel(
                 id = ns("setup_panels"),
                 type = "tabs",
                 tabPanel("LoadData", 
                          top_bar_w_help("Load data", ns("help")),
                          fluidRow(
-                             column(2, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1))
+                             column(2, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
+                             column(2),
+                             column(5,
+                                    p(HTML("<b>Status:</b>")),
+                                    p("No columns assigned"),
+                                    p("No datasets loaded"),
+                                    textOutput(ns("column_status")),
+                                    textOutput(ns("load_status")),
+                                    textOutput(ns("perform_map_status"))
+                             )
                          ),
                          fluidRow(
                              column(4,
@@ -95,6 +104,15 @@ setup_panel_ui <- function(id) {
                                                 ns("autodetect_cols"),
                                                 class = "recolor_button",
                                                 width = "80%",
+                                                "Identify columns"
+                                            )
+                                        ),
+                                        fluidRow(
+                                            class = "button_row",
+                                            actionButton(
+                                                ns("perform_map_button"),
+                                                class = "recolor_button",
+                                                width = "80%",
                                                 "Load data"
                                             )
                                         ),
@@ -103,21 +121,8 @@ setup_panel_ui <- function(id) {
                                         conditionalPanel(
                                             sprintf("input['%s'] == 1", ns("toggle_extra_settings")),
                                             select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
-                                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
-                                            fluidRow(
-                                                class = "button_row",
-                                                actionButton(
-                                                    ns("perform_map_button"),
-                                                    class = "recolor_button_gray",
-                                                    width = "80%",
-                                                    style = "visible:false;",
-                                                    "Map datasets"
-                                                )
-                                            )
-                                        ),
-                                        p("If using two datasets, assign matching feature column."),
-                                        textOutput(ns("perform_map_status"))
-                                        
+                                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1"))
+                                        )
                                     )
                              ),
                              column(5,
@@ -126,7 +131,7 @@ setup_panel_ui <- function(id) {
                                         wellPanel(
                                             selectInput(
                                                 ns("sample_selected_1"),
-                                                "Assigned sample columns",
+                                                "Assigned sample columns (dataset 1)",
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
@@ -134,7 +139,7 @@ setup_panel_ui <- function(id) {
                                             ),
                                             selectInput(
                                                 ns("statcols_selected_1"),
-                                                "Assigned statistics columns",
+                                                "Assigned statistics columns (dataset 1)",
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
@@ -148,7 +153,7 @@ setup_panel_ui <- function(id) {
                                         wellPanel(
                                             selectInput(
                                                 ns("sample_selected_2"),
-                                                "Sample columns",
+                                                "Assigned sample columns (dataset 2)",
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
@@ -156,7 +161,7 @@ setup_panel_ui <- function(id) {
                                             ),
                                             selectInput(
                                                 ns("statcols_selected_2"),
-                                                "Stat cols",
+                                                "Assigned statistics columns (dataset 2)",
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
@@ -266,7 +271,7 @@ module_setup_server <- function(input, output, session, module_name) {
         rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
     })
     
-
+    
     output$raw_data1 <- DT::renderDataTable({
         req(rv$filedata_1())
         rv$filedata_1()
@@ -541,7 +546,7 @@ module_setup_server <- function(input, output, session, module_name) {
         
         # if has entry with columns in one case - perform the mapping
         # Otherwise - be ready to recolor the Map datasets button
-        rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+        # rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
         
     })
     
@@ -583,7 +588,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 selcol1 <- selcol_list$samples
             }
         }
-
+        
         selcol2 <- NULL
         if (!is.null(data_file_2)) {
             selcol2_list <- rv$selected_cols_obj()[[data_file_2$name]]

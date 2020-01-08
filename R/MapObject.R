@@ -79,6 +79,9 @@ MapObject <- R6Class("MapObject", list(
             self$correlations <- corrs
         }
     },
+    has_correlations = function() {
+        !is.null(self$correlations)
+    },
     get_full_entries = function(dataset, samples) {
         
         sdf <- dataset[, samples]
