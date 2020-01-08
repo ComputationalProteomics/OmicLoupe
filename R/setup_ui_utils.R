@@ -1,3 +1,16 @@
+top_bar_w_help <- function(title, button_id) {
+    fluidRow(
+        span(
+            style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
+            h3(title)
+        ),
+        span(
+            style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+            actionButton(button_id, "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
+        )
+    )
+}
+
 sample_input_well <- function(upload_id, select_col_id, feature_col_id, select_size=12) {
     wellPanel(
         fileInput(

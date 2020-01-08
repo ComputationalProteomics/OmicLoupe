@@ -3,34 +3,13 @@ setup_correlation_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
+            top_bar_w_help("Correlation", ns("help")),
             fluidRow(
-                column(8,
-                       h4("Some ideas for development"),
-                       htmlOutput(ns("html"))
-                ),
                 htmlOutput(ns("warnings")),
                 plotOutput(ns("correlation_histograms"))
             )
         )
     )
-}
-
-parse_vector_to_bullets <- function(vect, number=TRUE) {
-    
-    html_string <- paste0(
-        "<li>",
-        paste(vect, collapse="</li><li>"),
-        "</li>"
-    )
-    
-    if (!number) {
-        list_style <- "ul"
-    }
-    else {
-        list_style <- "ol"
-    }
-    
-    sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
 module_correlation_server <- function(input, output, session, rv, module_name) {
@@ -55,13 +34,6 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
             nrow=3
         )
     }, height = 800)
-    
-    output$html <- renderUI({
-        HTML(parse_vector_to_bullets(c(
-            "Show correlation histograms",
-            "Other correlation visualizations?"
-        )))
-    })
 }
 
 

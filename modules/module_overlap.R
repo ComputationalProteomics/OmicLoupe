@@ -3,13 +3,7 @@ setup_overlap_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            fluidRow(
-                column(8,
-                       h4("Some ideas for development"),
-                       htmlOutput(ns("html"))
-                )
-            ),
-            p("Left and right: Venns or upsets"),
+            top_bar_w_help("Overlap study", ns("help")),
             fluidRow(
                 column(
                     12,
@@ -79,10 +73,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     })
     
     observeEvent(input$table_display_rows_selected, {
-        
-        message("Observed!")
         rv$set_selected_feature(selected_id_reactive(), module_name)
-        message("Now the value is: ", rv$selected_feature())
     })
     
     parse_contrast_pass_list <- function(target_data, target_contrast, contrast_type) {
@@ -235,7 +226,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         rv$selected_cols_obj() 
         input$dataset1 
         input$dataset2}, {
-            # update_stat_inputs(session, rv, input$dataset1, input$dataset2)
             if (is.null(rv$filename_1()) && is.null(rv$filename_2())) {
                 return()
             }
@@ -262,16 +252,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         
         total_text <- paste(error_vect, collapse="<br>")
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
-    
-    output$html <- renderUI({
-        
-        HTML(parse_vector_to_bullets(c(
-            "Illustration of presence of certain features across the two datasets",
-            "Illustration of presence of certain features in certain statistical comparisons",
-            "Illustration of overlap across features passing certain statistical thresholds",
-            "Venn diagrams and upsets are alternatives"
-        )))
     })
 }
 

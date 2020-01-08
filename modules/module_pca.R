@@ -7,6 +7,7 @@ setup_pca_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
+            top_bar_w_help("Principal Component Analysis", ns("help")),
             fluidRow(
                 column(4,
                        wellPanel(

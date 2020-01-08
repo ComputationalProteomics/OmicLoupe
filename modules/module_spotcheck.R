@@ -3,13 +3,7 @@ setup_spotcheck_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            fluidRow(
-                column(8,
-                       h4("Some ideas for development"),
-                       htmlOutput(ns("html"))
-                )
-            ),
-            p("Spotchecking here, allow jumping here from any screen"),
+            top_bar_w_help("Spotcheck", ns("help")),
             fluidRow(
                 column(
                     12,

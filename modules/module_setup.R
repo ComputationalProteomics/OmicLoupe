@@ -26,6 +26,11 @@ setup_panel_ui <- function(id) {
                 ".recolor_button_red:active:focus { color: #fff; background-color: #aa0000; border-color: #aa0000; }",
                 ".recolor_button_red:focus { color: #fff; background-color: #aa0000; border-color: #aa0000; }",
                 
+                ".recolor_button_gray { color: #fff; background-color: #ccc; border-color: #ccc; }",
+                ".recolor_button_gray:hover { color: #fff; background-color: #bbb; border-color: #bbb; }",
+                ".recolor_button_gray:active:focus { color: #fff; background-color: #aaa; border-color: #aaa; }",
+                ".recolor_button_gray:focus { color: #fff; background-color: #bbb; border-color: #bbb; }",
+                
                 ".recolor_button_yellow { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
                 ".recolor_button_yellow:hover { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
                 ".recolor_button_yellow:active:focus { color: #fff; background-color: #aaaa00; border-color: #aaaa00; }",
@@ -53,47 +58,23 @@ setup_panel_ui <- function(id) {
                 ".button_row { padding: 5px; }",
                 "#column_select_noselectize { height: 500px; }"
             ),
-            # tags$style(
-            #     HTML(
-            #         "
-            #         .align {
-            #             padding: 10px;
-            #             vertical-align: bottom;
-            #         }
-            #         "
-            #     )
-            # ),
-            # tags$style(HTML(".fa { font-size: 8px; }")),
-            
+
             tabsetPanel(
                 id = ns("setup_panels"),
                 type = "tabs",
                 tabPanel("LoadData", 
+                         top_bar_w_help("Load data", ns("help")),
                          fluidRow(
-                             span(
-                                 style="display: inline-block; vertical-align:top; width: 120px; margin-top; -50px;", 
-                                 h3("Load data")
-                             ),
-                             span(
-                                 style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; ", 
-                                 actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
-                                 # actionButton(ns("help"), "", icon=icon("question"), style="padding-bottom:4px; font-size:80%;")
-                             )
+                             column(2, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1))
                          ),
                          fluidRow(
                              column(4,
-                                    fluidRow(
-                                        column(6, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
-                                        column(6, span(checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE), style="padding:10px;"))
-                                    ),
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1", ns("select_dataset")),
-                                        h3("Dataset 1"),
                                         sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"))
                                     ),
                                     conditionalPanel(
                                         sprintf("input['%s'] == 2", ns("select_dataset")),
-                                        h3("Dataset 2"),
                                         sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"))
                                     ),
                                     conditionalPanel(
@@ -108,8 +89,6 @@ setup_panel_ui <- function(id) {
                              column(3,
                                     align="center",
                                     wellPanel(
-                                        select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
-                                        select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
                                         fluidRow(
                                             class = "button_row",
                                             actionButton(
@@ -119,29 +98,35 @@ setup_panel_ui <- function(id) {
                                                 "Detect columns"
                                             )
                                         ),
-                                        fluidRow(
-                                            class = "button_row",
-                                            actionButton(
-                                                ns("perform_map_button"),
-                                                class = "recolor_button_red",
-                                                width = "80%",
-                                                "Map datasets"
+                                        checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
+                                        checkboxInput(ns("toggle_extra_settings"), "Toggle extra settings", value = FALSE),
+                                        conditionalPanel(
+                                            sprintf("input['%s'] == 1", ns("toggle_extra_settings")),
+                                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
+                                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1")),
+                                            fluidRow(
+                                                class = "button_row",
+                                                actionButton(
+                                                    ns("perform_map_button"),
+                                                    class = "recolor_button_gray",
+                                                    width = "80%",
+                                                    style = "visible:false;",
+                                                    "Map datasets"
+                                                )
                                             )
-                                        )
-                                    ),
-                                    wellPanel(
-                                        p("If using two datasets, assign matching feature column. If wanting PCA measures, assign sample columns."),
+                                        ),
+                                        p("If using two datasets, assign matching feature column."),
                                         textOutput(ns("perform_map_status"))
+                                        
                                     )
                              ),
                              column(5,
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1", ns("select_dataset")),
-                                        h3("Dataset 1"),
                                         wellPanel(
                                             selectInput(
                                                 ns("sample_selected_1"),
-                                                "Sample columns",
+                                                "Assigned sample columns",
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
@@ -149,7 +134,7 @@ setup_panel_ui <- function(id) {
                                             ),
                                             selectInput(
                                                 ns("statcols_selected_1"),
-                                                "Stat cols",
+                                                "Assigned statistics columns",
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
@@ -160,7 +145,6 @@ setup_panel_ui <- function(id) {
                                     ),
                                     conditionalPanel(
                                         sprintf("input['%s'] == 2", ns("select_dataset")),
-                                        h3("Dataset 2"),
                                         wellPanel(
                                             selectInput(
                                                 ns("sample_selected_2"),
@@ -185,7 +169,7 @@ setup_panel_ui <- function(id) {
                          )
                 ),
                 tabPanel("TableSetup", 
-                         h3("Table setup"),
+                         top_bar_w_help("Table Setup", ns("help_table_setup")),
                          wellPanel(
                              fluidRow(
                                  column(
@@ -204,9 +188,11 @@ setup_panel_ui <- function(id) {
                          ),
                          tabsetPanel(
                              type = "tabs",
-                             tabPanel("Mapped data", DT::DTOutput(ns("table_display"))),
+                             tabPanel("Raw data 1", DT::DTOutput(ns("raw_data1"))),
+                             tabPanel("Raw data 2", DT::DTOutput(ns("raw_data2"))),
                              tabPanel("Design 1", DT::DTOutput(ns("dt_design1"))),
-                             tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
+                             tabPanel("Design 2", DT::DTOutput(ns("dt_design2"))),
+                             tabPanel("Mapped data", DT::DTOutput(ns("table_display")))
                          )
                 )
             )
@@ -233,7 +219,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_setup_server <- function(input, output, session, module_name) {
     
-    # <ol><li>Upload at least one dataset file and design file (format instructions)</li></ol>
+    # document.querySelectorAll("#navbar li a[data-value=Correlation]")
     
     observeEvent(input$help, {
         shinyalert(
@@ -294,19 +280,16 @@ module_setup_server <- function(input, output, session, module_name) {
         rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
     })
     
-    # observeEvent(rv$selected_feature(), {
-    #     req(rv$mapping_obj())
-    #     req(rv$mapping_obj()$get_combined_dataset())
-    #     
-    #     if (rv$selected_feature_module() != module_name) {
-    #         message("Performing refresh")
-    #         # This part must be setting up a link!
-    #         output$table_display <- DT::renderDataTable(rv$dt_parsed_data_w_row(rv, rv$mapping_obj()$get_combined_dataset()))
-    #     }
-    #     else {
-    #         message("Ignoring update, identified as coming from feature change within module")
-    #     }
-    # })
+
+    output$raw_data1 <- DT::renderDataTable({
+        req(rv$filedata_1())
+        rv$filedata_1()
+    })
+    
+    output$raw_data2 <- DT::renderDataTable({
+        req(rv$filedata_2())
+        rv$filedata_2()
+    })
     
     output$dt_design1 <- DT::renderDataTable({
         req(rv$design_1)
@@ -360,6 +343,7 @@ module_setup_server <- function(input, output, session, module_name) {
     
     observeEvent(input$sample_select_button_1, {
         
+        browser()
         data_nbr <- input$select_dataset
         filename <- rv[[sprintf("filename_%s", data_nbr)]]()
         
@@ -569,6 +553,11 @@ module_setup_server <- function(input, output, session, module_name) {
                 rv$filename_2()
             )
         }
+        
+        # if has entry with columns in one case - perform the mapping
+        # Otherwise - be ready to recolor the Map datasets button
+        rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+        
     })
     
     observeEvent(rv$filedata_1(), {
@@ -601,20 +590,34 @@ module_setup_server <- function(input, output, session, module_name) {
         updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()), selected = start_cond)
     })
     
-    observeEvent({
-        input$perform_map_button
-    }, {
+    perform_mapping <- function(rv, output, data_file_1, data_file_2, feature_col_1, feature_col_2) {
+        # selcol1 <- NULL
+        # if (!is.null(input$data_file_1)) {
+        #     selcol_list <- rv$selected_cols_obj()[[input$data_file_1$name]]
+        #     if ("samples" %in% names(selcol_list)) {
+        #         selcol1 <- selcol_list$samples
+        #     }
+        # }
+        # 
+        # selcol2 <- NULL
+        # if (!is.null(input$data_file_2)) {
+        #     selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
+        #     if ("samples" %in% names(selcol2_list)) {
+        #         selcol2 <- selcol2_list$samples
+        #     }
+        # }
+        
         selcol1 <- NULL
-        if (!is.null(input$data_file_1)) {
-            selcol_list <- rv$selected_cols_obj()[[input$data_file_1$name]]
+        if (!is.null(data_file_1)) {
+            selcol_list <- rv$selected_cols_obj()[[data_file_1$name]]
             if ("samples" %in% names(selcol_list)) {
                 selcol1 <- selcol_list$samples
             }
         }
-        
+
         selcol2 <- NULL
-        if (!is.null(input$data_file_2)) {
-            selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
+        if (!is.null(data_file_2)) {
+            selcol2_list <- rv$selected_cols_obj()[[data_file_2$name]]
             if ("samples" %in% names(selcol2_list)) {
                 selcol2 <- selcol2_list$samples
             }
@@ -622,20 +625,65 @@ module_setup_server <- function(input, output, session, module_name) {
         
         rv <- do_dataset_mapping(
             rv, 
-            input$feature_col_1, 
-            input$feature_col_2, 
+            feature_col_1, 
+            feature_col_2, 
             output, 
             selcol1,
             selcol2,
             input$matched_samples
         )
-        
+        rv
+    }
+    
+    observeEvent({
+        input$perform_map_button
+    }, {
+        rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+        # selcol1 <- NULL
+        # if (!is.null(input$data_file_1)) {
+        #     selcol_list <- rv$selected_cols_obj()[[input$data_file_1$name]]
+        #     if ("samples" %in% names(selcol_list)) {
+        #         selcol1 <- selcol_list$samples
+        #     }
+        # }
+        # 
+        # selcol2 <- NULL
+        # if (!is.null(input$data_file_2)) {
+        #     selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
+        #     if ("samples" %in% names(selcol2_list)) {
+        #         selcol2 <- selcol2_list$samples
+        #     }
+        # }
+        # 
+        # rv <- do_dataset_mapping(
+        #     rv, 
+        #     input$feature_col_1, 
+        #     input$feature_col_2, 
+        #     output, 
+        #     selcol1,
+        #     selcol2,
+        #     input$matched_samples
+        # )
     })
     
     observeEvent(rv$mapping_obj(), {
         req(!is.null(rv$mapping_obj()))
-        shinyjs::removeClass("perform_map_button", "recolor_button_red")
-        shinyjs::addClass("perform_map_button", "recolor_button")
+        # shinyjs::removeClass("perform_map_button", "recolor_button_red")
+        
+        number_files <- length(which(c(!is.null(input$data_file_1), !is.null(input$data_file_2))))
+        
+        if (number_files == 2) {
+            message("Dual found")
+            
+            shinyjs::addClass("perform_map_button", "recolor_button_blue")
+        }
+        else if (number_files == 1) {
+            message("Single found")
+            shinyjs::addClass("perform_map_button", "recolor_button_gray")
+        }
+        else {
+            message("Number identified files: %s", number_files)
+        }
     })
     
     observeEvent({
@@ -644,7 +692,6 @@ module_setup_server <- function(input, output, session, module_name) {
         input$design_file_1
         input$design_file_2
     }, {
-        message("Testing")
         shinyjs::removeClass("perform_map_button", "recolor_button")
         shinyjs::removeClass("perform_map_button", "recolor_button_red")
         shinyjs::addClass("perform_map_button", "recolor_button_yellow")

@@ -68,7 +68,8 @@ module_ideas_server <- function(input, output, session, module_name) {
             "PCA: Integrate more closely with scatter distribution by showing at same page",
             "Performing Hive plot or Circular plot as 'master illustration' overviewing the two datasets globally",
             "Do measures of similarity across datasets, such as correlation of fold changes or p-value orders",
-            "Consider if limited unit testing is needed"
+            "Consider if limited unit testing is needed",
+            "For Venn comparisons - compare presence of features, allowing for identifying features missing in certain dataset or conditions"
         )))
     })
 }

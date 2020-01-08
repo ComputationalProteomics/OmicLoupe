@@ -33,12 +33,15 @@ ui <- navbarPage(
     "OmicLoupe",
     id="navbar",
     setup_panel_ui("Setup"),
-    setup_plotly_ui("Plotly"),
-    setup_pca_ui("PCA"),
     setup_quality_ui("Quality"),
-    setup_overlap_ui("Overlap"),
+    setup_pca_ui("PCA"),
     setup_spotcheck_ui("Spotcheck"),
+    
+    setup_plotly_ui("StatDist"),
+    setup_overlap_ui("Overlap"),
+    
     setup_correlation_ui("Correlation"),
+    
     setup_help_ui("Help"),
     setup_ideas_ui("Ideas")
 )
@@ -46,13 +49,16 @@ ui <- navbarPage(
 server <- shinyServer(function(session, input, output) {
     
     reactive_values <- callModule(module_setup_server, id="Setup", module_name="Setup")
-    callModule(module_plotly_server, id="Plotly", rv=reactive_values, module_name="Plotly")
-    callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
-    callModule(module_help_server, id="Help", module_name="Help")
     callModule(module_quality_server, id="Quality", rv=reactive_values, module_name="Quality")
-    callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap")
+    callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
     callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="Spotcheck")
+    
+    callModule(module_plotly_server, id="StatDist", rv=reactive_values, module_name="StatDist")
+    callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap")
+    
     callModule(module_correlation_server, id="Correlation", rv=reactive_values, module_name="Correlation")
+    
+    callModule(module_help_server, id="Help", module_name="Help")
     callModule(module_ideas_server, id="Ideas", module_name="Ideas")
 })
 

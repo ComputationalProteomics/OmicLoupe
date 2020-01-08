@@ -16,6 +16,17 @@ setup_plotly_ui <- function(id) {
         id,
         fluidPage(
             fluidRow(
+                span(
+                    style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
+                    h3("Statistical investigations")
+                ),
+                span(
+                    style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+                    actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
+                    # actionButton(ns("help"), "", icon=icon("question"), style="padding-bottom:4px; font-size:80%;")
+                )
+            ),
+            fluidRow(
                 column(4,
                        wellPanel(
                            selectInput(ns("color_type"), "Coloring type", choices=c("Threshold", "PCA", "Column"), selected="select"),
@@ -373,7 +384,9 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     })
     
     output$plotly_volc1 <- renderPlotly({
-        
+
+        req(rv$mapping_obj())
+
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
@@ -408,6 +421,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     })
 
     output$plotly_volc2 <- renderPlotly({
+        
+        req(rv$mapping_obj())
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -444,6 +459,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_ma1 <- renderPlotly({
         
+        req(rv$mapping_obj())
+        
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
@@ -477,6 +494,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     })
     
     output$plotly_ma2 <- renderPlotly({
+        
+        req(rv$mapping_obj())
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -512,6 +531,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_hist1 <- renderPlotly({
         
+        req(rv$mapping_obj())
+        
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         
@@ -533,6 +554,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     })
     
     output$plotly_hist2 <- renderPlotly({
+        
+        req(rv$mapping_obj())
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")

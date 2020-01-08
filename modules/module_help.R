@@ -4,20 +4,49 @@ setup_help_ui <- function(id) {
         id,
         fluidPage(
             fluidRow(
-                column(8,
-                       h2("Setup page"),
-                       htmlOutput(ns("setup_image_text")),
-                       plotOutput(ns("setup_image"), height = 800),
-                       h2("Plotly page"),
-                       htmlOutput(ns("plotly1_image_text")),
-                       plotOutput(ns("plotly1_image"), height = 1050),
-                       h2("Plotly page 2"),
-                       htmlOutput(ns("plotly2_image_text")),
-                       plotOutput(ns("plotly2_image"), height = 1050),
-                       h2("PCA page"),
-                       htmlOutput(ns("pca_image_text")),
-                       plotOutput(ns("pca_image"), height=1000)
+                tabsetPanel(
+                    id = ns("help_panels"),
+                    type = "tabs",
+                    tabPanel(
+                        "Input data formats",
+                        htmlOutput(ns("input_data_text"))
+                    ),
+                    tabPanel(
+                        "Setup page", 
+                        htmlOutput(ns("setup_image_text")),
+                        plotOutput(ns("setup_image"), height = 800)
+                    ),
+                    tabPanel(
+                        "Statistics page",
+                        htmlOutput(ns("plotly1_image_text")),
+                        plotOutput(ns("plotly1_image"), height = 1050),
+                    ),
+                    tabPanel(
+                        "Statistics page 2",
+                        htmlOutput(ns("plotly2_image_text")),
+                        plotOutput(ns("plotly2_image"), height = 1050)
+                    ),
+                    tabPanel(
+                        "PCA page",
+                        htmlOutput(ns("pca_image_text")),
+                        plotOutput(ns("pca_image"), height=1000)
+                    )
                 )
+                # )
+                # column(8,
+                #        h2("Setup page"),
+                #        htmlOutput(ns("setup_image_text")),
+                #        plotOutput(ns("setup_image"), height = 800),
+                #        h2("Plotly page"),
+                #        htmlOutput(ns("plotly1_image_text")),
+                #        plotOutput(ns("plotly1_image"), height = 1050),
+                #        h2("Plotly page 2"),
+                #        htmlOutput(ns("plotly2_image_text")),
+                #        plotOutput(ns("plotly2_image"), height = 1050),
+                #        h2("PCA page"),
+                #        htmlOutput(ns("pca_image_text")),
+                #        plotOutput(ns("pca_image"), height=1000)
+                # )
             )
         )
     )

@@ -3,6 +3,7 @@ setup_quality_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
+            top_bar_w_help("Quality", ns("help")),
             fluidRow(
                 column(
                     12,
@@ -97,7 +98,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     sync_param_choices <- function() {
         
-        message("sync_param_choices")
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$ddf_comp(rv, input$dataset2))
 
