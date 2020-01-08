@@ -8,10 +8,6 @@ setup_help_ui <- function(id) {
                     id = ns("help_panels"),
                     type = "tabs",
                     tabPanel(
-                        "Input data formats",
-                        htmlOutput(ns("input_data_text"))
-                    ),
-                    tabPanel(
                         "Setup page", 
                         htmlOutput(ns("setup_image_text")),
                         plotOutput(ns("setup_image"), height = 800)
@@ -30,6 +26,10 @@ setup_help_ui <- function(id) {
                         "PCA page",
                         htmlOutput(ns("pca_image_text")),
                         plotOutput(ns("pca_image"), height=1000)
+                    ),
+                    tabPanel(
+                        "Input data formats",
+                        htmlOutput(ns("input_data_text"))
                     )
                 )
             )
@@ -95,6 +95,17 @@ module_help_server <- function(input, output, session, module_name) {
         HTML(parse_vector_to_bullets(c(
             "First",
             "Second"
+        )))
+    })
+    
+    output$input_data_text <- renderUI({
+        HTML(parse_vector_to_bullets(c(
+            "Need to specify requirements on input files",
+            "1. Data file, containing statistical columns and specify feature column (and optional annotation column)",
+            "2. Design file, containing experimental condition with one column mapping to the data file, and other columns could be used for visualization colorings",
+            "Column identification logic",
+            "Data loading",
+            "Using matched samples"
         )))
     })
     

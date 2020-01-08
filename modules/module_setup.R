@@ -66,25 +66,25 @@ setup_panel_ui <- function(id) {
                          top_bar_w_help("Load data", ns("help")),
                          fluidRow(
                              column(2, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
-                             column(2),
-                             column(5,
+                             column(1),
+                             column(9,
                                     p(HTML("<b>Status:</b>")),
-                                    p("No columns assigned"),
-                                    p("No datasets loaded"),
+                                    # p("No columns assigned"),
+                                    # p("No datasets loaded"),
                                     textOutput(ns("column_status")),
-                                    textOutput(ns("load_status")),
-                                    textOutput(ns("perform_map_status"))
+                                    textOutput(ns("load_status"))
+                                    # textOutput(ns("perform_map_status"))
                              )
                          ),
                          fluidRow(
                              column(4,
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1", ns("select_dataset")),
-                                        sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"))
+                                        sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"), ns("annot_col_1"))
                                     ),
                                     conditionalPanel(
                                         sprintf("input['%s'] == 2", ns("select_dataset")),
-                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"))
+                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_1"))
                                     ),
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1 || input['%s'] == 1", ns("select_dataset"), ns("matched_samples")),
@@ -98,6 +98,8 @@ setup_panel_ui <- function(id) {
                              column(3,
                                     align="center",
                                     wellPanel(
+                                        checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
+                                        checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE),
                                         fluidRow(
                                             class = "button_row",
                                             actionButton(
@@ -107,6 +109,7 @@ setup_panel_ui <- function(id) {
                                                 "Identify columns"
                                             )
                                         ),
+                                        hr(),
                                         fluidRow(
                                             class = "button_row",
                                             actionButton(
@@ -116,7 +119,6 @@ setup_panel_ui <- function(id) {
                                                 "Load data"
                                             )
                                         ),
-                                        checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
                                         checkboxInput(ns("toggle_extra_settings"), "Toggle extra settings", value = FALSE),
                                         conditionalPanel(
                                             sprintf("input['%s'] == 1", ns("toggle_extra_settings")),
@@ -205,11 +207,11 @@ setup_panel_ui <- function(id) {
     )
 }
 
+# How to access navbar element (from outside module)
+# document.querySelectorAll("#navbar li a[data-value=Correlation]")
 
 
 module_setup_server <- function(input, output, session, module_name) {
-    
-    # document.querySelectorAll("#navbar li a[data-value=Correlation]")
     
     observeEvent(input$help, {
         shinyalert(
@@ -333,56 +335,56 @@ module_setup_server <- function(input, output, session, module_name) {
     
     # ------------------- Sample Management --------------------
     
-    observeEvent(input$sample_select_button_1, {
-        
-        data_nbr <- input$select_dataset
-        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-        
-        if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
-            selected_samples <- column_selection_action(
-                input[[sprintf("data_selected_columns_%s", data_nbr)]],
-                rv$selected_cols_obj()[[filename]]$samples
-            )
-            
-            rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
-            
-            sync_select_inputs(
-                session,
-                sprintf("data_selected_columns_%s", data_nbr),
-                sprintf("sample_selected_%s", data_nbr),
-                rv[[sprintf("filedata_%s", data_nbr)]],
-                selected_samples
-            )
-        }
-        else {
-            warning("Trying to select with nothing marked")
-        }
-    })
-    
-    observeEvent(input$sample_deselect_button_1, {
-        
-        data_nbr <- input$select_dataset
-        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-        
-        if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
-            selected_samples <- column_selection_action(
-                input[[sprintf("sample_selected_%s", data_nbr)]],            
-                rv$selected_cols_obj()[[rv$filename_1()]]$samples, 
-                is_deselect = TRUE
-            )
-            rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
-            sync_select_inputs(
-                session, 
-                sprintf("data_selected_columns_%s", data_nbr),
-                sprintf("sample_selected_%s", data_nbr),
-                rv$filedata_1, 
-                selected_samples
-            )
-        }
-        else {
-            warning("Trying to deselect with nothing marked, ignoring")
-        }
-    })
+    # observeEvent(input$sample_select_button_1, {
+    #     
+    #     data_nbr <- input$select_dataset
+    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+    #     
+    #     if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
+    #         selected_samples <- column_selection_action(
+    #             input[[sprintf("data_selected_columns_%s", data_nbr)]],
+    #             rv$selected_cols_obj()[[filename]]$samples
+    #         )
+    #         
+    #         rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
+    #         
+    #         sync_select_inputs(
+    #             session,
+    #             sprintf("data_selected_columns_%s", data_nbr),
+    #             sprintf("sample_selected_%s", data_nbr),
+    #             rv[[sprintf("filedata_%s", data_nbr)]],
+    #             selected_samples
+    #         )
+    #     }
+    #     else {
+    #         warning("Trying to select with nothing marked")
+    #     }
+    # })
+    # 
+    # observeEvent(input$sample_deselect_button_1, {
+    #     
+    #     data_nbr <- input$select_dataset
+    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+    #     
+    #     if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
+    #         selected_samples <- column_selection_action(
+    #             input[[sprintf("sample_selected_%s", data_nbr)]],            
+    #             rv$selected_cols_obj()[[rv$filename_1()]]$samples, 
+    #             is_deselect = TRUE
+    #         )
+    #         rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
+    #         sync_select_inputs(
+    #             session, 
+    #             sprintf("data_selected_columns_%s", data_nbr),
+    #             sprintf("sample_selected_%s", data_nbr),
+    #             rv$filedata_1, 
+    #             selected_samples
+    #         )
+    #     }
+    #     else {
+    #         warning("Trying to deselect with nothing marked, ignoring")
+    #     }
+    # })
     
     update_statpatterns_display <- function(statpatterns, target_out) {
         
@@ -397,76 +399,86 @@ module_setup_server <- function(input, output, session, module_name) {
         })
     }
     
-    observeEvent(input$stat_select_button_1, {
-        
-        data_nbr <- input$select_dataset
-        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-        
-        if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
-            selected_statcols <- column_selection_action(
-                input[[sprintf("data_selected_columns_%s", data_nbr)]],
-                rv$selected_cols_obj()[[filename]]$statcols
-            )
-            
-            rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
-            sync_select_inputs(
-                session, 
-                sprintf("data_selected_columns_%s", data_nbr),
-                sprintf("statcols_selected_%s", data_nbr),
-                rv[[sprintf("filedata_%s", data_nbr)]],
-                selected_statcols
-            )
-            update_statpatterns_display(
-                rv$selected_cols_obj()[[filename]]$statpatterns, 
-                sprintf("found_stat_patterns_%s", data_nbr)
-            )
-        }
-        else {
-            warning("Trying to select with nothing marked, ignoring...")
-        }
-    })
+    # observeEvent(input$stat_select_button_1, {
+    #     
+    #     data_nbr <- input$select_dataset
+    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+    #     
+    #     if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
+    #         selected_statcols <- column_selection_action(
+    #             input[[sprintf("data_selected_columns_%s", data_nbr)]],
+    #             rv$selected_cols_obj()[[filename]]$statcols
+    #         )
+    #         
+    #         rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
+    #         sync_select_inputs(
+    #             session, 
+    #             sprintf("data_selected_columns_%s", data_nbr),
+    #             sprintf("statcols_selected_%s", data_nbr),
+    #             rv[[sprintf("filedata_%s", data_nbr)]],
+    #             selected_statcols
+    #         )
+    #         update_statpatterns_display(
+    #             rv$selected_cols_obj()[[filename]]$statpatterns, 
+    #             sprintf("found_stat_patterns_%s", data_nbr)
+    #         )
+    #     }
+    #     else {
+    #         warning("Trying to select with nothing marked, ignoring...")
+    #     }
+    # })
+    # 
+    # observeEvent(input$stat_deselect_button_1, {
+    #     data_nbr <- input$select_dataset
+    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
+    #     
+    #     if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
+    #         selected_statcols <- column_selection_action(
+    #             input[[sprintf("statcols_selected_%s", data_nbr)]],
+    #             rv$selected_cols_obj()[[filename]]$statcols,
+    #             is_deselect = TRUE
+    #         )
+    #         
+    #         rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
+    #         sync_select_inputs(
+    #             session, 
+    #             sprintf("data_selected_columns_%s", data_nbr),
+    #             sprintf("statcols_selected_%s", data_nbr),
+    #             rv[[sprintf("filedata_%s", data_nbr)]],
+    #             selected_statcols
+    #         )
+    #         update_statpatterns_display(
+    #             rv$selected_cols_obj()[[filename]]$statpatterns, 
+    #             sprintf("found_stat_patterns_%s", data_nbr)
+    #         )
+    #     }
+    #     else {
+    #         warning("Trying to deselect with nothing marked, ignoring")
+    #     }
+    # })
     
-    observeEvent(input$stat_deselect_button_1, {
-        data_nbr <- input$select_dataset
-        filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-        
-        if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
-            selected_statcols <- column_selection_action(
-                input[[sprintf("statcols_selected_%s", data_nbr)]],
-                rv$selected_cols_obj()[[filename]]$statcols,
-                is_deselect = TRUE
-            )
+    observeEvent({
+        input$feature_col_1
+        input$annot_col_1
+        }, {
             
-            rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
-            sync_select_inputs(
-                session, 
-                sprintf("data_selected_columns_%s", data_nbr),
-                sprintf("statcols_selected_%s", data_nbr),
-                rv[[sprintf("filedata_%s", data_nbr)]],
-                selected_statcols
-            )
-            update_statpatterns_display(
-                rv$selected_cols_obj()[[filename]]$statpatterns, 
-                sprintf("found_stat_patterns_%s", data_nbr)
-            )
-        }
-        else {
-            warning("Trying to deselect with nothing marked, ignoring")
-        }
-    })
-    
-    observeEvent(input$feature_col_1, {
+        warning("Consider: Is this section needed? Possibly in the statistics module naming?")
+            
         data_nbr <- input$select_dataset
         if (!is.null(rv[[sprintf("filename_%s", data_nbr)]]()) && !is.null(rv$mapping_obj())) {
             rv[[sprintf("selected_cols_", data_nbr)]]$feature_col <- input[[sprintf("feature_col_%s", data_nbr)]]
+            rv[[sprintf("selected_cols_", data_nbr)]]$annot_col <- input[[sprintf("annot_col_%s", data_nbr)]]
             rv <- update_selcol_obj(
-                rv, 
-                rv[[sprintf("filename_%s", data_nbr)]](), 
-                "feature_col", 
-                input[[sprintf("feature_col_%s", data_nbr)]]
+                rv, rv[[sprintf("filename_%s", data_nbr)]](),
+                "feature_col", input[[sprintf("feature_col_%s", data_nbr)]]
+            )
+            rv <- update_selcol_obj(
+                rv, rv[[sprintf("filename_%s", data_nbr)]](),
+                "annot_col", input[[sprintf("annot_col_%s", data_nbr)]]
             )
         }
     })
+    
     # --------------------------- End ----------------------------
     
     autodetect_stat_cols <- function() {
@@ -485,18 +497,19 @@ module_setup_server <- function(input, output, session, module_name) {
         }
     }
     
-    autodetect_sample_cols <- function(ddf, rdf, data_nbr, rv, filename) {
+    autodetect_sample_cols <- function(ddf, rdf, data_nbr, rv, filename, sample_col=NULL) {
         
-        full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
-        sample_col <- colnames(ddf)[which(full_match)[1]]
-        
-        updateSelectInput(
-            session, 
-            sprintf("design_sample_col_%s", data_nbr), 
-            choices=colnames(rv[[sprintf("design_%s", data_nbr)]]()), 
-            selected = sample_col
-        )
-        
+        if (is.null(sample_col)) {
+            full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
+            sample_col <- colnames(ddf)[which(full_match)[1]]
+            updateSelectInput(
+                session, 
+                sprintf("design_sample_col_%s", data_nbr), 
+                choices=colnames(rv[[sprintf("design_%s", data_nbr)]]()), 
+                selected = sample_col
+            )
+        }
+
         if (is.null(ddf)) {
             stop("Data frame is NULL, invalid input provided!")
         }
@@ -523,31 +536,88 @@ module_setup_server <- function(input, output, session, module_name) {
         }
     }
     
+    
+    detect_sample_cols <- function(rv, design, design_sample_col, filedata, filename, data_nbr, autodetect=TRUE) {
+        
+        if (!is.null(design_sample_col) && design_sample_col != "" && !is.null(filedata)) {
+            
+            if (autodetect) {
+                sample_col <- NULL
+            }
+            else {
+                sample_col <- design_sample_col
+            }
+            
+            autodetect_sample_cols(
+                design,
+                filedata,
+                data_nbr = data_nbr, 
+                rv, 
+                filename,
+                sample_col = sample_col
+            )
+        }
+    }
+    
     observeEvent(input$autodetect_cols, {
+        
         autodetect_stat_cols()
-        if (!is.null(input$design_sample_col_1) && input$design_sample_col_1 != "" && !is.null(rv$filedata_1())) {
-            autodetect_sample_cols(
-                rv$design_1(),
-                rv$filedata_1(),
-                data_nbr = 1, 
-                rv, 
-                rv$filename_1()
-            )
-        }
-        if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "" && !is.null(rv$filedata_2())) {
-            autodetect_sample_cols(
-                rv$design_2(),
-                rv$filedata_2(),
-                data_nbr = 2,
-                rv, 
-                rv$filename_2()
-            )
-        }
         
-        # if has entry with columns in one case - perform the mapping
-        # Otherwise - be ready to recolor the Map datasets button
-        # rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+        detect_sample_cols(
+            rv,
+            rv$design_1(),
+            input$design_sample_col_1,
+            filedata=rv$filedata_1(),
+            filename=rv$filename_1(),
+            data_nbr=1,
+            autodetect=input$automatic_sample_detect
+        )
+        detect_sample_cols(
+            rv,
+            rv$design_2(),
+            input$design_sample_col_2,
+            filedata=rv$filedata_2(),
+            filename=rv$filename_2(),
+            data_nbr=2,
+            autodetect=input$automatic_sample_detect
+        )
         
+        # if (!is.null(input$design_sample_col_1) && input$design_sample_col_1 != "" && !is.null(rv$filedata_1())) {
+        #     
+        #     if (input$automatic_sample_detect) {
+        #         sample_col <- NULL
+        #     }
+        #     else {
+        #         sample_col <- input$design_sample_col_1
+        #     }
+        #     
+        #     autodetect_sample_cols(
+        #         rv$design_1(),
+        #         rv$filedata_1(),
+        #         data_nbr = 1, 
+        #         rv, 
+        #         rv$filename_1(),
+        #         sample_col = sample_col
+        #     )
+        # }
+        # if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "" && !is.null(rv$filedata_2())) {
+        #     
+        #     if (input$automatic_sample_detect) {
+        #         sample_col <- NULL
+        #     }
+        #     else {
+        #         sample_col <- input$design_sample_col_1
+        #     }
+        #     
+        #     autodetect_sample_cols(
+        #         rv$design_2(),
+        #         rv$filedata_2(),
+        #         data_nbr = 2,
+        #         rv, 
+        #         rv$filename_2(),
+        #         sample_col = sample_col
+        #     )
+        # }
     })
     
     observeEvent(rv$filedata_1(), {
@@ -606,13 +676,27 @@ module_setup_server <- function(input, output, session, module_name) {
             selcol2,
             input$matched_samples
         )
+        
         rv
     }
     
-    observeEvent({
-        input$perform_map_button
-    }, {
-        rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+    observeEvent(input$perform_map_button, {
+        
+        if (is.null(input$data_file_1) && is.null(input$design_file_1)) {
+            output$load_status <- renderText({ "Neither data file or design file detected, please upload and assign columns before loading data" })
+        }
+        else if (!is.null(input$data_file_1) && is.null(input$design_file_1)) {
+            output$load_status <- renderText({ "No design file detected, please upload and assign columns before loading data" })
+        }
+        else if (is.null(input$data_file_1) && !is.null(input$design_file_1)) {
+            output$load_status <- renderText({ "No data file detected, please upload and assign columns before loading data" })
+        }
+        else if (length(rv$selected_cols_obj()[[input$data_file_1$name]]) == 0) {
+            output$load_status <- renderText({ "Data present but no columns assigned, please identify columns before loading" })
+        }
+        else {
+            rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+        }
     })
     
     observeEvent(rv$mapping_obj(), {
@@ -621,27 +705,15 @@ module_setup_server <- function(input, output, session, module_name) {
         
         if (number_files == 2) {
             message("Dual found")
-            
-            shinyjs::addClass("perform_map_button", "recolor_button_blue")
+            # output$load_status <- renderText({ "Two datasets detected as assigned" })
         }
         else if (number_files == 1) {
             message("Single found")
-            shinyjs::addClass("perform_map_button", "recolor_button_gray")
+            # output$load_status <- renderText({ "One dataset detected as assigned" })
         }
         else {
             message("Number identified files: %s", number_files)
         }
-    })
-    
-    observeEvent({
-        input$data_file_1
-        input$data_file_2
-        input$design_file_1
-        input$design_file_2
-    }, {
-        shinyjs::removeClass("perform_map_button", "recolor_button")
-        shinyjs::removeClass("perform_map_button", "recolor_button_red")
-        shinyjs::addClass("perform_map_button", "recolor_button_yellow")
     })
     
     return(rv)

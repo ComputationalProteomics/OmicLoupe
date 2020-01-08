@@ -11,7 +11,7 @@ top_bar_w_help <- function(title, button_id) {
     )
 }
 
-sample_input_well <- function(upload_id, select_col_id, feature_col_id, select_size=12) {
+sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_col_id, select_size=12) {
     wellPanel(
         fileInput(
             upload_id, 
@@ -31,6 +31,13 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, select_s
         selectInput(
             feature_col_id,
             "Feature column",
+            choices = c(""),
+            multiple = FALSE,
+            selectize = FALSE
+        ),
+        selectInput(
+            annot_col_id,
+            "Annotation column",
             choices = c(""),
             multiple = FALSE,
             selectize = FALSE

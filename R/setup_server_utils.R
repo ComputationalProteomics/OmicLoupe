@@ -66,7 +66,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
     }
     
     if (is.null(rv$filedata_1()) && is.null(rv$filedata_2())) {
-        output$perform_map_status <- renderText({
+        output$load_status <- renderText({
             sprintf("Both datasets needs to be present, missing both")
         })
     }
@@ -78,7 +78,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         ))
         
         out_text <- get_output_text(rv, "Dataset1")
-        output$perform_map_status <- renderText({ out_text })
+        output$load_status <- renderText({ out_text })
     }
     else if (is.null(rv$filedata_1())) {
         rv$mapping_obj(MapObject$new(
@@ -88,7 +88,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         ))
         
         out_text <- get_output_text(rv, "Dataset2")
-        output$perform_map_status <- renderText({ out_text })
+        output$load_status <- renderText({ out_text })
     }
     else {
         rv$mapping_obj(MapObject$new(
@@ -108,7 +108,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             out_text <- "No samples mapped, check your data and your Feature columns!"
         }
 
-        output$perform_map_status <- renderText({ out_text })
+        output$load_status <- renderText({ out_text })
     }
     rv
 }
