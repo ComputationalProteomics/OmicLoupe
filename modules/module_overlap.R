@@ -68,6 +68,14 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_overlap_server <- function(input, output, session, rv, module_name) {
     
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Overlap visuals",
+            text = help_overlap, 
+            html = TRUE
+        )
+    })
+    
     selected_id_reactive <- reactive({
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
     })

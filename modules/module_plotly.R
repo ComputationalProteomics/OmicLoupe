@@ -69,8 +69,12 @@ setup_plotly_ui <- function(id) {
                                )
                            ),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
-                           sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
-                           sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
+                           checkboxInput(ns("more_settings"), "Show more settings", value = FALSE),
+                           conditionalPanel(
+                               sprintf("input['%s'] == 1", ns("more_settings")),
+                               sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
+                               sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
+                           ),
                        )
                 ),
                 column(8,
@@ -95,6 +99,14 @@ setup_plotly_ui <- function(id) {
 
 
 module_plotly_server <- function(input, output, session, rv, module_name) {
+    
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Statistics visuals",
+            text = help_statistics, 
+            html = TRUE
+        )
+    })
     
     # ---------------- REACTIVE ---------------- 
     
@@ -295,7 +307,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     }
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
-    make_scatter <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
+    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
         
         # max_levels <- 10
         # df_color <- plot_df[[color_col]]
@@ -307,6 +319,14 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
             geom_point(alpha=alpha) +
             ggtitle(title)
+        
+        if (!is.null(xlab)) {
+            plt <- plt + xlab(x_lab)
+        }
+        
+        if (!is.null(ylab)) {
+            plt <- plt + ylab(y_lab)
+        }
         
         # plt <- plot_ly(
         #     plot_df,
@@ -338,7 +358,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             nbinsx = input$bin_count,
             source = "subset",
             key = key_vals
-        ) %>% layout(title = title, xaxis=list(title="P.Value"))
+        ) %>% layout(title = title, xaxis=list(title="P-value"), yaxis=list(title="Count"))
     }
     
     retrieve_color_col <- function(color_type, data_pattern) {
@@ -409,6 +429,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             plot_df, 
             x_col="fold", 
             y_col="sig", 
+            x_lab="Fold change",
+            y_lab="P-value (-log10)",
             color_col=color_col, 
             key="key", 
             alpha=input$alpha,
@@ -446,6 +468,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             plot_df, 
             x_col="fold", 
             y_col="sig", 
+            x_lab="Fold change (log2)",
+            y_lab="Significance (-log10)",
             color_col=color_col, 
             key="key", 
             alpha=input$alpha,
@@ -482,6 +506,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             plot_df, 
             x_col="expr", 
             y_col="fold", 
+            x_lab="Average expression",
+            y_lab="Fold change (log2)",
             color_col=color_col, 
             alpha=input$alpha,
             key="key", 
@@ -518,6 +544,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             plot_df, 
             x_col="expr", 
             y_col="fold", 
+            x_lab="Average expression",
+            y_lab="Fold change (log2)",
             color_col=color_col, 
             alpha=input$alpha,
             key="key", 

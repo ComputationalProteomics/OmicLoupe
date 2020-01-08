@@ -81,6 +81,14 @@ setup_quality_ui <- function(id) {
 
 module_quality_server <- function(input, output, session, rv, module_name) {
     
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Quality visuals",
+            text = help_quality, 
+            html = TRUE
+        )
+    })
+    
     # Observers
     observeEvent(rv$filedata_1(), {
         message("observeEvent(rv$filedata_1()")

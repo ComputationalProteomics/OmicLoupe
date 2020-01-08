@@ -44,7 +44,7 @@ setup_pca_ui <- function(id) {
                                    )
                                ),
                                tabPanel(
-                                   "Other", 
+                                   "Other settings", 
                                    numericInput(ns("dot_size"), "Dot size", min=1, value=3, step=1),
                                    checkboxInput(ns("scale_pca_data"), "Scale", value = TRUE),
                                    checkboxInput(ns("center_pca_data"), "Center", value = TRUE),
@@ -76,6 +76,14 @@ setup_pca_ui <- function(id) {
 module_pca_server <- function(input, output, session, rv, module_name) {
     
     ########### REACTIVE ############
+    
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Principal component visuals",
+            text = help_pca, 
+            html = TRUE
+        )
+    })
     
     pca_obj1 <- reactive({
         

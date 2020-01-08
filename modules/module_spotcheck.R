@@ -59,6 +59,14 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Spot-check visuals",
+            text = help_spotcheck, 
+            html = TRUE
+        )
+    })
+    
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])

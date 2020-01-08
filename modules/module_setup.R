@@ -95,7 +95,7 @@ setup_panel_ui <- function(id) {
                                                 ns("autodetect_cols"),
                                                 class = "recolor_button",
                                                 width = "80%",
-                                                "Detect columns"
+                                                "Load data"
                                             )
                                         ),
                                         checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
@@ -200,22 +200,7 @@ setup_panel_ui <- function(id) {
     )
 }
 
-parse_vector_to_bullets <- function(vect, number=TRUE) {
-    html_string <- paste0(
-        "<li>",
-        paste(vect, collapse="</li><li>"),
-        "</li>"
-    )
-    
-    if (!number) {
-        list_style <- "ul"
-    }
-    else {
-        list_style <- "ol"
-    }
-    
-    sprintf("<%s>%s</%s>", list_style, html_string, list_style)
-}
+
 
 module_setup_server <- function(input, output, session, module_name) {
     
@@ -224,14 +209,15 @@ module_setup_server <- function(input, output, session, module_name) {
     observeEvent(input$help, {
         shinyalert(
             title = "Help: Setup page",
-            text = sprintf("Expected workflow: %s", 
-                           parse_vector_to_bullets(c(
-                               "Upload one or more dataset files together with respective design files (further instructions on file formats under 'Help')", 
-                               "Assign sample columns in the dataset file(s), normally using the 'Detect columns' button", 
-                               "Assign statistical columns, normally using the 'Detect columns' button. Note that these should follow a format outlined under 'Help'",
-                               "Finally, if more than one dataset - perform mapping which will match feature columns from the two datasets",
-                               "If running matched samples click the 'Matched samples' button and use only one design matrix, this will unlock the 'Correlation' tab"
-                           ))), 
+            text = help_setup_setup, 
+            html = TRUE
+        )
+    })
+    
+    observeEvent(input$help_table_setup, {
+        shinyalert(
+            title = "Help: Table setup",
+            text = help_table_setup,
             html = TRUE
         )
     })
@@ -343,7 +329,6 @@ module_setup_server <- function(input, output, session, module_name) {
     
     observeEvent(input$sample_select_button_1, {
         
-        browser()
         data_nbr <- input$select_dataset
         filename <- rv[[sprintf("filename_%s", data_nbr)]]()
         
@@ -591,22 +576,6 @@ module_setup_server <- function(input, output, session, module_name) {
     })
     
     perform_mapping <- function(rv, output, data_file_1, data_file_2, feature_col_1, feature_col_2) {
-        # selcol1 <- NULL
-        # if (!is.null(input$data_file_1)) {
-        #     selcol_list <- rv$selected_cols_obj()[[input$data_file_1$name]]
-        #     if ("samples" %in% names(selcol_list)) {
-        #         selcol1 <- selcol_list$samples
-        #     }
-        # }
-        # 
-        # selcol2 <- NULL
-        # if (!is.null(input$data_file_2)) {
-        #     selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
-        #     if ("samples" %in% names(selcol2_list)) {
-        #         selcol2 <- selcol2_list$samples
-        #     }
-        # }
-        
         selcol1 <- NULL
         if (!is.null(data_file_1)) {
             selcol_list <- rv$selected_cols_obj()[[data_file_1$name]]
@@ -639,37 +608,10 @@ module_setup_server <- function(input, output, session, module_name) {
         input$perform_map_button
     }, {
         rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
-        # selcol1 <- NULL
-        # if (!is.null(input$data_file_1)) {
-        #     selcol_list <- rv$selected_cols_obj()[[input$data_file_1$name]]
-        #     if ("samples" %in% names(selcol_list)) {
-        #         selcol1 <- selcol_list$samples
-        #     }
-        # }
-        # 
-        # selcol2 <- NULL
-        # if (!is.null(input$data_file_2)) {
-        #     selcol2_list <- rv$selected_cols_obj()[[input$data_file_2$name]]
-        #     if ("samples" %in% names(selcol2_list)) {
-        #         selcol2 <- selcol2_list$samples
-        #     }
-        # }
-        # 
-        # rv <- do_dataset_mapping(
-        #     rv, 
-        #     input$feature_col_1, 
-        #     input$feature_col_2, 
-        #     output, 
-        #     selcol1,
-        #     selcol2,
-        #     input$matched_samples
-        # )
     })
     
     observeEvent(rv$mapping_obj(), {
         req(!is.null(rv$mapping_obj()))
-        # shinyjs::removeClass("perform_map_button", "recolor_button_red")
-        
         number_files <- length(which(c(!is.null(input$data_file_1), !is.null(input$data_file_2))))
         
         if (number_files == 2) {

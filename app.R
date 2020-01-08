@@ -25,6 +25,7 @@ source("R/pca.R")
 source("R/reactive_values.R")
 source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
+source("R/help_texts.R")
 
 ui <- navbarPage(
     

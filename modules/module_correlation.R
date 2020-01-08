@@ -14,6 +14,14 @@ setup_correlation_ui <- function(id) {
 
 module_correlation_server <- function(input, output, session, rv, module_name) {
     
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Correlation visuals",
+            text = help_correlation, 
+            html = TRUE
+        )
+    })
+    
     output$correlation_histograms <- renderPlot({
         
         comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
