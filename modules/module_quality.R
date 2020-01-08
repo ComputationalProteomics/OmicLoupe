@@ -231,7 +231,14 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             geom_col() + 
             ggtitle("Barplot ref.")
         
-        plt_ref
+        if (!input$show_missing) {
+            plt_ref <- plt_ref + ylab("Summed abundance")
+        }
+        else {
+            plt_ref <- plt_ref + ylab("Number missing")
+        }
+        
+        plt_ref + xlab("Sample")
     })
     
     output$bars_comp <- renderPlot({
@@ -262,7 +269,14 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             geom_col() + 
             ggtitle("Barplot comp.")
         
-        plt_comp
+        if (!input$show_missing) {
+            plt_comp <- plt_comp + ylab("Summed abundance")
+        }
+        else {
+            plt_comp <- plt_comp + ylab("Number missing")
+        }
+        
+        plt_comp + xlab("Sample")
     })
 
     adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col) {
@@ -288,12 +302,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         }
         
         plt <- plt + target_geom(na.rm=TRUE)
-        plt
+        
+        plt + xlab("Sample") + ylab("Abundance")
     }
     
     output$boxplots_ref <- renderPlot({ 
-        
-        # browser()
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -347,7 +360,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             geom_density(na.rm=TRUE) + 
             ggtitle("Density ref.")
 
-        plt_ref
+        plt_ref + xlab("Abundance") + ylab("Density")
     })
     
     output$density_comp <- renderPlot({ 
@@ -359,7 +372,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             aes_string(x="value", group="name", color=comp_color())) + 
             geom_density(na.rm=TRUE) + 
             ggtitle("Density comp.")
-        plt_comp
+        plt_comp + xlab("Abundance") + ylab("Density")
     })
     
     factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count) {
@@ -389,7 +402,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             plt_ref <- ggplot() + ggtitle("Empty histogram ref.")
         }
 
-        plt_ref
+        plt_ref + ylab("Count") + xlab(input$data_num_col_ref)
     })
     
     output$histograms_comp <- renderPlot({ 
@@ -411,7 +424,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             plt_comp <- ggplot() + ggtitle("Empty histogram comp.")
         }
         
-        plt_comp
+        plt_comp + ylab("Count") + xlab(input$data_num_col_comp)
     })
 }
 
