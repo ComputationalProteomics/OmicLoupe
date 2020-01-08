@@ -41,6 +41,11 @@ setup_panel_ui <- function(id) {
                 ".btn-file:active:focus { color: #fff; background-color: #115895; border-color: #115895; }",
                 ".btn-file:focus { color: #fff; background-color: #2269a6; border-color: #2e6da4; }",
                 
+                ".help { color: #000; background-color: #fff; border-color: #ccc; }",
+                ".help:hover { color: #000; background-color: #fff; border-color: #ccc; }",
+                ".help:active:focus { color: #000; background-color: #fff; border-color: #ccc; }",
+                ".help:focus { color: #000; background-color: #fff; border-color: #ccc; }",
+                
                 ".well { background-color: #F3F3F3; border-color: #AAAAAA; border-width: 1px; box-shadow: 2px 2px grey; }"
             ),
             tags$style(
@@ -48,12 +53,33 @@ setup_panel_ui <- function(id) {
                 ".button_row { padding: 5px; }",
                 "#column_select_noselectize { height: 500px; }"
             ),
+            # tags$style(
+            #     HTML(
+            #         "
+            #         .align {
+            #             padding: 10px;
+            #             vertical-align: bottom;
+            #         }
+            #         "
+            #     )
+            # ),
+            # tags$style(HTML(".fa { font-size: 8px; }")),
             
             tabsetPanel(
                 id = ns("setup_panels"),
                 type = "tabs",
                 tabPanel("LoadData", 
-                         fluidRow(h3("Load data"), actionButton(ns("help"), "", icon=icon("question"))),
+                         fluidRow(
+                             span(
+                                 style="display: inline-block; vertical-align:top; width: 120px; margin-top; -50px;", 
+                                 h3("Load data")
+                             ),
+                             span(
+                                 style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; ", 
+                                 actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
+                                 # actionButton(ns("help"), "", icon=icon("question"), style="padding-bottom:4px; font-size:80%;")
+                             )
+                         ),
                          fluidRow(
                              column(4,
                                     fluidRow(
