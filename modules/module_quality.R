@@ -45,14 +45,17 @@ setup_quality_ui <- function(id) {
                             fluidRow(
                                 column(6,
                                        selectInput(ns("data_num_col_ref"), "Histogram column ref", choices=c("")),
-                                       selectInput(ns("data_cat_col_ref"), "Fill column ref", choices=c("")),
-                                       numericInput(ns("max_color_cats"), "Maximum color cats.", min=1, step=1, value=5)
+                                       selectInput(ns("data_cat_col_ref"), "Fill column ref", choices=c(""))
                                 ),
                                 column(6,
                                        selectInput(ns("data_num_col_comp"), "Histogram column comp", choices=c("")),
-                                       selectInput(ns("data_cat_col_comp"), "Fill column comp", choices=c("")),
-                                       numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)
+                                       selectInput(ns("data_cat_col_comp"), "Fill column comp", choices=c(""))
                                 )
+                            ),
+                            fluidRow(
+                                column(4, numericInput(ns("max_color_cats"), "Maximum color cats.", min=1, step=1, value=5)),
+                                column(4, numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)),
+                                column(4, numericInput(ns("numeric_color_bins"), "Numeric color bins", min=1, step=1, value=4))
                             )
                         )
                     ),
@@ -396,8 +399,19 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
     })
     
-    factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count) {
-        rdf[[adf_color_col_ref]] <- as.factor(rdf[[adf_color_col_ref]])
+    factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_split_count) {
+        
+        target_col <- rdf[[adf_color_col_ref]]
+        if (is.character(target_col) || (is.numeric(target_col) && length(unique(target_col)) <= retain_count)) {
+            rdf[[adf_color_col_ref]] <- as.factor(target_col)
+        }
+        else if (is.numeric(target_col)) {
+            rdf[[adf_color_col_ref]] <- as.factor(cut(target_col, numeric_split_count))
+        }
+        else if (!is.factor(target_col)) {
+            stop(sprintf("Unknown value type for col: %s", adf_color_col_ref))
+        }
+        
         color_freq_table <- table(rdf[[adf_color_col_ref]])
         combine_names <- names(color_freq_table)[!names(color_freq_table) %in% names(sort(color_freq_table, decreasing = TRUE))[1:retain_count]]
         rdf[[adf_color_col_ref]] <- rdf[[adf_color_col_ref]] %>% fct_collapse(other=combine_names)
@@ -413,7 +427,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rdf_ref <- rv$rdf_ref(rv, input$dataset1)
             target_color <- NULL
             if (input$data_cat_col_ref != "None") {
-                rdf_ref <- factor_prep_color_col(rdf_ref, input$data_cat_col_ref, input$max_color_cats)
+                rdf_ref <- factor_prep_color_col(rdf_ref, input$data_cat_col_ref, input$max_color_cats, input$numeric_color_bins)
                 target_color <- input$data_cat_col_ref
             }
             plt_ref <- ggplot(rdf_ref, aes_string(x=input$data_num_col_ref, fill=target_color)) + 

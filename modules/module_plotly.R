@@ -9,6 +9,8 @@ source("R/vis_server_plots.R")
 
 MY_COLORS <- c("grey50", "blue", "red", "orange")
 
+MAX_DISCRETE_LEVELS <- 20
+
 setup_plotly_ui <- function(id) {
     
     ns <- NS(id)
@@ -72,7 +74,7 @@ setup_plotly_ui <- function(id) {
                            checkboxInput(ns("more_settings"), "Show more settings", value = FALSE),
                            conditionalPanel(
                                sprintf("input['%s'] == 1", ns("more_settings")),
-                               sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
+                               sliderInput(ns("bin_count"), "Bin count", value=100, step=10, min=10, max=200),
                                sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
                            ),
                        )
@@ -391,7 +393,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
                 error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
             }
             if (is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)) || is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2))) {
-                # if (is.null(reactive_ref_statcols()) || is.null(reactive_comp_statcols())) {
                 error_vect <- c(error_vect, "ref_statcols or comp_statcols not found, assign stat-columns at Setup page")
             }
         }
@@ -426,7 +427,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }
         }
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         make_scatter(
             plot_df, 
@@ -467,7 +468,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }        
         }
 
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         make_scatter(
             plot_df, 
@@ -508,7 +509,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }
         }        
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         
         ggplt <- make_scatter(
@@ -550,7 +551,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }
         }
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         
         
