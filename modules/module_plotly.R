@@ -163,7 +163,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             pca_df
         }
         else if (input$color_type == "Column") {
-            warning("This needs to be fixed!")
+            warning("This needs to be fixed! (How? // Later Jakob)")
+            # browser()
             base_df$ref.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(1), input$color_col_1)]]
             base_df$comp.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(2), input$color_col_2)]]
             base_df %>% arrange(ref.color_col)
@@ -425,6 +426,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }
         }
         
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        
         make_scatter(
             plot_df, 
             x_col="fold", 
@@ -463,6 +466,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
                 cont_scale <- TRUE
             }        
         }
+
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
         
         make_scatter(
             plot_df, 
@@ -501,7 +506,11 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             if (input$color_type == "PCA") {
                 cont_scale <- TRUE
             }
-        }
+        }        
+        
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        
+        
         ggplt <- make_scatter(
             plot_df, 
             x_col="expr", 
@@ -540,6 +549,11 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
                 cont_scale <- TRUE
             }
         }
+        
+        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < 20)
+        
+        
+        
         ggplt <- make_scatter(
             plot_df, 
             x_col="expr", 

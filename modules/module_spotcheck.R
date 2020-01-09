@@ -160,7 +160,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         plt_df_comp
     })
 
-    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, show_labels) {
+    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin) {
         add_geoms <- function(plt, show_box, show_scatter, show_violin, show_labels) {
             if (show_violin) {
                 plt <- plt + geom_violin(na.rm = TRUE)
@@ -171,9 +171,9 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             if (show_scatter) {
                 plt <- plt + geom_point(na.rm = TRUE)
             }
-            if (show_labels) {
-                plt <- plt + geom_text_repel(na.rm = TRUE)
-            }
+            # if (show_labels) {
+            #     plt <- plt + geom_text_repel(na.rm = TRUE)
+            # }
             plt
         }
         
@@ -195,8 +195,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             target_row,
             input$show_boxplot,
             input$show_scatter,
-            input$show_violin,
-            input$show_labels
+            input$show_violin
         ) %>% ggplotly()
     })
     
@@ -210,8 +209,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             target_row,
             input$show_boxplot,
             input$show_scatter,
-            input$show_violin,
-            input$show_labels
+            input$show_violin
         ) %>% ggplotly()
     })
     
