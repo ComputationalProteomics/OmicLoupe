@@ -34,7 +34,11 @@ setup_quality_ui <- function(id) {
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Barplots'", ns("plot_tabs")),
-                            checkboxInput(ns("show_missing"), "Show missing", value=FALSE)
+                            fluidRow(
+                                column(4, checkboxInput(ns("show_missing_ref"), "Show missing ref.", value=FALSE)),
+                                column(4, checkboxInput(ns("show_missing_comp"), "Show missing comp.", value=FALSE)),
+                                column(4, checkboxInput(ns("rotate_label_barplot"), "Rotate label", value=TRUE))
+                            )
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Histograms'", ns("plot_tabs")),
@@ -213,11 +217,12 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
         long_sdf_ref <- reactive_long_sdf_ref()
         
-        if (!input$show_missing) {
+        if (!input$show_missing_ref) {
             summed_data_ref <- long_sdf_ref %>% 
                 filter(!is.infinite(long_sdf_ref$value)) %>%
                 group_by(name) %>%
                 summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_ref)
+            title <- "Barplot ref. total intensity"
         }
         else {
             summed_data_ref <- long_sdf_ref %>%
@@ -225,15 +230,20 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 mutate(value=is.na(value)) %>%
                 group_by(name) %>%
                 summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_ref)
+            title <- "Barplot ref. number missing"
         }
         
         plt_ref <- ggplot(
             summed_data_ref, 
             aes_string(x="name", y="value", fill=ref_color())) + 
             geom_col() + 
-            ggtitle("Barplot ref.")
+            ggtitle(title)
         
-        if (!input$show_missing) {
+        if (input$rotate_label_barplot) {
+            plt_ref <- plt_ref + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+        }
+        
+        if (!input$show_missing_ref) {
             plt_ref <- plt_ref + ylab("Summed abundance")
         }
         else {
@@ -251,11 +261,12 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
         long_sdf_comp <- reactive_long_sdf_comp()
         
-        if (!input$show_missing) {
+        if (!input$show_missing_comp) {
             summed_data_comp <- long_sdf_comp %>% 
                 filter(!is.infinite(long_sdf_comp$value)) %>%
                 group_by(name) %>%
                 summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
+            title <- "Barplot comp. total intensity"
         }
         else {
             summed_data_comp <- long_sdf_comp %>%
@@ -263,15 +274,20 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 mutate(value=is.na(value)) %>%
                 group_by(name) %>%
                 summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
+            title <- "Barplot comp. number missing"
         }
         
         plt_comp <- ggplot(
             summed_data_comp, 
             aes_string(x="name", y="value", fill=comp_color())) + 
             geom_col() + 
-            ggtitle("Barplot comp.")
+            ggtitle(title)
         
-        if (!input$show_missing) {
+        if (input$rotate_label_barplot) {
+            plt_comp <- plt_comp + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+        }
+        
+        if (!input$show_missing_comp) {
             plt_comp <- plt_comp + ylab("Summed abundance")
         }
         else {

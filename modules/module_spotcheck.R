@@ -19,16 +19,21 @@ setup_spotcheck_ui <- function(id) {
                             )
                         ),
                         fluidRow(
-                            column(3, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
-                            column(3, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
-                            column(3, checkboxInput(ns("show_violin"), "Show violin", value=FALSE)),
-                            column(3, checkboxInput(ns("show_labels"), "Show labels", value=FALSE))
+                            column(4, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
+                            column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
+                            column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
                         )
                     ),
                     htmlOutput(ns("warnings")),
                     tabsetPanel(
                         type = "tabs",
-                        tabPanel("Combined view", plotOutput(ns("spot_display_combined")) %>% withSpinner())
+                        tabPanel(
+                            "Combined view", 
+                            fluidRow(
+                                column(6, plotlyOutput(ns("spot_display_ref")) %>% withSpinner()),
+                                column(6, plotlyOutput(ns("spot_display_comp")) %>% withSpinner())
+                            )
+                        )
                     ),
                     tabsetPanel(
                         type = "tabs",
@@ -154,13 +159,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         )
         plt_df_comp
     })
-    
-    output$spot_display_combined <- renderPlot({
-        
-        req(plot_df_ref())
-        req(plot_df_comp())
-        
-        target_row <- input$table_display_rows_selected
+
+    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, show_labels) {
         add_geoms <- function(plt, show_box, show_scatter, show_violin, show_labels) {
             if (show_violin) {
                 plt <- plt + geom_violin(na.rm = TRUE)
@@ -177,15 +177,42 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             plt
         }
         
-        plt_ref_base <- ggplot(plot_df_ref(), aes(x=cond, y=value, color=cond, label=sample)) + 
-            ggtitle(sprintf("Spot check feature: %s", target_row))
-        plt_ref <- add_geoms(plt_ref_base, input$show_boxplot, input$show_scatter, input$show_violin, input$show_labels)
+        plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=cond, label=sample)) + 
+            ggtitle(sprintf("Spot check feature: %s", target_row)) +
+            xlab("Condition") +
+            ylab("Abundance")
+        
+        plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin, show_labels)
+        plt_ref
+    }
+        
+    output$spot_display_ref <- renderPlotly({
+        req(plot_df_ref())
 
-        plt_comp_base <- ggplot(plot_df_comp(), aes(x=cond, y=value, color=cond, label=sample)) + 
-            ggtitle(sprintf("Spot check feature: %s", target_row))
-        plt_comp <- add_geoms(plt_comp_base, input$show_boxplot, input$show_scatter, input$show_violin, input$show_labels)
-
-        ggarrange(plt_ref, plt_comp, nrow=1, ncol=2)
+        target_row <- input$table_display_rows_selected
+        make_spotcheck_plot(
+            plot_df_ref(),
+            target_row,
+            input$show_boxplot,
+            input$show_scatter,
+            input$show_violin,
+            input$show_labels
+        ) %>% ggplotly()
+    })
+    
+    output$spot_display_comp <- renderPlotly({
+        
+        req(plot_df_comp())
+        
+        target_row <- input$table_display_rows_selected
+        make_spotcheck_plot(
+            plot_df_ref(),
+            target_row,
+            input$show_boxplot,
+            input$show_scatter,
+            input$show_violin,
+            input$show_labels
+        ) %>% ggplotly()
     })
     
     output$warnings <- renderUI({
