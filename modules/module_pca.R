@@ -21,7 +21,7 @@ setup_pca_ui <- function(id) {
                                    "Dataset 1", 
                                    numericInput(ns("pc_comp_1_data1"), "PC1", min=1, value=1, step=1),
                                    numericInput(ns("pc_comp_2_data1"), "PC2", min=1, value=2, step=1),
-                                   selectInput(ns("sample_data1"), "Sample", choices=c("")),
+                                   # selectInput(ns("sample_data1"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data1"), "Color", choices=c(""))),
                                        column(4, checkboxInput(ns("data1_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
@@ -34,7 +34,7 @@ setup_pca_ui <- function(id) {
                                    "Dataset 2", 
                                    numericInput(ns("pc_comp_1_data2"), "PC1", min=1, value=1, step=1),
                                    numericInput(ns("pc_comp_2_data2"), "PC2", min=1, value=2, step=1),
-                                   selectInput(ns("sample_data2"), "Sample", choices=c("")),
+                                   # selectInput(ns("sample_data2"), "Sample", choices=c("")),
                                    fluidRow(
                                        column(8, selectInput(ns("color_data2"), "Color", choices=c(""))),
                                        column(4, checkboxInput(ns("data2_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
@@ -159,7 +159,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     ########### FUNCTIONS ############
     
-    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
+    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, label_col, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
         
         pc1_lab <- sprintf("PC%s", pc1)
         pc2_lab <- sprintf("PC%s", pc2)
@@ -175,7 +175,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt_df[[color]] <- as.factor(plt_df[[color]])
         }
         
-        plt_base <- ggplot(plt_df, aes_string(x=pc1_lab, y=pc2_lab, color=color, shape=shape, text=sample, label=sample))
+        plt_base <- ggplot(plt_df, aes_string(x=pc1_lab, y=pc2_lab, colour=color, shape=shape, text=sample, label=label_col))
         if (!show_labels) {
             plt_base <- plt_base + geom_point(size=dot_size)
         }
@@ -242,21 +242,24 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         if (has_value(input$shape_data1)) shape_col <- input$shape_data1
         else shape_col <- NULL
         
-        if (has_value(input$sample_data1)) sample_col <- input$sample_data1
-        else sample_col <- NULL
+        sample_col <- rv$ddf_samplecol_ref(rv, input$dataset1)
+        
+        data <- rv$ddf_ref(rv, input$dataset1)
+        data$Sample <- data[[sample_col]]
         
         plt <- make_pca_plt(
-            rv$ddf_ref(rv, input$dataset1),
-            pca_obj1(),
-            input$pc_comp_1_data1,
-            input$pc_comp_2_data1,
-            color_col,
-            shape_col,
-            sample_col,
-            input$dot_size,
+            ddf=data,
+            pca_obj=pca_obj1(),
+            pc1=input$pc_comp_1_data1,
+            pc2=input$pc_comp_2_data1,
+            color=color_col,
+            shape=shape_col,
+            sample=sample_col,
+            label_col="Sample",
+            dot_size=input$dot_size,
             show_labels = input$show_labels_data, 
             color_as_fact = input$data1_as_factor
-        ) %>% ggplotly() %>% layout(dragmode="select")
+        ) %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
         
         plt
     })
@@ -269,21 +272,23 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         if (has_value(input$shape_data2)) shape_col <- input$shape_data2
         else shape_col <- NULL
         
-        if (has_value(input$sample_data2)) sample_col <- input$sample_data2
-        else sample_col <- NULL
+        sample_col <- rv$ddf_samplecol_ref(rv, input$dataset2)
+        data <- rv$ddf_ref(rv, input$dataset2)
+        data$label <- data[[sample_col]]
         
         plt <- make_pca_plt(
-            rv$ddf_comp(rv, input$dataset2),
+            data,
             pca_obj2(),
             input$pc_comp_1_data2,
             input$pc_comp_2_data2,
             color_col,
             shape_col,
             sample_col,
+            "label",
             input$dot_size,
             show_labels = input$show_labels_data, 
             color_as_fact = input$data2_as_factor
-        ) %>% ggplotly() %>% layout(dragmode="select")
+        ) %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
         plt
     })
 }
