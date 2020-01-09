@@ -6,6 +6,7 @@ library(plotly)
 library(tidyverse)
 library(DT)
 library(stringr)
+library(ggrepel)
 
 options(shiny.maxRequestSize=100*1024^2)
 

@@ -61,8 +61,10 @@ setup_quality_ui <- function(id) {
                                  plotOutput(ns("boxplots_comp")) %>% withSpinner()
                         ),
                         tabPanel("Density", 
-                                 plotOutput(ns("density_ref")) %>% withSpinner(),
-                                 plotOutput(ns("density_comp")) %>% withSpinner()
+                                 # plotOutput(ns("density_ref")) %>% withSpinner(),
+                                 # plotOutput(ns("density_comp")) %>% withSpinner(),
+                                 plotlyOutput(ns("density_ref_plotly")) %>% withSpinner(),
+                                 plotlyOutput(ns("density_comp_plotly")) %>% withSpinner()
                         ),
                         tabPanel("Barplots", 
                                  plotOutput(ns("bars_ref")) %>% withSpinner(),
@@ -324,7 +326,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_ref(rv, input$dataset1),
             rv$ddf_samplecol_ref(rv, input$dataset1),
             input$color_data_ref
-            # rv$ddf_condcol_ref(rv, input$dataset1)
         )
     })
 
@@ -346,33 +347,37 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_comp(rv, input$dataset2),
             rv$ddf_samplecol_comp(rv, input$dataset2),
             input$color_data_comp
-            # rv$ddf_condcol_comp(rv, input$dataset2)
         )
     })
     
-    output$density_ref <- renderPlot({ 
+    output$density_ref_plotly <- renderPlotly({
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
             aes_string(x="value", group="name", color=ref_color())) + 
-            geom_density(na.rm=TRUE) + 
+            geom_density(na.rm=TRUE) +
             ggtitle("Density ref.")
-
-        plt_ref + xlab("Abundance") + ylab("Density")
+        
+        plt_ref %>% 
+            ggplotly() %>%
+            layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
     })
     
-    output$density_comp <- renderPlot({ 
+    output$density_comp_plotly <- renderPlotly({
         req(rv$ddf_comp(rv, input$dataset2))
         req(reactive_long_sdf_comp())
         
-        plt_comp <- ggplot(
+        plt_ref <- ggplot(
             reactive_long_sdf_comp(), 
             aes_string(x="value", group="name", color=comp_color())) + 
-            geom_density(na.rm=TRUE) + 
+            geom_density(na.rm=TRUE) +
             ggtitle("Density comp.")
-        plt_comp + xlab("Abundance") + ylab("Density")
+        
+        plt_ref %>% 
+            ggplotly() %>% 
+            layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
     })
     
     factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count) {
