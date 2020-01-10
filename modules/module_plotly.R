@@ -36,8 +36,8 @@ setup_plotly_ui <- function(id) {
                                sprintf("input['%s'] == 'PCA'", ns("color_type")),
                                fluidRow(
                                    column(4, numericInput(ns("plot_pc1"), "Plt1 PC", value=1, min=1, step=1)),
-                                   column(4, numericInput(ns("plot_pc2"), "Plt2 PC", value=1, min=1, step=1)),
-                                   column(4, actionButton(ns("color_pca"), "Plot"))
+                                   column(4, numericInput(ns("plot_pc2"), "Plt2 PC", value=1, min=1, step=1))
+                                   # column(4, actionButton(ns("color_pca"), "Plot"))
                                )
                            ),
                            conditionalPanel(

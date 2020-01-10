@@ -91,9 +91,9 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
         
         pass_tbl <- combined_dataset %>% 
-            filter(UQ(as.name(sig_field)) < input$threshold) %>% 
+            dplyr::filter(UQ(as.name(sig_field)) < input$threshold) %>% 
             dplyr::select(c("comb_id", fold_field)) %>%
-            rename(fold=fold_field) %>%
+            dplyr::rename(fold=fold_field) %>%
             mutate(comb_id=as.character(comb_id))
         pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
         pass_list
@@ -190,7 +190,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     output$venn <- renderPlot({
 
-        # browser()
         venn$do_paired_expression_venn(
             ref_pass_reactive(), 
             comp_pass_reactive(), 
