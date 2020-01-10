@@ -84,7 +84,12 @@ Venn <- R6Class(
             both_sig_names <- intersect(col1_w_fold %>% names(), col2_w_fold %>% names())
             
             joint_count <- length(both_sig_names)
-            joint_contra_count <- length(which(sign(unlist(col1_w_fold[both_sig_names])) != sign(unlist(col2_w_fold[both_sig_names]))))
+            if (joint_count > 0) {
+                joint_contra_count <- length(which(sign(unlist(col1_w_fold[both_sig_names])) != sign(unlist(col2_w_fold[both_sig_names]))))
+            }
+            else {
+                joint_contra_count <- 0
+            }
             joint_same_count <- joint_count - joint_contra_count
             left_count <- length(col1_w_fold) - joint_count
             right_count <- length(col2_w_fold) - joint_count

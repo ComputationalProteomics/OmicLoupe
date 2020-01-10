@@ -190,6 +190,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     output$venn <- renderPlot({
 
+        # browser()
         venn$do_paired_expression_venn(
             ref_pass_reactive(), 
             comp_pass_reactive(), 
