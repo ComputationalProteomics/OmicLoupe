@@ -281,8 +281,7 @@ module_setup_server <- function(input, output, session, module_name) {
     
     output$raw_data2 <- DT::renderDataTable({
         req(rv$filedata_2())
-        rv$filedata_2()
-        rv$dt_parsed_data(rv, rv$filedata_1(), with_row_selection=FALSE)
+        rv$dt_parsed_data(rv, rv$filedata_2(), with_row_selection=FALSE)
     })
     
     output$dt_design1 <- DT::renderDataTable({

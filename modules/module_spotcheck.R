@@ -205,7 +205,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         
         target_row <- input$table_display_rows_selected
         make_spotcheck_plot(
-            plot_df_ref(),
+            plot_df_comp(),
             target_row,
             input$show_boxplot,
             input$show_scatter,

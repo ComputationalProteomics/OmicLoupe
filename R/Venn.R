@@ -97,24 +97,28 @@ Venn <- R6Class(
             labels <- c(
                 as.character(left_count),
                 as.character(right_count),
-                sprintf("%s same", joint_same_count),
-                sprintf("%s contra", joint_contra_count)
+                sprintf("%s same fold dir.", joint_same_count),
+                sprintf("%s reverse fold dir.", joint_contra_count),
+                "Ref. contrast",
+                "Comp. contrast"
             )
             
             df.vdc <- data.frame(
-                x=c(-1.5, 1.5, 0, 0),
-                y=c(0, 0, 0, -0.3),
+                x=c(-1.5, 1.5, 0, 0, -1.8, 1.8),
+                y=c(0, 0, 0, -0.3, 1.4, 1.4),
                 label=labels
             )
             
             df.venn <- data.frame(x = c(-0.5, 0.5),
                                   y = c(0, 0),
-                                  labels = c("Contrast 1", "Contrast 2"), 
+                                  labels="gray",
+                                  # labels = c("Contrast 1", "Contrast 2"),
                                   stringsAsFactors = FALSE)
             
             plt <- ggplot2::ggplot(data=df.venn) +
                 ggforce::geom_circle(
-                    ggplot2::aes_string(x0 = "x", y0 = "y", r = 1.5, fill = "labels"), 
+                    ggplot2::aes_string(x0 = "x", y0 = "y", r = 1.5, fill="labels"), 
+                    # ggplot2::aes_string(x0 = "x", y0 = "y", r = 1.5, fill = "labels"), 
                     alpha = 0.3, 
                     size = 0.5, 
                     colour = 'darkgray'
@@ -175,9 +179,11 @@ Venn <- R6Class(
             
             plt <- plt + ggplot2::scale_fill_manual(values = colors) +
                 ggplot2::scale_colour_manual(values = colors, guide = FALSE) +
-                ggplot2::labs(fill = NULL) +
+                # ggplot2::labs(fill = NULL) +
+                theme(legend.position="none") +
                 ggplot2::annotate("text", x = df.vdc$x, y = df.vdc$y, label = df.vdc$label, size = 5) +
-                ggplot2::ggtitle(title)
+                ggplot2::ggtitle(title) +
+                scale_x_continuous(expand=c(0.1, 0.1))
             
             # ggsave(plt, filename = "~/Desktop/out.png")
             

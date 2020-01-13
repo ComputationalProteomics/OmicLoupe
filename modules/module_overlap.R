@@ -193,7 +193,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         venn$do_paired_expression_venn(
             ref_pass_reactive(), 
             comp_pass_reactive(), 
-            title="Comp", 
+            title="", 
             highlight = input$select_target)
     })
     

@@ -71,6 +71,7 @@ setup_plotly_ui <- function(id) {
                                )
                            ),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
+                           checkboxInput(ns("set_same_axis"), "Set same axis ranges", value = FALSE),
                            checkboxInput(ns("more_settings"), "Show more settings", value = FALSE),
                            conditionalPanel(
                                sprintf("input['%s'] == 1", ns("more_settings")),
@@ -165,8 +166,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             pca_df
         }
         else if (input$color_type == "Column") {
-            warning("This needs to be fixed! (How? // Later Jakob)")
-            # browser()
+            warning("This needs to be fixed! (How? // Later Jakob and where? // Even later, maybe already fixed, if with the dataset_ind?)")
             base_df$ref.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(1), input$color_col_1)]]
             base_df$comp.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(2), input$color_col_2)]]
             base_df %>% arrange(ref.color_col)
@@ -405,6 +405,15 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
     
+    set_shared_max_lims <- function(plt, xcol, ycol, ref_df, comp_df) {
+        min_fold <- min(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
+        max_fold <- max(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
+        min_sig <- min(c(ref_df[[ycol]], comp_df[[ycol]]), na.rm=TRUE)
+        max_sig <- max(c(ref_df[[ycol]], comp_df[[ycol]]), na.rm=TRUE)
+        plt + xlim(min_fold, max_fold) + ylim(min_sig, max_sig)
+    }
+    
+    
     output$plotly_volc1 <- renderPlotly({
 
         req(rv$mapping_obj())
@@ -429,7 +438,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        make_scatter(
+        base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
             y_col="sig", 
@@ -440,7 +449,13 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             alpha=input$alpha,
             cont_scale = cont_scale,
             title="Volcano: Reference dataset", 
-            manual_scale = manual_scale) %>% 
+            manual_scale = manual_scale)
+        
+        if (input$set_same_axis) {
+            base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
+        }
+        
+        base_plt %>% 
             ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
@@ -470,7 +485,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
 
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        make_scatter(
+        base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
             y_col="sig", 
@@ -481,7 +496,13 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             alpha=input$alpha,
             cont_scale = cont_scale,
             title="Volcano: Compare dataset", 
-            manual_scale = manual_scale) %>% 
+            manual_scale = manual_scale) 
+        
+        if (input$set_same_axis) {
+            base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
+        }
+        
+        base_plt %>% 
             ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
@@ -512,7 +533,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         
-        ggplt <- make_scatter(
+        base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
@@ -523,7 +544,13 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             key="key", 
             title="MA: Reference dataset",
             cont_scale = cont_scale,
-            manual_scale = manual_scale) %>% 
+            manual_scale = manual_scale)
+        
+        if (input$set_same_axis) {
+            base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
+        }
+        
+        base_plt %>% 
             ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
@@ -555,7 +582,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         
         
-        ggplt <- make_scatter(
+        base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
@@ -566,7 +593,13 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             key="key", 
             title="MA: Compare dataset", 
             cont_scale = cont_scale,
-            manual_scale = manual_scale) %>% 
+            manual_scale = manual_scale)
+        
+        if (input$set_same_axis) {
+            base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
+        }
+        
+        base_plt %>% 
             ggplotly(source="subset") %>%
             layout(dragmode="select") %>%
             toWebGL()
