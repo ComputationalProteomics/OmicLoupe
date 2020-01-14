@@ -25,10 +25,11 @@ setup_overlap_ui <- function(id) {
                             )
                         ),
                         conditionalPanel(
-                            sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
+                            sprintf("input['%s'] == 'Upset' || input['%s'] == 'FoldComparison'", ns("plot_tabs"), ns("plot_tabs")),
                             selectInput(ns("upset_ref_comparisons"), "Upset ref. choices", choices = c("Dev"), selected="Dev", multiple = TRUE),
                             selectInput(ns("upset_comp_comparisons"), "Upset comp. choices", choices = c("Dev"), selected="Dev", multiple = TRUE),
-                            numericInput(ns("upset_max_comps"), "Upset comparison count", min = 1, value = 10)
+                            numericInput(ns("upset_max_comps"), "Upset comparison count", min = 1, value = 10),
+                            numericInput(ns("max_fold_comps"), "Max fold comps", min=1, value=10)
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -36,11 +37,14 @@ setup_overlap_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Venn",
-                                 plotOutput(ns("venn")),
-                                 DT::DTOutput(ns("table_display"))
+                            plotOutput(ns("venn")),
+                            DT::DTOutput(ns("table_display"))
                         ),
                         tabPanel("Upset",
-                                plotOutput(ns("upset"))
+                            plotOutput(ns("upset"))
+                        ),
+                        tabPanel("FoldComparison",
+                            plotOutput(ns("fold_comp"))
                         )
                     )
                 )
@@ -183,6 +187,84 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         )
         plt
     }, height = 800)
+    
+    output$fold_comp <- renderPlot({
+        
+        ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
+            parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
+        }, dataset=input$dataset1, contrast_type=input$contrast_type)
+        
+        if (input$dataset1 != input$dataset2) {
+            comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
+                parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
+            }, dataset=input$dataset2, contrast_type=input$contrast_type)
+            
+            plot_list <- c(ref_names_list, comp_names_list)
+            names(plot_list) <- c(
+                paste("d1", input$upset_ref_comparisons, sep="."),
+                paste("d2", input$upset_comp_comparisons, sep=".")
+            )
+        }
+        else {
+            plot_list <- ref_names_list
+            names(plot_list) <- input$upset_ref_comparisons
+        }
+        
+        present_in_all <- Reduce(intersect, plot_list)
+        
+        if (input$dataset1 == input$dataset2) {
+            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
+                filter(comb_id %in% present_in_all) %>%
+                mutate(
+                    p_sum=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value")]),
+                    p_prod=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value")])
+                ) %>%
+                arrange(p_sum) %>%
+                head(input$max_fold_comps) %>%
+                dplyr::select(ID=comb_id, p_sum=p_sum, paste0("d1.", input$upset_ref_comparisons, "logFC")
+                ) %>%
+                tidyr::gather("Comparison", "Fold", -ID)
+            
+        }
+        else {
+            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
+                filter(comb_id %in% present_in_all) %>%
+                mutate(
+                    p_sum=rowSums(.[, 
+                                    paste0("d1.", input$upset_comp_comparisons, "P.Value"),
+                                    paste0("d2.", input$upset_comp_comparisons, "P.Value")                                    
+                                    ]),
+                    p_prod=rowSums(.[, 
+                                     paste0("d1.", input$upset_comp_comparisons, "P.Value"),
+                                     paste0("d2.", input$upset_comp_comparisons, "P.Value")
+                                     ])
+                ) %>%
+                arrange(p_sum) %>%
+                head(input$max_fold_comps) %>%
+                dplyr::select(ID=comb_id, 
+                              p_sum=p_sum,
+                              paste0("d1.", input$upset_ref_comparisons, "logFC"),
+                              paste0("d2.", input$upset_comp_comparisons, "logFC")
+                ) %>%
+                tidyr::gather("Comparison", "Fold", -ID)
+        }
+        
+        
+
+        plt <- ggplot(long_df, aes(x=reorder(ID, p_sum), y=Fold)) + theme_classic() +
+            theme(axis.text.x = element_text(angle=90, vjust=0.5)) +
+            geom_boxplot() +
+            geom_point(aes(color=Comparison)) + xlab("")
+        
+        # plt <- UpSetR::upset(
+        #     UpSetR::fromList(plot_list), 
+        #     set.metadata = upset_metadata_obj,
+        #     order.by="freq", 
+        #     text.scale=2, 
+        #     nsets = input$upset_max_comps
+        # )
+        plt
+    })
     
     output$table_display <- DT::renderDataTable({
         rv$dt_parsed_data(rv, output_table_reactive())
