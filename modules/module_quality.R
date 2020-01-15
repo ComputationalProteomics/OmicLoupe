@@ -57,6 +57,10 @@ setup_quality_ui <- function(id) {
                                 column(4, numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)),
                                 column(4, numericInput(ns("numeric_color_bins"), "Numeric color bins", min=1, step=1, value=4))
                             )
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Dendrograms'", ns("plot_tabs")),
+                            numericInput(ns("dendrogram_height"), "Dendrogram plot height (inactive, requires UI render)", value=500, min = 50, step = 50)
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -68,14 +72,18 @@ setup_quality_ui <- function(id) {
                                  plotOutput(ns("boxplots_comp")) %>% withSpinner()
                         ),
                         tabPanel("Density", 
-                                 # plotOutput(ns("density_ref")) %>% withSpinner(),
-                                 # plotOutput(ns("density_comp")) %>% withSpinner(),
                                  plotlyOutput(ns("density_ref_plotly")) %>% withSpinner(),
                                  plotlyOutput(ns("density_comp_plotly")) %>% withSpinner()
                         ),
                         tabPanel("Barplots", 
                                  plotOutput(ns("bars_ref")) %>% withSpinner(),
                                  plotOutput(ns("bars_comp")) %>% withSpinner()
+                        ),
+                        tabPanel("Dendrograms",
+                                 fluidRow(
+                                     column(6, plotOutput(ns("dendrogram_ref")) %>% withSpinner()),
+                                     column(6, plotOutput(ns("dendrogram_comp")) %>% withSpinner())
+                                 )
                         ),
                         tabPanel("Histograms", 
                                  plotOutput(ns("histograms_ref")) %>% withSpinner(),
@@ -176,10 +184,18 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         get_long(di_new(rv, input$dataset2, 2), rv, comp_ddf_samplecol())
     })
     
+    ref_sdf <- reactive({
+        rv$rdf_ref(rv, input$dataset1)[, rv$samples(rv, input$dataset1)]
+    })
+    
+    comp_sdf <- reactive({
+        rv$rdf_comp(rv, input$dataset2)[, rv$samples(rv, input$dataset2)]
+    })
+    
     ref_ddf_samplecol <- reactive({
         rv[[sprintf("design_samplecol_%s", di_new(rv, input$dataset1, 1))]]()
     })
-    
+
     comp_ddf_samplecol <- reactive({
         rv[[sprintf("design_samplecol_%s", di_new(rv, input$dataset2, 2))]]()
     })
@@ -417,6 +433,74 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         rdf[[adf_color_col_ref]] <- rdf[[adf_color_col_ref]] %>% fct_collapse(other=combine_names)
         rdf
     }
+    
+    do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_variance=NULL, title="Dendrogram", omit_samples=NULL) {
+        
+        if (!is.null(omit_samples)) {
+            data_m <- raw_data_m[, (!colnames(raw_data_m) %in% omit_samples)]
+            color_levels <- raw_color_levels[colnames(raw_data_m) %in% colnames(data_m)]
+        }
+        else {
+            data_m <- raw_data_m
+            color_levels <- raw_color_levels
+        }
+        
+        samples <- colnames(data_m)
+        
+        if (is.null(labels)) {
+            labels <- samples
+        }
+        
+        # Setup data
+        expr_m_nona <- data_m[complete.cases(data_m),]
+        
+        # Calculate tree
+        scaledTransposedMatrix <- scale(t(expr_m_nona), center=TRUE, scale=TRUE)
+        hc <- stats::hclust(stats::dist(scaledTransposedMatrix), "ave")
+        dhc <- stats::as.dendrogram(hc)
+        # Note - Label order is shuffled within this object! Be careful with coloring.
+        ddata <- ggdendro::dendro_data(dhc, type="rectangle")
+        
+        # Prepare for plotting
+        cluster_label_order <- match(ddata$labels$label, samples)
+        ddata$labels$color <- color_levels[cluster_label_order]
+        ddata$labels$label <- labels[cluster_label_order]
+        
+        # Visualize
+        plt <- ggplot(segment(ddata)) +
+            geom_segment(aes(x=.data$x, y=.data$y, xend=.data$xend, yend=.data$yend)) +
+            theme_dendro() +
+            geom_text(data=label(ddata),
+                      aes(x=.data$x, y=.data$y, label=.data$label, color=.data$color),
+                      vjust=0.5, hjust=0, size=6) +
+            coord_flip() +
+            scale_y_reverse(expand=c(0.2, 0)) +
+            scale_x_continuous(expand=c(0,1)) +
+            ggtitle(title)
+        plt
+    }
+    
+    output$dendrogram_ref <- renderPlot({
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(rv$rdf_ref(rv, input$dataset1))
+        
+        do_dendrogram(
+            ref_sdf(),
+            rv$ddf_ref(rv, input$dataset1)[[ref_color()]],
+            labels=rv$ddf_ref(rv, input$dataset1)[[ref_ddf_samplecol()]]
+        )
+    }, height=1000)
+    
+    output$dendrogram_comp <- renderPlot({
+        req(rv$ddf_ref(rv, input$dataset2))
+        req(rv$rdf_ref(rv, input$dataset2))
+        
+        do_dendrogram(
+            comp_sdf(),
+            rv$ddf_comp(rv, input$dataset2)[[comp_color()]],
+            labels=rv$ddf_comp(rv, input$dataset2)[[comp_ddf_samplecol()]]
+        )
+    }, height=1000)
     
     output$histograms_ref <- renderPlot({ 
         
