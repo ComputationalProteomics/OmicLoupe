@@ -27,10 +27,19 @@ setup_overlap_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 'Upset' || input['%s'] == 'FoldComparison'", ns("plot_tabs"), ns("plot_tabs")),
                             selectInput(ns("upset_ref_comparisons"), "Upset ref. choices", choices = c("Dev"), selected="Dev", multiple = TRUE),
-                            selectInput(ns("upset_comp_comparisons"), "Upset comp. choices", choices = c("Dev"), selected="Dev", multiple = TRUE),
+                            conditionalPanel(
+                                sprintf("input['%s'] != input['%s']", ns("dataset1"), ns("dataset2")),
+                                selectInput(ns("upset_comp_comparisons"), "Upset comp. choices", choices = c("Dev"), selected="Dev", multiple = TRUE)
+                            )
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
                             numericInput(ns("upset_max_comps"), "Upset comparison count", min = 1, value = 10),
-                            numericInput(ns("max_fold_comps"), "Max fold comps", min=1, value=10),
                             checkboxInput(ns("fold_split_upset"), "Fold split upset", value=FALSE)
+                        ),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 'FoldComparison'", ns("plot_tabs")),
+                            numericInput(ns("max_fold_comps"), "Max fold comps", min=1, value=10)
                         )
                     ),
                     htmlOutput(ns("warnings")),
