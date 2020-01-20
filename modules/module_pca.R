@@ -50,7 +50,9 @@ setup_pca_ui <- function(id) {
                                    checkboxInput(ns("center_pca_data"), "Center", value = TRUE),
                                    checkboxInput(ns("show_labels_data"), "Show labels", value = FALSE),
                                    checkboxInput(ns("show_loadings"), "Show loadings", value = FALSE),
-                                   numericInput(ns("variance_filter_data"), "Variance filter", min=0, max=1, step=0.01, value = 0.1)
+                                   numericInput(ns("variance_filter_data"), "Variance filter", min=0, max=1, step=0.01, value = 0.1),
+                                   textInput(ns("custom_title1"), "Custom title 1", value=""),
+                                   textInput(ns("custom_title2"), "Custom title 2", value="")
                                )
                            )
                        )
@@ -259,9 +261,13 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             dot_size=input$dot_size,
             show_labels = input$show_labels_data, 
             color_as_fact = input$data1_as_factor
-        ) %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
+        )
         
-        plt
+        if (input$custom_title1 != "") {
+            plt <- plt + ggtitle(input$custom_title1)
+        }
+        
+        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
     })
     
     output$pca_plot2 <- renderPlotly({
@@ -288,7 +294,12 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             input$dot_size,
             show_labels = input$show_labels_data, 
             color_as_fact = input$data2_as_factor
-        ) %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
-        plt
+        ) 
+        
+        if (input$custom_title2 != "") {
+            plt <- plt + ggtitle(input$custom_title2)
+        }
+        
+        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
     })
 }

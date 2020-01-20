@@ -61,6 +61,12 @@ setup_quality_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 'Dendrograms'", ns("plot_tabs")),
                             numericInput(ns("dendrogram_height"), "Dendrogram plot height (inactive, requires UI render)", value=500, min = 50, step = 50)
+                        ),
+                        checkboxInput(ns("show_more_settings"), "Show more settings", value = FALSE),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 1", ns("show_more_settings")),
+                            textInput(ns("custom_title1"), "Custom title 1", value = ""),
+                            textInput(ns("custom_title2"), "Custom title 2", value = "")
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -434,7 +440,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         rdf
     }
     
-    do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_variance=NULL, title="Dendrogram", omit_samples=NULL) {
+    do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_variance=NULL, title="Dendrogram", omit_samples=NULL, legend_title=NULL) {
         
         if (!is.null(omit_samples)) {
             data_m <- raw_data_m[, (!colnames(raw_data_m) %in% omit_samples)]
@@ -477,6 +483,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             scale_y_reverse(expand=c(0.2, 0)) +
             scale_x_continuous(expand=c(0,1)) +
             ggtitle(title)
+        
+        if (!is.null(legend_title)) {
+            plt <- plt + labs(color = legend_title)
+        }
+        
         plt
     }
     
@@ -484,22 +495,38 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$rdf_ref(rv, input$dataset1))
         
-        do_dendrogram(
+        plt <- do_dendrogram(
             ref_sdf(),
             rv$ddf_ref(rv, input$dataset1)[[ref_color()]],
-            labels=rv$ddf_ref(rv, input$dataset1)[[ref_ddf_samplecol()]]
+            labels=rv$ddf_ref(rv, input$dataset1)[[ref_ddf_samplecol()]], 
+            legend_title = ref_color()
         )
+        
+        if (input$custom_title1 != "") {
+            plt <- plt + ggtitle(input$custom_title1)
+        }
+        
+        plt
+        
     }, height=1000)
     
     output$dendrogram_comp <- renderPlot({
         req(rv$ddf_ref(rv, input$dataset2))
         req(rv$rdf_ref(rv, input$dataset2))
         
-        do_dendrogram(
+        plt <- do_dendrogram(
             comp_sdf(),
             rv$ddf_comp(rv, input$dataset2)[[comp_color()]],
-            labels=rv$ddf_comp(rv, input$dataset2)[[comp_ddf_samplecol()]]
+            labels=rv$ddf_comp(rv, input$dataset2)[[comp_ddf_samplecol()]],
+            legend_title = comp_color()
         )
+        
+        if (input$custom_title2 != "") {
+            plt <- plt + ggtitle(input$custom_title2)
+        }
+        
+        plt
+        
     }, height=1000)
     
     output$histograms_ref <- renderPlot({ 

@@ -193,18 +193,37 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                     paste("d1", input$upset_ref_comparisons, sep="."),
                     paste("d2", input$upset_comp_comparisons, sep=".")
                 )
+                metadata <- data.frame(
+                    comparison = c(names(plot_list)),
+                    data_source = c(
+                        rep("d1", length(input$upset_ref_comparisons)),
+                        rep("d2", length(input$upset_comp_comparisons))
+                    )
+                )
             }
             else {
-                plot_list <- lapply(rapply(c(ref_names_list, comp_names_list), enquote, how="unlist"), eval)
+                ref_pltlist <- ref_names_list
+                comp_pltlist <- comp_names_list
+                names(ref_pltlist) <- input$upset_ref_comparisons %>% gsub("\\.$", "", .)
+                names(comp_pltlist) <- input$upset_comp_comparisons %>% gsub("\\.$", "", .)
+                plot_list <- lapply(rapply(c(ref_pltlist, comp_pltlist), enquote, how="unlist"), eval)
+                
+                metadata <- data.frame(
+                    comparison = c(names(plot_list)),
+                    data_source = c(
+                        rep("d1", length(input$upset_ref_comparisons) * 2),
+                        rep("d2", length(input$upset_comp_comparisons) * 2)
+                    )
+                )
             }
             
-            metadata <- data.frame(
-                comparison = c(names(plot_list)),
-                data_source = c(
-                    rep("d1", length(input$upset_ref_comparisons)),
-                    rep("d2", length(input$upset_comp_comparisons))
-                )
-            )
+            # metadata <- data.frame(
+            #     comparison = c(names(plot_list)),
+            #     data_source = c(
+            #         rep("d1", length(input$upset_ref_comparisons)),
+            #         rep("d2", length(input$upset_comp_comparisons))
+            #     )
+            # )
             upset_metadata_obj <- list(
                 data = metadata,
                 plots = list(list(
@@ -267,8 +286,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
                 filter(comb_id %in% present_in_all) %>%
                 mutate(
-                    p_sum=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value")]),
-                    p_prod=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value")])
+                    p_sum=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE]),
+                    p_prod=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE])
                 ) %>%
                 arrange(p_sum) %>%
                 head(input$max_fold_comps) %>%
@@ -282,13 +301,13 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 filter(comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, 
-                                    paste0("d1.", input$upset_comp_comparisons, "P.Value"),
-                                    paste0("d2.", input$upset_comp_comparisons, "P.Value")                                    
-                                    ]),
+                                    c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
+                                    paste0("d2.", input$upset_comp_comparisons, "P.Value")),
+                                    drop=FALSE]),
                     p_prod=rowSums(.[, 
-                                     paste0("d1.", input$upset_comp_comparisons, "P.Value"),
-                                     paste0("d2.", input$upset_comp_comparisons, "P.Value")
-                                     ])
+                                     c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
+                                     paste0("d2.", input$upset_comp_comparisons, "P.Value")),
+                                     drop=FALSE])
                 ) %>%
                 arrange(p_sum) %>%
                 head(input$max_fold_comps) %>%
