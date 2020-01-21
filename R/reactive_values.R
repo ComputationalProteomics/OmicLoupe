@@ -65,9 +65,12 @@ setup_reactive_values_obj <- function(input) {
     rv$table_settings <- reactiveVal(NULL)
     
     rv$ddf_condcol_ref <- function(rv, input_field) { 
+        # browser()
+        req(input_field != "")
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 1))]]()
     } 
     rv$ddf_condcol_comp <- function(rv, input_field) { 
+        req(input_field != "")
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]() 
     } 
     

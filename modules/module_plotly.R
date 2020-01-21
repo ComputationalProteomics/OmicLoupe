@@ -72,6 +72,8 @@ setup_plotly_ui <- function(id) {
                            ),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
                            checkboxInput(ns("set_same_axis"), "Set same axis ranges", value = FALSE),
+                           textInput(ns("ref_custom_header"), "Custom ref. header", value=""),
+                           textInput(ns("comp_custom_header"), "Custom comp. header", value=""),
                            checkboxInput(ns("more_settings"), "Show more settings", value = FALSE),
                            conditionalPanel(
                                sprintf("input['%s'] == 1", ns("more_settings")),
@@ -310,7 +312,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     }
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
-    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
+    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, key, hover_text="hover_text", title="", 
+                             manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
         
         # max_levels <- 10
         # df_color <- plot_df[[color_col]]
@@ -438,6 +441,9 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
+        if (input$ref_custom_header == "") title <- "Volcano: Reference dataset"
+        else title <- input$ref_custom_header
+
         base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
@@ -448,7 +454,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             key="key", 
             alpha=input$alpha,
             cont_scale = cont_scale,
-            title="Volcano: Reference dataset", 
+            title=title, 
             manual_scale = manual_scale)
         
         if (input$set_same_axis) {
@@ -485,6 +491,9 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
 
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
+        if (input$comp_custom_header == "") title <- "Volcano: Compare dataset"
+        else title <- input$comp_custom_header
+        
         base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
@@ -495,7 +504,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             key="key", 
             alpha=input$alpha,
             cont_scale = cont_scale,
-            title="Volcano: Compare dataset", 
+            title=title, 
             manual_scale = manual_scale) 
         
         if (input$set_same_axis) {
@@ -532,6 +541,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
+        if (input$ref_custom_header == "") title <- "MA: Reference dataset"
+        else title <- input$ref_custom_header
         
         base_plt <- make_scatter(
             plot_df, 
@@ -542,7 +553,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             color_col=color_col, 
             alpha=input$alpha,
             key="key", 
-            title="MA: Reference dataset",
+            title=title,
             cont_scale = cont_scale,
             manual_scale = manual_scale)
         
@@ -580,7 +591,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        
+        if (input$comp_custom_header == "") title <- "MA: Compare dataset"
+        else title <- input$comp_custom_header
         
         base_plt <- make_scatter(
             plot_df, 
@@ -591,7 +603,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             color_col=color_col, 
             alpha=input$alpha,
             key="key", 
-            title="MA: Compare dataset", 
+            title=input$comp_custom_header, 
             cont_scale = cont_scale,
             manual_scale = manual_scale)
         
@@ -619,12 +631,16 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         else {
             color_col <- "pass_thres"
         }
+        
+        if (input$ref_custom_header == "") title <- "P-value histogram: Reference dataset"
+        else title <- input$ref_custom_header
+        
         make_histogram(
             plot_df, 
             x_col="pval", 
             fill_col=color_col, 
             key_vals=plot_df$key,
-            title="P-value histogram: Reference dataset") %>% 
+            title=title) %>% 
             layout(dragmode="none", barmode="stack") %>% 
             toWebGL()
     })
@@ -643,12 +659,16 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         else {
             color_col <- "pass_thres"
         }
+        
+        if (input$comp_custom_header == "") title <- "P-value histogram: Compare dataset"
+        else title <- input$comp_custom_header
+        
         make_histogram(
             plot_df, 
             x_col="pval", 
             fill_col=color_col, 
             key_vals=plot_df$key, 
-            title="P-value histogram: Compare dataset") %>% 
+            title=title) %>% 
             layout(dragmode="none", barmode="stack") %>% 
             toWebGL()
     })

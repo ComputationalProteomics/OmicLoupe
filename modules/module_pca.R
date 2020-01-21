@@ -26,8 +26,12 @@ setup_pca_ui <- function(id) {
                                        column(8, selectInput(ns("color_data1"), "Color", choices=c(""))),
                                        column(4, checkboxInput(ns("data1_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
                                    ),
-                                   fluidRow(
-                                       column(8, selectInput(ns("shape_data1"), "Shape", choices=c("")))
+                                   fluidRow(column(8, selectInput(ns("shape_data1"), "Shape", choices=c("")))),
+                                   checkboxInput(ns("do_filter_samples_data1"), "Filter samples", value=FALSE),
+                                   conditionalPanel(
+                                       sprintf("input['%s'] == 1", ns("do_filter_samples_data1")),
+                                       selectInput(ns("filter_cond_data1"), "Filter condition", choices=c("")),
+                                       selectInput(ns("display_levels_data1"), "Display levels", choices = c(""), selected="", multiple=TRUE)
                                    )
                                ),
                                tabPanel(
@@ -39,8 +43,12 @@ setup_pca_ui <- function(id) {
                                        column(8, selectInput(ns("color_data2"), "Color", choices=c(""))),
                                        column(4, checkboxInput(ns("data2_as_factor"), "As factor", value=FALSE), style="margin-top: 25px")
                                    ),
-                                   fluidRow(
-                                       column(8, selectInput(ns("shape_data2"), "Shape", choices=c("")))
+                                   fluidRow(column(8, selectInput(ns("shape_data2"), "Shape", choices=c("")))),
+                                   checkboxInput(ns("do_filter_samples_data2"), "Filter samples", value=FALSE),
+                                   conditionalPanel(
+                                       sprintf("input['%s'] == 1", ns("do_filter_samples_data2")),
+                                       selectInput(ns("filter_cond_data2"), "Filter condition", choices=c("")),
+                                       selectInput(ns("display_levels_data2"), "Display levels", choices = c(""), selected="", multiple=TRUE)
                                    )
                                ),
                                tabPanel(
@@ -87,15 +95,70 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         )
     })
     
+    filtered_samples_ref <- reactive({
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(input$filter_cond_data1 != "")
+        
+        if (input$filter_cond_data1 == "None") {
+            rv$ddf_ref(rv, input$dataset1) %>%
+                dplyr::select(UQ(as.name(rv$ddf_samplecol_ref(rv, input$dataset1)))) %>% 
+                unlist()
+        }
+        else {
+            filtered_samples <- rv$ddf_ref(rv, input$dataset1) %>% 
+                filter(UQ(as.name(input$filter_cond_data1)) %in% input$display_levels_data1) %>% 
+                dplyr::select(UQ(as.name(rv$ddf_samplecol_ref(rv, input$dataset1)))) %>% 
+                unlist()
+            filtered_samples
+        }
+    })
+    
+    filtered_samples_comp <- reactive({
+        req(rv$ddf_ref(rv, input$dataset2))
+        req(input$filter_cond_data2 != "")
+        
+        if (input$filter_cond_data2 == "None") {
+            rv$ddf_comp(rv, input$dataset2) %>%
+                dplyr::select(UQ(as.name(rv$ddf_samplecol_comp(rv, input$dataset2)))) %>% 
+                unlist()
+        }
+        else {
+            filtered_samples <- rv$ddf_comp(rv, input$dataset2) %>% 
+                filter(UQ(as.name(input$filter_cond_data2)) %in% input$display_levels_data2) %>% 
+                dplyr::select(UQ(as.name(rv$ddf_samplecol_comp(rv, input$dataset2)))) %>% 
+                unlist()
+            filtered_samples
+        }
+    })
+    
+    pca_ddf1 <- reactive({
+        req(rv$ddf_ref(rv, input$dataset1))
+        req(rv$samples(rv, input$dataset1))
+        
+        target_samples <- filtered_samples_ref()
+        rv$ddf_ref(rv, input$dataset1) %>% 
+            filter(UQ(as.name(rv$ddf_samplecol_ref(rv, input$dataset1))) %in% target_samples)
+    })
+    
+    pca_ddf2 <- reactive({
+        req(rv$ddf_comp(rv, input$dataset2))
+        req(rv$samples(rv, input$dataset2))
+        
+        target_samples <- filtered_samples_comp()
+        rv$ddf_comp(rv, input$dataset2) %>% 
+            filter(UQ(as.name(rv$ddf_samplecol_comp(rv, input$dataset2))) %in% target_samples)
+    })
+    
     pca_obj1 <- reactive({
         
         req(rv$rdf_ref(rv, input$dataset1))
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$samples(rv, input$dataset1))
 
+        filtered_samples <- filtered_samples_ref()
         calculate_pca_obj(
             rv$rdf_ref(rv, input$dataset1),
-            rv$samples(rv, input$dataset1),
+            filtered_samples,
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -108,9 +171,10 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         req(rv$ddf_comp(rv, input$dataset2))
         req(rv$samples(rv, input$dataset2))
 
+        filtered_samples <- filtered_samples_comp()
         calculate_pca_obj(
             rv$rdf_comp(rv, input$dataset2),
-            rv$samples(rv, input$dataset2),
+            filtered_samples,
             do_scale = input$scale_pca_data,
             do_center = input$center_pca_data,
             var_cut = input$variance_filter_data
@@ -135,7 +199,25 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
+        
+        updateSelectInput(session, "filter_cond_data1", choices = ref_choices, selected=ref_choices[1])
+        updateSelectInput(session, "filter_cond_data2", choices = comp_choices, selected=comp_choices[1])
+        
+        display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[input$filter_cond_data1]]
+        updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
+        display_levels_data2 <- rv$ddf_ref(rv, input$dataset2)[[input$filter_cond_data2]]
+        updateSelectInput(session, "display_levels_data2", choices = display_levels_data2, selected=display_levels_data2)
     }
+
+    observeEvent(input$filter_cond_data1, {
+        display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[input$filter_cond_data1]]
+        updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
+    })
+        
+    observeEvent(input$filter_cond_data2, {
+        display_levels_data2 <- rv$ddf_ref(rv, input$dataset2)[[input$filter_cond_data2]]
+        updateSelectInput(session, "display_levels_data2", choices = display_levels_data2, selected=display_levels_data2)
+    })
     
     observeEvent({
         rv$ddf_ref(rv, input$dataset1)
@@ -146,6 +228,19 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         input$dataset2}, {
             sync_param_choices()
         })
+    
+    # observeEvent(rv$ddf_condcol_ref(rv, input$dataset1), {
+    #     req(rv$ddf_ref(rv, input$dataset1))
+    #     browser()
+    #     display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[rv$ddf_condcol_ref(rv, input$dataset1)]]
+    #     updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
+    # })
+    # 
+    # observeEvent(rv$ddf_condcol_comp(rv, input$dataset2), {
+    #     req(rv$ddf_comp(rv, input$dataset2))
+    #     display_levels_data2 <- rv$ddf_comp(rv, input$dataset2)[[rv$ddf_condcol_comp(rv, input$dataset2)]]
+    #     updateSelectInput(session, "display_levels_data2", choices = display_levels_data2, selected=display_levels_data2)
+    # })
     
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)
@@ -245,8 +340,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         else shape_col <- NULL
         
         sample_col <- rv$ddf_samplecol_ref(rv, input$dataset1)
-        
-        data <- rv$ddf_ref(rv, input$dataset1)
+        # data <- rv$ddf_ref(rv, input$dataset1)
+        data <- pca_ddf1()
         data$Sample <- data[[sample_col]]
         
         plt <- make_pca_plt(
@@ -279,7 +374,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         else shape_col <- NULL
         
         sample_col <- rv$ddf_samplecol_ref(rv, input$dataset2)
-        data <- rv$ddf_ref(rv, input$dataset2)
+        data <- pca_ddf2()
+        # data <- rv$ddf_ref(rv, input$dataset2)
         data$label <- data[[sample_col]]
         
         plt <- make_pca_plt(

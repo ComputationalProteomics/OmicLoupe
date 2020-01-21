@@ -117,10 +117,17 @@ MapObject <- R6Class("MapObject", list(
             stop("Unknown situation, for self$dataset1 and self$dataset2: ", self$dataset1, " ", self$dataset2)
         }
     },
+    has_combined = function() {
+        length(self$joint_indices1) > 0 && length(self$joint_indices1) == length(self$joint_indices2)
+    },
     get_combined_dataset = function(full_entries = FALSE) {
-        
+    
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
             
+            if (!self$has_combined()) {
+                return(NULL)
+            }
+                
             out_df1 <- self$dataset1[self$joint_indices1, ]
             out_df2 <- self$dataset2[self$joint_indices2, ]
 
