@@ -118,12 +118,6 @@ setup_panel_ui <- function(id) {
                                                 width = "80%",
                                                 "Load data"
                                             )
-                                        ),
-                                        checkboxInput(ns("toggle_extra_settings"), "Toggle extra settings", value = FALSE),
-                                        conditionalPanel(
-                                            sprintf("input['%s'] == 1", ns("toggle_extra_settings")),
-                                            select_button_row("Select samples", ns("sample_select_button_1"), ns("sample_deselect_button_1")),
-                                            select_button_row("Select stat groups", ns("stat_select_button_1"), ns("stat_deselect_button_1"))
                                         )
                                     )
                              ),
@@ -334,57 +328,6 @@ module_setup_server <- function(input, output, session, module_name) {
     
     # ------------------- Sample Management --------------------
     
-    # observeEvent(input$sample_select_button_1, {
-    #     
-    #     data_nbr <- input$select_dataset
-    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-    #     
-    #     if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
-    #         selected_samples <- column_selection_action(
-    #             input[[sprintf("data_selected_columns_%s", data_nbr)]],
-    #             rv$selected_cols_obj()[[filename]]$samples
-    #         )
-    #         
-    #         rv <- update_selcol_obj(rv, filename, "samples", selected_samples)
-    #         
-    #         sync_select_inputs(
-    #             session,
-    #             sprintf("data_selected_columns_%s", data_nbr),
-    #             sprintf("sample_selected_%s", data_nbr),
-    #             rv[[sprintf("filedata_%s", data_nbr)]],
-    #             selected_samples
-    #         )
-    #     }
-    #     else {
-    #         warning("Trying to select with nothing marked")
-    #     }
-    # })
-    # 
-    # observeEvent(input$sample_deselect_button_1, {
-    #     
-    #     data_nbr <- input$select_dataset
-    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-    #     
-    #     if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
-    #         selected_samples <- column_selection_action(
-    #             input[[sprintf("sample_selected_%s", data_nbr)]],            
-    #             rv$selected_cols_obj()[[rv$filename_1()]]$samples, 
-    #             is_deselect = TRUE
-    #         )
-    #         rv <- update_selcol_obj(rv, rv$filename_1(), "samples", selected_samples)
-    #         sync_select_inputs(
-    #             session, 
-    #             sprintf("data_selected_columns_%s", data_nbr),
-    #             sprintf("sample_selected_%s", data_nbr),
-    #             rv$filedata_1, 
-    #             selected_samples
-    #         )
-    #     }
-    #     else {
-    #         warning("Trying to deselect with nothing marked, ignoring")
-    #     }
-    # })
-    
     update_statpatterns_display <- function(statpatterns, target_out) {
         
         if (!is.null(statpatterns)) {
@@ -397,64 +340,6 @@ module_setup_server <- function(input, output, session, module_name) {
             out_text
         })
     }
-    
-    # observeEvent(input$stat_select_button_1, {
-    #     
-    #     data_nbr <- input$select_dataset
-    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-    #     
-    #     if (!is.null(input[[sprintf("data_selected_columns_%s", data_nbr)]])) {
-    #         selected_statcols <- column_selection_action(
-    #             input[[sprintf("data_selected_columns_%s", data_nbr)]],
-    #             rv$selected_cols_obj()[[filename]]$statcols
-    #         )
-    #         
-    #         rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
-    #         sync_select_inputs(
-    #             session, 
-    #             sprintf("data_selected_columns_%s", data_nbr),
-    #             sprintf("statcols_selected_%s", data_nbr),
-    #             rv[[sprintf("filedata_%s", data_nbr)]],
-    #             selected_statcols
-    #         )
-    #         update_statpatterns_display(
-    #             rv$selected_cols_obj()[[filename]]$statpatterns, 
-    #             sprintf("found_stat_patterns_%s", data_nbr)
-    #         )
-    #     }
-    #     else {
-    #         warning("Trying to select with nothing marked, ignoring...")
-    #     }
-    # })
-    # 
-    # observeEvent(input$stat_deselect_button_1, {
-    #     data_nbr <- input$select_dataset
-    #     filename <- rv[[sprintf("filename_%s", data_nbr)]]()
-    #     
-    #     if (!is.null(input[[sprintf("statcols_selected_%s", data_nbr)]])) {
-    #         selected_statcols <- column_selection_action(
-    #             input[[sprintf("statcols_selected_%s", data_nbr)]],
-    #             rv$selected_cols_obj()[[filename]]$statcols,
-    #             is_deselect = TRUE
-    #         )
-    #         
-    #         rv <- update_selcol_obj(rv, filename, "statcols", selected_statcols, sync_stat_patterns = TRUE)
-    #         sync_select_inputs(
-    #             session, 
-    #             sprintf("data_selected_columns_%s", data_nbr),
-    #             sprintf("statcols_selected_%s", data_nbr),
-    #             rv[[sprintf("filedata_%s", data_nbr)]],
-    #             selected_statcols
-    #         )
-    #         update_statpatterns_display(
-    #             rv$selected_cols_obj()[[filename]]$statpatterns, 
-    #             sprintf("found_stat_patterns_%s", data_nbr)
-    #         )
-    #     }
-    #     else {
-    #         warning("Trying to deselect with nothing marked, ignoring")
-    #     }
-    # })
     
     observeEvent({
         input$feature_col_1
@@ -581,42 +466,6 @@ module_setup_server <- function(input, output, session, module_name) {
             autodetect=input$automatic_sample_detect
         )
         
-        # if (!is.null(input$design_sample_col_1) && input$design_sample_col_1 != "" && !is.null(rv$filedata_1())) {
-        #     
-        #     if (input$automatic_sample_detect) {
-        #         sample_col <- NULL
-        #     }
-        #     else {
-        #         sample_col <- input$design_sample_col_1
-        #     }
-        #     
-        #     autodetect_sample_cols(
-        #         rv$design_1(),
-        #         rv$filedata_1(),
-        #         data_nbr = 1, 
-        #         rv, 
-        #         rv$filename_1(),
-        #         sample_col = sample_col
-        #     )
-        # }
-        # if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "" && !is.null(rv$filedata_2())) {
-        #     
-        #     if (input$automatic_sample_detect) {
-        #         sample_col <- NULL
-        #     }
-        #     else {
-        #         sample_col <- input$design_sample_col_1
-        #     }
-        #     
-        #     autodetect_sample_cols(
-        #         rv$design_2(),
-        #         rv$filedata_2(),
-        #         data_nbr = 2,
-        #         rv, 
-        #         rv$filename_2(),
-        #         sample_col = sample_col
-        #     )
-        # }
     })
     
     # Clear/reset fildata 1 related fields

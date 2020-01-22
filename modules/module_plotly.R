@@ -25,7 +25,6 @@ setup_plotly_ui <- function(id) {
                 span(
                     style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
                     actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
-                    # actionButton(ns("help"), "", icon=icon("question"), style="padding-bottom:4px; font-size:80%;")
                 )
             ),
             fluidRow(
@@ -37,7 +36,6 @@ setup_plotly_ui <- function(id) {
                                fluidRow(
                                    column(4, numericInput(ns("plot_pc1"), "Plt1 PC", value=1, min=1, step=1)),
                                    column(4, numericInput(ns("plot_pc2"), "Plt2 PC", value=1, min=1, step=1))
-                                   # column(4, actionButton(ns("color_pca"), "Plot"))
                                )
                            ),
                            conditionalPanel(
@@ -47,29 +45,25 @@ setup_plotly_ui <- function(id) {
                                    column(6, selectInput(ns("color_col_2"), "Comp. column", choices = c("")))
                                )
                            ),
-                           column(6,
-                                  fluidRow(
-                                      selectInput(ns("dataset1"), "Ref. data", choices=c(), selected = ""),
-                                      selectInput(ns("dataset2"), "Comp. data", choices=c(), selected = "")
-                                  )
-                           ),
-                           column(6,
-                                  fluidRow(
-                                      selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
-                                      selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
-                                  )
-                           ),
+                           column(6, fluidRow(
+                               selectInput(ns("dataset1"), "Ref. data", choices=c(), selected = ""),
+                               selectInput(ns("dataset2"), "Comp. data", choices=c(), selected = "")
+                           )),
+                           column(6, fluidRow(
+                               selectInput(ns("stat_base1"), "Ref. Comparison", choices=c(), selected = ""),
+                               selectInput(ns("stat_base2"), "Comp. Comparison", choices=c(), selected = "")
+                           )),
                            fluidRow(
                                column(9,
                                       sliderInput(ns("pvalue_cutoff"), "P-value cutoff", value=0.05, step=0.01, min=0, max=1)
-                               ),
-                               column(3,
-                                      span(
-                                          selectInput(ns("pvalue_type_select"), choices = c("P.Value", "adj.P.Val"), selected = "P.Value", label = "P-value type"),
-                                          style="padding:20px"
-                                      )
-                               )
-                           ),
+                               ), column(3, 
+                                         span(
+                                             selectInput(ns("pvalue_type_select"), 
+                                                         choices = c("P.Value", "adj.P.Val"), 
+                                                         selected = "P.Value", 
+                                                         label = "P-value type"),
+                                             style="padding:20px")
+                               )),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
                            checkboxInput(ns("set_same_axis"), "Set same axis ranges", value = FALSE),
                            textInput(ns("ref_custom_header"), "Custom ref. header", value=""),
@@ -114,7 +108,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     })
     
     # ---------------- REACTIVE ---------------- 
-
+    
     get_thres_pass_type_col <- function(df, stat_cols1, stat_cols2, pvalue_cut, fold_cut, stat_pattern) {
         
         pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut
@@ -129,7 +123,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         pass_type_col
     }
-        
+    
     reactive_plot_df <- reactive({
         
         req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
@@ -155,24 +149,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         base_df <- cbind(
             combined_dataset, 
             pass_threshold_data=pass_thres_col,
-            annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset1, 1)), rv$rdf_featurecol_ref(rv, input$dataset1))],
-            annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset2, 2)), rv$rdf_featurecol_comp(rv, input$dataset2))]
+            annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset1, 1)), rv$rdf_annotcol_ref(rv, input$dataset1))],
+            annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset2, 2)), rv$rdf_annotcol_comp(rv, input$dataset2))]
         ) %>% arrange(desc(UQ(as.name(target_statcol))))
         
-        # if (!is.null(rv$rdf_featurecol_ref(rv, input$dataset1))) {
-        #     base_df <- cbind(
-        #         base_df,
-        #         annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset1, 1)), rv$rdf_featurecol_ref(rv, input$dataset1))]
-        #     )
-        # }
-        # 
-        # if (!is.null(rv$rdf_featurecol_comp(rv, input$dataset2))) {
-        #     base_df <- cbind(
-        #         base_df,
-        #         annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset2, 2)), rv$rdf_featurecol_comp(rv, input$dataset2))]
-        #     )
-        # }
-                
         if (input$color_type == "Threshold") {
             base_df
         }
@@ -301,7 +281,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     # ---------------- FUNCTIONS ---------------- 
     
-
+    
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
     make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", title="", 
@@ -309,7 +289,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
             # plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
-                geom_point(alpha=alpha) +
+            geom_point(alpha=alpha) +
             ggtitle(title)
         
         if (!is.null(xlab)) {
@@ -403,9 +383,9 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     }
     
     output$plotly_volc1 <- renderPlotly({
-
+        
         req(rv$mapping_obj())
-
+        
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
@@ -428,7 +408,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         if (input$ref_custom_header == "") title <- "Volcano: Reference dataset"
         else title <- input$ref_custom_header
-
+        
         plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
         
         base_plt <- make_scatter(
@@ -453,7 +433,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             layout(dragmode="select") %>%
             toWebGL()
     })
-
+    
     output$plotly_volc2 <- renderPlotly({
         
         req(rv$mapping_obj())
@@ -475,7 +455,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
                 cont_scale <- TRUE
             }        
         }
-
+        
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         if (input$comp_custom_header == "") title <- "Volcano: Compare dataset"
@@ -687,7 +667,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(rv$mapping_obj())
         req(rv$mapping_obj()$get_combined_dataset())
-
+        
         target_df <- get_target_df(rv)
         rv$dt_parsed_data(rv, target_df)
     })
