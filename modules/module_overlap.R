@@ -183,10 +183,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 }
             }, dataset=input$dataset2, contrast_type=input$contrast_type, fold_split=input$fold_split_upset)
             
-            # comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
-            #     parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
-            # }, dataset=input$dataset2, contrast_type=input$contrast_type)
-            
             if (!input$fold_split_upset) {
                 plot_list <- c(ref_names_list, comp_names_list)
                 names(plot_list) <- c(
@@ -204,8 +200,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             else {
                 ref_pltlist <- ref_names_list
                 comp_pltlist <- comp_names_list
-                names(ref_pltlist) <- input$upset_ref_comparisons %>% gsub("\\.$", "", .)
-                names(comp_pltlist) <- input$upset_comp_comparisons %>% gsub("\\.$", "", .)
+                names(ref_pltlist) <- sprintf("d1.%s", input$upset_ref_comparisons %>% gsub("\\.$", "", .))
+                names(comp_pltlist) <- sprintf("d2.%s", input$upset_comp_comparisons %>% gsub("\\.$", "", .))
                 plot_list <- lapply(rapply(c(ref_pltlist, comp_pltlist), enquote, how="unlist"), eval)
                 
                 metadata <- data.frame(
@@ -217,13 +213,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 )
             }
             
-            # metadata <- data.frame(
-            #     comparison = c(names(plot_list)),
-            #     data_source = c(
-            #         rep("d1", length(input$upset_ref_comparisons)),
-            #         rep("d2", length(input$upset_comp_comparisons))
-            #     )
-            # )
             upset_metadata_obj <- list(
                 data = metadata,
                 plots = list(list(
