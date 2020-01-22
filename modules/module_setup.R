@@ -65,87 +65,80 @@ setup_panel_ui <- function(id) {
                 tabPanel("LoadData", 
                          top_bar_w_help("Load data", ns("help")),
                          fluidRow(
-                             column(2, selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1)),
-                             column(1),
-                             column(9,
+                             column(4, 
+                                    # selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1),
+                                    checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE),
                                     p(HTML("<b>Status:</b>")),
-                                    # p("No columns assigned"),
-                                    # p("No datasets loaded"),
                                     textOutput(ns("column_status")),
                                     textOutput(ns("load_status"))
-                                    # textOutput(ns("perform_map_status"))
+                             ),
+                             column(8, 
+                                    column(6, 
+                                           align="center",
+                                           fluidRow(
+                                               class = "button_row",
+                                               actionButton(
+                                                   ns("autodetect_cols"),
+                                                   class = "recolor_button",
+                                                   width = "80%",
+                                                   "Identify columns"
+                                               )
+                                           ),
+                                           fluidRow(
+                                               class = "button_row",
+                                               actionButton(
+                                                   ns("perform_map_button"),
+                                                   class = "recolor_button",
+                                                   width = "80%",
+                                                   "Load data"
+                                               )
+                                           )
+                                           
+                                    ),
+                                    column(6, 
+                                           checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
+                                           checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE)
+                                           
+                                    )
                              )
                          ),
                          fluidRow(
                              column(4,
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 1", ns("select_dataset")),
-                                        sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"), ns("annot_col_1"))
-                                    ),
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 2", ns("select_dataset")),
-                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_1"))
-                                    ),
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 1 || input['%s'] == 1", ns("select_dataset"), ns("matched_samples")),
-                                        design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
-                                    ),
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 2 && input['%s'] != 1", ns("select_dataset"), ns("matched_samples")),
+                                    h3("Dataset 1"),
+                                    sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"), ns("annot_col_1"), select_size=5),
+                                    design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
+                             ),
+                             conditionalPanel(
+                                 sprintf("input['%s'] == 1", ns("two_datasets")),
+                                 column(4,
+                                        h3("Dataset 2"),
+                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_1"), select_size=5),
                                         design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
-                                    )
+                                 )
                              ),
-                             column(3,
-                                    align="center",
+                             column(4,
+                                    h3("Assigned columns"),
                                     wellPanel(
-                                        checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
-                                        checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE),
-                                        fluidRow(
-                                            class = "button_row",
-                                            actionButton(
-                                                ns("autodetect_cols"),
-                                                class = "recolor_button",
-                                                width = "80%",
-                                                "Identify columns"
-                                            )
+                                        selectInput(
+                                            ns("sample_selected_1"),
+                                            "Assigned sample columns (dataset 1)",
+                                            choices = c(""),
+                                            multiple = TRUE,
+                                            selectize = FALSE,
+                                            size = 5
                                         ),
-                                        hr(),
-                                        fluidRow(
-                                            class = "button_row",
-                                            actionButton(
-                                                ns("perform_map_button"),
-                                                class = "recolor_button",
-                                                width = "80%",
-                                                "Load data"
-                                            )
-                                        )
-                                    )
-                             ),
-                             column(5,
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 1", ns("select_dataset")),
-                                        wellPanel(
-                                            selectInput(
-                                                ns("sample_selected_1"),
-                                                "Assigned sample columns (dataset 1)",
-                                                choices = c(""),
-                                                multiple = TRUE,
-                                                selectize = FALSE,
-                                                size = 12
-                                            ),
-                                            selectInput(
-                                                ns("statcols_selected_1"),
-                                                "Assigned statistics columns (dataset 1)",
-                                                choices = c(""),
-                                                multiple = TRUE,
-                                                selectize = FALSE,
-                                                size = 12
-                                            ),
-                                            textOutput(ns("found_stat_patterns_1"))
-                                        )
+                                        selectInput(
+                                            ns("statcols_selected_1"),
+                                            "Assigned statistics columns (dataset 1)",
+                                            choices = c(""),
+                                            multiple = TRUE,
+                                            selectize = FALSE,
+                                            size = 5
+                                        ),
+                                        textOutput(ns("found_stat_patterns_1"))
                                     ),
                                     conditionalPanel(
-                                        sprintf("input['%s'] == 2", ns("select_dataset")),
+                                        sprintf("input['%s'] == 1", ns("two_datasets")),
                                         wellPanel(
                                             selectInput(
                                                 ns("sample_selected_2"),
@@ -153,7 +146,7 @@ setup_panel_ui <- function(id) {
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
-                                                size = 12
+                                                size = 5
                                             ),
                                             selectInput(
                                                 ns("statcols_selected_2"),
@@ -161,7 +154,7 @@ setup_panel_ui <- function(id) {
                                                 choices = c(""),
                                                 multiple = TRUE,
                                                 selectize = FALSE,
-                                                size = 12
+                                                size = 5
                                             ),
                                             textOutput(ns("found_stat_patterns_2"))
                                         )
@@ -196,14 +189,12 @@ setup_panel_ui <- function(id) {
                              tabPanel("Design 2", DT::DTOutput(ns("dt_design2")))
                          )
                 )
-            )
-        )
-    )
+            )))
+    # )
 }
 
 # How to access navbar element (from outside module)
 # document.querySelectorAll("#navbar li a[data-value=Correlation]")
-
 
 module_setup_server <- function(input, output, session, module_name) {
     
@@ -341,28 +332,6 @@ module_setup_server <- function(input, output, session, module_name) {
         })
     }
     
-    observeEvent({
-        input$feature_col_1
-        input$annot_col_1
-        }, {
-            
-        warning("Consider: Is this section needed? Possibly in the statistics module naming?")
-            
-        data_nbr <- input$select_dataset
-        if (!is.null(rv[[sprintf("filename_%s", data_nbr)]]()) && !is.null(rv$mapping_obj())) {
-            rv[[sprintf("selected_cols_", data_nbr)]]$feature_col <- input[[sprintf("feature_col_%s", data_nbr)]]
-            rv[[sprintf("selected_cols_", data_nbr)]]$annot_col <- input[[sprintf("annot_col_%s", data_nbr)]]
-            rv <- update_selcol_obj(
-                rv, rv[[sprintf("filename_%s", data_nbr)]](),
-                "feature_col", input[[sprintf("feature_col_%s", data_nbr)]]
-            )
-            rv <- update_selcol_obj(
-                rv, rv[[sprintf("filename_%s", data_nbr)]](),
-                "annot_col", input[[sprintf("annot_col_%s", data_nbr)]]
-            )
-        }
-    })
-    
     # --------------------------- End ----------------------------
     
     autodetect_stat_cols <- function() {
@@ -393,7 +362,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 selected = sample_col
             )
         }
-
+        
         if (is.null(ddf)) {
             stop("Data frame is NULL, invalid input provided!")
         }

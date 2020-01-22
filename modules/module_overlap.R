@@ -233,7 +233,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 names(plot_list_joint) <- input$upset_ref_comparisons %>% gsub("\\.$", "", .)
                 plot_list <- lapply(rapply(plot_list_joint, enquote, how="unlist"), eval)
             }
-
             upset_metadata_obj <- NULL
         }
         
