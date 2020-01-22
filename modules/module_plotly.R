@@ -79,7 +79,7 @@ setup_plotly_ui <- function(id) {
                                sprintf("input['%s'] == 1", ns("more_settings")),
                                sliderInput(ns("bin_count"), "Bin count", value=100, step=10, min=10, max=200),
                                sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
-                           ),
+                           )
                        )
                 ),
                 column(8,
@@ -114,7 +114,22 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     })
     
     # ---------------- REACTIVE ---------------- 
-    
+
+    get_thres_pass_type_col <- function(df, stat_cols1, stat_cols2, pvalue_cut, fold_cut, stat_pattern) {
+        
+        pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut
+        pass_threshold_data2 <- df[[stat_cols2[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols2$logFC]]) > fold_cut
+        pass_both <- pass_threshold_data1 & pass_threshold_data2
+        
+        pass_type <- rep("None", length(pass_both))
+        pass_type[pass_threshold_data1] <- "Ref"
+        pass_type[pass_threshold_data2] <- "Comp"
+        pass_type[pass_both] <- "Both"
+        pass_type_col <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp"))
+        
+        pass_type_col
+    }
+        
     reactive_plot_df <- reactive({
         
         req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
@@ -127,7 +142,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         }
         
-        base_df <- get_pass_thres_annot_data(
+        pass_thres_col <- get_thres_pass_type_col(
             combined_dataset,
             rv$statcols_ref(rv, input$dataset1, input$stat_base1),
             rv$statcols_comp(rv, input$dataset2, input$stat_base2),
@@ -136,6 +151,28 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             input$pvalue_type_select
         )
         
+        target_statcol <- rv$statcols_ref(rv, input$dataset1, input$stat_base1)[[input$pvalue_type_select]]
+        base_df <- cbind(
+            combined_dataset, 
+            pass_threshold_data=pass_thres_col,
+            annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset1, 1)), rv$rdf_featurecol_ref(rv, input$dataset1))],
+            annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset2, 2)), rv$rdf_featurecol_comp(rv, input$dataset2))]
+        ) %>% arrange(desc(UQ(as.name(target_statcol))))
+        
+        # if (!is.null(rv$rdf_featurecol_ref(rv, input$dataset1))) {
+        #     base_df <- cbind(
+        #         base_df,
+        #         annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset1, 1)), rv$rdf_featurecol_ref(rv, input$dataset1))]
+        #     )
+        # }
+        # 
+        # if (!is.null(rv$rdf_featurecol_comp(rv, input$dataset2))) {
+        #     base_df <- cbind(
+        #         base_df,
+        #         annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset2, 2)), rv$rdf_featurecol_comp(rv, input$dataset2))]
+        #     )
+        # }
+                
         if (input$color_type == "Threshold") {
             base_df
         }
@@ -146,7 +183,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                paste(sprintf("d%s", dataset_ind(1)), rv$samples(rv, input$dataset1), sep="."),
+                paste(sprintf("d%s", rv$di(rv, input$dataset2, 1)), rv$samples(rv, input$dataset1), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -156,7 +193,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                paste(sprintf("d%s", dataset_ind(2)), rv$samples(rv, input$dataset2), sep="."),
+                paste(sprintf("d%s", rv(rv, input$dataset2, 2)), rv$samples(rv, input$dataset2), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = 0.4,
@@ -169,8 +206,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         }
         else if (input$color_type == "Column") {
             warning("This needs to be fixed! (How? // Later Jakob and where? // Even later, maybe already fixed, if with the dataset_ind?)")
-            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(1), input$color_col_1)]]
-            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", dataset_ind(2), input$color_col_2)]]
+            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", rv$di(rv, input$dataset1, 1), input$color_col_1)]]
+            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", rv$di(rv, input$dataset2, 2), input$color_col_2)]]
             base_df %>% arrange(ref.color_col)
         }
         else {
@@ -178,14 +215,44 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         }
     })
     
+    parse_plot_df <- function(target_statcols, feature_col="target_col1") {
+        
+        plot_df <- data.frame(
+            fold = reactive_plot_df()[[target_statcols$logFC]],
+            sig = -log10(reactive_plot_df()[[target_statcols$P.Value]]),
+            lab = rv$mapping_obj()[[feature_col]],
+            expr = reactive_plot_df()[[target_statcols$AveExpr]],
+            pval = reactive_plot_df()[[target_statcols$P.Value]],
+            pass_thres = reactive_plot_df()$pass_threshold_data,
+            hover_text = reactive_plot_df()$comb_id,
+            key = reactive_plot_df()$comb_id,
+            annot_ref = reactive_plot_df()$annot_ref,
+            annot_comp = reactive_plot_df()$annot_comp
+        )
+        
+        if (input$color_type == "PCA") {
+            plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
+            plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
+            warning("The pass_thres could be better calculated for histograms also in PCA")
+            plot_df$pass_thres <- TRUE
+        }
+        
+        if (input$color_type == "Column") {
+            plot_df$ref.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "ref")]]
+            plot_df$comp.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "comp")]]
+        }
+        
+        plot_df
+    }
+    
     plot_ref_df <- reactive({
         req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
-        get_plot_df(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        parse_plot_df(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
     })
     
     plot_comp_df <- reactive({
         req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
-        get_plot_df(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        parse_plot_df(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
     })
     
     # ---------------- OBSERVERS ---------------- 
@@ -234,96 +301,15 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     # ---------------- FUNCTIONS ---------------- 
     
-    dataset_ind <- function(field) {
-        
-        req(rv$filename_1())
-        
-        if (!is.null(rv$filename_1()) && input[[sprintf("dataset%s", field)]] == rv$filename_1()) {
-            1
-        }
-        else if (!is.null(rv$filename_2()) && input[[sprintf("dataset%s", field)]] == rv$filename_2()) {
-            2
-        }
-        else { 
-            warning(sprintf("Unknown input$dataset_%s: ", field), input[[sprintf("dataset%s", field)]])
-            NULL
-        }
-    }
-    
-    get_plot_df <- function(target_statcols, feature_col="target_col1") {
-        
-        plot_df <- data.frame(
-            fold = reactive_plot_df()[[target_statcols$logFC]],
-            sig = -log10(reactive_plot_df()[[target_statcols$P.Value]]),
-            lab = rv$mapping_obj()[[feature_col]],
-            expr = reactive_plot_df()[[target_statcols$AveExpr]],
-            pval = reactive_plot_df()[[target_statcols$P.Value]],
-            pass_thres = reactive_plot_df()$pass_threshold_data,
-            hover_text = reactive_plot_df()$comb_id,
-            key = reactive_plot_df()$comb_id
-        )
-        
-        # plot_df <- data.frame(
-        #     fold = reactive_plot_df()[[target_statcols()$logFC]],
-        #     sig = -log10(reactive_plot_df()[[target_statcols()$P.Value]]),
-        #     lab = rv$mapping_obj()[[feature_col]],
-        #     expr = reactive_plot_df()[[target_statcols()$AveExpr]],
-        #     pval = reactive_plot_df()[[target_statcols()$P.Value]],
-        #     pass_thres = reactive_plot_df()$pass_threshold_data,
-        #     hover_text = reactive_plot_df()$comb_id,
-        #     key = reactive_plot_df()$comb_id
-        # )
-        if (input$color_type == "PCA") {
-            plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
-            plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
-            warning("The pass_thres could be better calculated for histograms also in PCA")
-            plot_df$pass_thres <- TRUE
-        }
-        
-        if (input$color_type == "Column") {
-            plot_df$ref.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "ref")]]
-            plot_df$comp.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "comp")]]
-        }
-        
-        plot_df
-    }
-    
-    make_scatter_gg <- function(plot_df, x_col, y_col, color_col, key, hover_text="hover_text", title="", manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
-        
-        max_levels <- 10
-        df_color <- plot_df[[color_col]]
-        if ((is.factor(df_color) || is.character(df_color)) && length(unique(df_color)) > max_levels) {
-            warning("Maxlevels color color exceeded (", length(unique(df_color)), ") assigning no color")
-            color_col <- NULL
-        }
-        
-        plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) + 
-            geom_point(alpha=alpha) + 
-            ggtitle(title)
-        
-        if (manual_scale) {
-            plt <- plt + scale_color_manual(values=MY_COLORS)
-        }
-        else if (!is.null(cont_scale)) {
-            plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
-        }
-        
-        plt
-    }
+
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
-    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, key, hover_text="hover_text", title="", 
+    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", title="", 
                              manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
         
-        # max_levels <- 10
-        # df_color <- plot_df[[color_col]]
-        # if ((is.factor(df_color) || is.character(df_color)) && length(unique(df_color)) > max_levels) {
-        #     warning("Maxlevels color color exceeded (", length(unique(df_color)), ") assigning no color")
-        #     color_col <- NULL
-        # }
-        
-        plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
-            geom_point(alpha=alpha) +
+        plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
+            # plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
+                geom_point(alpha=alpha) +
             ggtitle(title)
         
         if (!is.null(xlab)) {
@@ -416,7 +402,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         plt + xlim(min_fold, max_fold) + ylim(min_sig, max_sig)
     }
     
-    
     output$plotly_volc1 <- renderPlotly({
 
         req(rv$mapping_obj())
@@ -444,6 +429,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         if (input$ref_custom_header == "") title <- "Volcano: Reference dataset"
         else title <- input$ref_custom_header
 
+        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        
         base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
@@ -451,7 +438,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             x_lab="Fold change",
             y_lab="P-value (-log10)",
             color_col=color_col, 
-            key="key", 
+            hover_text="descr", 
             alpha=input$alpha,
             cont_scale = cont_scale,
             title=title, 
@@ -494,6 +481,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         if (input$comp_custom_header == "") title <- "Volcano: Compare dataset"
         else title <- input$comp_custom_header
         
+        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
+        
         base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
@@ -501,7 +490,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             x_lab="Fold change (log2)",
             y_lab="Significance (-log10)",
             color_col=color_col, 
-            key="key", 
+            hover_text="descr", 
             alpha=input$alpha,
             cont_scale = cont_scale,
             title=title, 
@@ -544,6 +533,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         if (input$ref_custom_header == "") title <- "MA: Reference dataset"
         else title <- input$ref_custom_header
         
+        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        
         base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
@@ -552,7 +543,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             y_lab="Fold change (log2)",
             color_col=color_col, 
             alpha=input$alpha,
-            key="key", 
+            hover_text="descr", 
             title=title,
             cont_scale = cont_scale,
             manual_scale = manual_scale)
@@ -594,6 +585,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         if (input$comp_custom_header == "") title <- "MA: Compare dataset"
         else title <- input$comp_custom_header
         
+        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
+        
         base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
@@ -602,7 +595,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             y_lab="Fold change (log2)",
             color_col=color_col, 
             alpha=input$alpha,
-            key="key", 
+            hover_text="descr", 
             title=input$comp_custom_header, 
             cont_scale = cont_scale,
             manual_scale = manual_scale)

@@ -29,21 +29,21 @@ parse_stat_cols <- function(raw_stat_cols, base) {
     stat_cols
 }
 
-get_pass_thres_annot_data <- function(df, stat_cols1, stat_cols2, pvalue_cut, fold_cut, stat_pattern) {
-    
-    pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut
-    pass_threshold_data2 <- df[[stat_cols2[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols2$logFC]]) > fold_cut
-    pass_both <- pass_threshold_data1 & pass_threshold_data2
-
-    pass_type <- rep("None", length(pass_both))
-    pass_type[pass_threshold_data1] <- "Ref"
-    pass_type[pass_threshold_data2] <- "Comp"
-    pass_type[pass_both] <- "Both"
-    pass_type <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp"))
-    
-    plot_df <- cbind(df, pass_threshold_data=pass_type) %>% arrange(desc(UQ(as.name(stat_cols1[[stat_pattern]]))))
-    plot_df
-}
+# get_pass_thres_annot_data <- function(df, stat_cols1, stat_cols2, pvalue_cut, fold_cut, stat_pattern) {
+#     
+#     pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut
+#     pass_threshold_data2 <- df[[stat_cols2[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols2$logFC]]) > fold_cut
+#     pass_both <- pass_threshold_data1 & pass_threshold_data2
+# 
+#     pass_type <- rep("None", length(pass_both))
+#     pass_type[pass_threshold_data1] <- "Ref"
+#     pass_type[pass_threshold_data2] <- "Comp"
+#     pass_type[pass_both] <- "Both"
+#     pass_type <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp"))
+#     
+#     plot_df <- cbind(df, pass_threshold_data=pass_type) %>% arrange(desc(UQ(as.name(stat_cols1[[stat_pattern]]))))
+#     plot_df
+# }
 
 
 get_curr_selected_cols_pattern <- function(chosen_dataset, filenames, pattern1="selected_cols_1", pattern2="selected_cols_2s") {
@@ -74,6 +74,8 @@ di_new <- function(rv, input_field, field) {
         NULL
     }
 }
+
+di <- di_new
 
 # di <- function(rv, input, field) {
 #     

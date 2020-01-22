@@ -619,17 +619,19 @@ module_setup_server <- function(input, output, session, module_name) {
         # }
     })
     
+    # Clear/reset fildata 1 related fields
     observeEvent(rv$filedata_1(), {
         clear_fields(session, rv$filedata_1, c("sample_selected_1", "statcols_selected_1"))
-        clear_file_fields(session, rv$filedata_1, c("data_selected_columns_1", "feature_col_1"))
+        clear_file_fields(session, rv$filedata_1, c("data_selected_columns_1", "feature_col_1", "annot_col_1"))
         rv$selected_cols_obj(
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_1()))
         )
     })
     
+    # Clear/reset filedata 2 related fields
     observeEvent(rv$filedata_2(), {
         clear_fields(session, rv$filedata_2, c("sample_selected_2", "statcols_selected_2"))
-        clear_file_fields(session, rv$filedata_2, c("data_selected_columns_2", "feature_col_2"))
+        clear_file_fields(session, rv$filedata_2, c("data_selected_columns_2", "feature_col_2", "annot_col_2"))
         rv$selected_cols_obj(
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_2()))
         )
