@@ -65,42 +65,45 @@ setup_panel_ui <- function(id) {
                 tabPanel("LoadData", 
                          top_bar_w_help("Load data", ns("help")),
                          fluidRow(
+                             column(6, 
+                                    wellPanel(
+                                        fluidRow(
+                                            column(5, 
+                                                   align="center",
+                                                   fluidRow(
+                                                       class = "button_row",
+                                                       actionButton(
+                                                           ns("autodetect_cols"),
+                                                           class = "recolor_button",
+                                                           width = "80%",
+                                                           "Identify columns"
+                                                       )
+                                                   ),
+                                                   fluidRow(
+                                                       class = "button_row",
+                                                       actionButton(
+                                                           ns("perform_map_button"),
+                                                           class = "recolor_button",
+                                                           width = "80%",
+                                                           "Load data"
+                                                       )
+                                                   )
+                                                   
+                                            ),
+                                            column(6, 
+                                                   checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE),
+                                                   checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
+                                                   checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE)
+                                            )
+                                        )
+                                    )
+                             ),
                              column(4, 
-                                    # selectInput(ns("select_dataset"), label = "Select dataset", choices = c("Dataset 1"=1,"Dataset 2"=2), selected = 1),
-                                    checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE),
                                     p(HTML("<b>Status:</b>")),
                                     textOutput(ns("column_status")),
                                     textOutput(ns("load_status"))
                              ),
-                             column(8, 
-                                    column(6, 
-                                           align="center",
-                                           fluidRow(
-                                               class = "button_row",
-                                               actionButton(
-                                                   ns("autodetect_cols"),
-                                                   class = "recolor_button",
-                                                   width = "80%",
-                                                   "Identify columns"
-                                               )
-                                           ),
-                                           fluidRow(
-                                               class = "button_row",
-                                               actionButton(
-                                                   ns("perform_map_button"),
-                                                   class = "recolor_button",
-                                                   width = "80%",
-                                                   "Load data"
-                                               )
-                                           )
-                                           
-                                    ),
-                                    column(6, 
-                                           checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
-                                           checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE)
-                                           
-                                    )
-                             )
+                             column(2)
                          ),
                          fluidRow(
                              column(4,
@@ -112,7 +115,7 @@ setup_panel_ui <- function(id) {
                                  sprintf("input['%s'] == 1", ns("two_datasets")),
                                  column(4,
                                         h3("Dataset 2"),
-                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_1"), select_size=5),
+                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_2"), select_size=5),
                                         design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
                                  )
                              ),
