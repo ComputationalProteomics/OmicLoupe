@@ -59,7 +59,7 @@ get_curr_selected_cols_pattern <- function(chosen_dataset, filenames, pattern1="
 }
 
 
-di_new <- function(rv, input_field, field) {
+di_new <- function(rv, input_field, dummy=NULL) {
     
     if (is.null(rv$filename_1()) || rv$filename_1() == "") {
         NULL

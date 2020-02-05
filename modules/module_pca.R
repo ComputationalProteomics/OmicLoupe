@@ -199,23 +199,13 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         
         updateSelectInput(session, "color_data1", choices = ref_choices, selected=set_if_new(input$color_data1, ref_choices, rv$ddf_condcol_ref(rv, input$dataset1)))
         updateSelectInput(session, "color_data2", choices = comp_choices, selected=set_if_new(input$color_data2, comp_choices, rv$ddf_condcol_comp(rv, input$dataset2)))
-
         updateSelectInput(session, "shape_data1", choices = ref_choices, selected=set_if_new(input$shape_data1, ref_choices, ref_choices[1]))
         updateSelectInput(session, "shape_data2", choices = comp_choices, selected=set_if_new(input$shape_data2, comp_choices, comp_choices[1]))
-        
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=set_if_new(input$sample_data1, ref_choices, ref_choices[1]))
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=set_if_new(input$sample_data2, comp_choices, comp_choices[1]))
-        
         updateSelectInput(session, "filter_cond_data1", choices = ref_choices, selected=set_if_new(input$filter_cond_data1, ref_choices, ref_choices[1]))
         updateSelectInput(session, "filter_cond_data2", choices = comp_choices, selected=set_if_new(input$filter_cond_data2, comp_choices, comp_choices[1]))
                 
-        # updateSelectInput(session, "shape_data1", choices = ref_choices, selected=ref_choices[1])
-        # updateSelectInput(session, "shape_data2", choices = comp_choices, selected=comp_choices[1])
-        # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-        # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
-        # updateSelectInput(session, "filter_cond_data1", choices = ref_choices, selected=ref_choices[1])
-        # updateSelectInput(session, "filter_cond_data2", choices = comp_choices, selected=comp_choices[1])
-        
         display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[input$filter_cond_data1]]
         updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
         display_levels_data2 <- rv$ddf_ref(rv, input$dataset2)[[input$filter_cond_data2]]
@@ -241,19 +231,6 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         input$dataset2}, {
             sync_param_choices()
         })
-    
-    # observeEvent(rv$ddf_condcol_ref(rv, input$dataset1), {
-    #     req(rv$ddf_ref(rv, input$dataset1))
-    #     browser()
-    #     display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[rv$ddf_condcol_ref(rv, input$dataset1)]]
-    #     updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
-    # })
-    # 
-    # observeEvent(rv$ddf_condcol_comp(rv, input$dataset2), {
-    #     req(rv$ddf_comp(rv, input$dataset2))
-    #     display_levels_data2 <- rv$ddf_comp(rv, input$dataset2)[[rv$ddf_condcol_comp(rv, input$dataset2)]]
-    #     updateSelectInput(session, "display_levels_data2", choices = display_levels_data2, selected=display_levels_data2)
-    # })
     
     observeEvent(rv$filedata_1(), {
         choices <- get_dataset_choices(rv)

@@ -116,7 +116,10 @@ setup_panel_ui <- function(id) {
                                  column(4,
                                         h3("Dataset 2"),
                                         sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_2"), select_size=5),
-                                        design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
+                                        conditionalPanel(
+                                            sprintf("input['%s'] == 0", ns("matched_samples")),
+                                            design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
+                                        )
                                  )
                              ),
                              column(4,
@@ -193,7 +196,6 @@ setup_panel_ui <- function(id) {
                          )
                 )
             )))
-    # )
 }
 
 # How to access navbar element (from outside module)
@@ -418,7 +420,6 @@ module_setup_server <- function(input, output, session, module_name) {
     observeEvent(input$autodetect_cols, {
         
         autodetect_stat_cols()
-        
         detect_sample_cols(
             rv,
             rv$design_1(),
@@ -515,6 +516,11 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         else if (length(rv$selected_cols_obj()[[input$data_file_1$name]]) == 0) {
             output$load_status <- renderText({ "Data present but no columns assigned, please identify columns before loading" })
+        }
+        else if (input$matched_samples && 
+            (is.null(rv$selected_cols_obj()[[input$data_file_1$name]]$samples) || 
+            is.null(rv$selected_cols_obj()[[input$data_file_2$name]]$samples))) {
+            output$load_status <- renderText({ "Matched samples requires identified assigned sample columns for both datasets, now at least one is missing" })
         }
         else {
             rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)

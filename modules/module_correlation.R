@@ -38,6 +38,16 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
                 xlim(-1, 1) + xlab("Correlation") + ylab("Count")
         }
 
+        # Spotcheck correlation
+        # loess_samp <- rv$selected_cols_obj()$prot_loess_rdf_1819_matched_2out.tsv$samples
+        # log2_samp <- rv$selected_cols_obj()$prot_log2_rdf_1819_matched_2out.tsv$samples
+        # loess_sdf <- comb_df %>% dplyr::select(paste0("d1.", loess_samp))
+        # log2_sdf <- comb_df %>% dplyr::select(paste0("d2.", log2_samp))
+        # plt <- ggplot(data.frame(loess=loess_sdf[1, ] %>% unlist(), log2=log2_sdf[1, ] %>% unlist()), aes(x=log2, y=loess)) + geom_point()
+        
+        
+        # browser()
+        
         ggpubr::ggarrange(
             make_corr_hist(comb_df, "d2.pearson", "Pearson"),
             make_corr_hist(comb_df, "d2.spearman", "Spearman"),

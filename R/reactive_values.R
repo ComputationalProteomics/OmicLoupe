@@ -58,6 +58,14 @@ setup_reactive_values_obj <- function(input) {
         else NULL
     }
     
+    # rv$rdf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, "filedata")
+    # rv$rdf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, "filedata")
+    # rv$ddf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, "design")
+    # rv$ddf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, "design")
+    # rv$rdf_cols_ref <-          function(rv, input_field) colnames(retrieve_data(rv, input_field, "filedata"))
+    # rv$rdf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, "filedata"))
+    # rv$ddf_cols_ref <-          function(rv, input_field) colnames(retrieve_data(rv, input_field, "design"))
+    # rv$ddf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, "design"))
     rv$rdf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, 1, "filedata")
     rv$rdf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, 2, "filedata")
     rv$ddf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, 1, "design")
@@ -69,30 +77,56 @@ setup_reactive_values_obj <- function(input) {
     
     rv$table_settings <- reactiveVal(NULL)
     
-    rv$ddf_condcol_ref <- function(rv, input_field) { 
+    # rv$ddf_condcol_ref <- function(rv, input_field) { 
+    #     # browser()
+    #     req(input_field != "")
+    #     rv[[sprintf("design_condcol_%s", di_new(rv, input_field))]]()
+    # } 
+    # rv$ddf_condcol_comp <- function(rv, input_field) { 
+    #     req(input_field != "")
+    #     rv[[sprintf("design_condcol_%s", di_new(rv, input_field))]]() 
+    # } 
+    # 
+    # rv$ddf_samplecol_ref <- function(rv, input_field) {
+    #     rv[[sprintf("design_samplecol_%s", di_new(rv, input_field))]]()
+    # }
+    # rv$ddf_samplecol_comp <- function(rv, input_field) {
+    #     rv[[sprintf("design_samplecol_%s", di_new(rv, input_field))]]()
+    # }
+    # 
+    # rv$rdf_featurecol_ref <- function(rv, input_field) 
+    #     rv[[sprintf("data_featurecol_%s", di_new(rv, input_field))]]()
+    # rv$rdf_featurecol_comp <- function(rv, input_field) 
+    #     rv[[sprintf("data_featurecol_%s", di_new(rv, input_field))]]()
+    # rv$rdf_annotcol_ref <- function(rv, input_field) 
+    #     rv[[sprintf("data_annotcol_%s", di_new(rv, input_field))]]()
+    # rv$rdf_annotcol_comp <- function(rv, input_field) 
+    #     rv[[sprintf("data_annotcol_%s", di_new(rv, input_field))]]()
+    
+    rv$ddf_condcol_ref <- function(rv, input_field) {
         # browser()
         req(input_field != "")
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 1))]]()
-    } 
-    rv$ddf_condcol_comp <- function(rv, input_field) { 
+    }
+    rv$ddf_condcol_comp <- function(rv, input_field) {
         req(input_field != "")
-        rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]() 
-    } 
-    
+        rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]()
+    }
+
     rv$ddf_samplecol_ref <- function(rv, input_field) {
         rv[[sprintf("design_samplecol_%s", di_new(rv, input_field, 1))]]()
     }
     rv$ddf_samplecol_comp <- function(rv, input_field) {
         rv[[sprintf("design_samplecol_%s", di_new(rv, input_field, 2))]]()
     }
-    
-    rv$rdf_featurecol_ref <- function(rv, input_field) 
+
+    rv$rdf_featurecol_ref <- function(rv, input_field)
         rv[[sprintf("data_featurecol_%s", di_new(rv, input_field, 1))]]()
-    rv$rdf_featurecol_comp <- function(rv, input_field) 
+    rv$rdf_featurecol_comp <- function(rv, input_field)
         rv[[sprintf("data_featurecol_%s", di_new(rv, input_field, 2))]]()
-    rv$rdf_annotcol_ref <- function(rv, input_field) 
+    rv$rdf_annotcol_ref <- function(rv, input_field)
         rv[[sprintf("data_annotcol_%s", di_new(rv, input_field, 1))]]()
-    rv$rdf_annotcol_comp <- function(rv, input_field) 
+    rv$rdf_annotcol_comp <- function(rv, input_field)
         rv[[sprintf("data_annotcol_%s", di_new(rv, input_field, 2))]]()
     
     rv$samples <- function(rv, input_field, prefix="") { 

@@ -100,10 +100,16 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$ddf_comp(rv, input$dataset2))
 
+        set_if_new <- function(prev_val, new_values, new_val_selected) {
+            if (is.null(prev_val)) new_val_selected
+            else if (prev_val %in% new_values) prev_val
+            else new_val_selected
+        }
+        
         ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
         comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-        updateSelectInput(session, "ref_cond", choices = ref_choices, selected=rv$ddf_condcol_ref(rv, input$dataset1))
-        updateSelectInput(session, "comp_cond", choices = comp_choices, selected=rv$ddf_condcol_comp(rv, input$dataset2))
+        updateSelectInput(session, "ref_cond", choices = ref_choices, selected=set_if_new(input$ref_cond, ref_choices, ref_choices[1]))
+        updateSelectInput(session, "comp_cond", choices = comp_choices, selected=set_if_new(input$comp_cond, comp_choices, comp_choices[1]))
     }
     
     observeEvent({
@@ -128,14 +134,17 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         req(rv$samples(rv, input$dataset1))
         req(input$table_display_rows_selected)
         
-        rdf_ref <- rv$rdf_ref(rv, input$dataset1)
+        map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
+        ddf_ref$None <- "None"
         samples_ref <- rv$samples(rv, input$dataset1)
         cond_ref <- input$ref_cond
+        ref_ind <- di_new(rv, input$dataset1)
+        samples_names <- paste0(sprintf("d%s.", ref_ind), samples_ref)
         
         plt_df_ref <- tibble(
-            sample=samples_ref,
-            value=rdf_ref[input$table_display_rows_selected, samples_ref] %>% unlist(),
+            sample=samples_names,
+            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(samples_names) %>% unlist(),
             cond=ddf_ref[[cond_ref]] %>% as.factor()
         )
         plt_df_ref
@@ -146,18 +155,34 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         req(rv$ddf_comp(rv, input$dataset2))
         req(rv$samples(rv, input$dataset2))
         req(input$table_display_rows_selected)
-        
-        rdf_comp <- rv$rdf_comp(rv, input$dataset2)
+
+        map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
-        samples_comp <- rv$samples(rv, input$dataset2)
+        ddf_comp$None <- "None"
+        samples_comp <- rv$samples(rv, input$dataset1)
         cond_comp <- input$comp_cond
+        comp_ind <- di_new(rv, input$dataset2)
+        samples_names <- paste0(sprintf("d%s.", comp_ind), samples_comp)
         
         plt_df_comp <- tibble(
-            sample=samples_comp,
-            value=rdf_comp[input$table_display_rows_selected, samples_comp] %>% unlist(),
+            sample=samples_names,
+            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(samples_names) %>% unlist(),
             cond=ddf_comp[[cond_comp]] %>% as.factor()
         )
         plt_df_comp
+                
+        # rdf_comp <- rv$rdf_comp(rv, input$dataset2)
+        # ddf_comp <- rv$ddf_comp(rv, input$dataset2)
+        # ddf_comp$None <- "None"
+        # samples_comp <- rv$samples(rv, input$dataset2)
+        # cond_comp <- input$comp_cond
+        # 
+        # plt_df_comp <- tibble(
+        #     sample=samples_comp,
+        #     value=rdf_comp[input$table_display_rows_selected, samples_comp] %>% unlist(),
+        #     cond=ddf_comp[[cond_comp]] %>% as.factor()
+        # )
+        # plt_df_comp
     })
 
     make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin) {
