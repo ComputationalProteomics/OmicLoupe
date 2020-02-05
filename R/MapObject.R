@@ -96,6 +96,12 @@ MapObject <- R6Class("MapObject", list(
         sdf <- dataset[, samples]
         complete.cases(sdf) & !apply(sdf, 1, function(elem) { any(is.infinite(elem)) } )
     },
+    get_dataset1_nrow = function() {
+        self$dataset1 %>% nrow()
+    },
+    get_dataset2_nrow = function() {
+        self$dataset2 %>% nrow()
+    },
     get_matching_dataset1 = function() {
         if (!is.null(self$dataset2)) {
             self$dataset1[self$joint_indices1, ]

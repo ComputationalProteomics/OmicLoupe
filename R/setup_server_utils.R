@@ -52,7 +52,12 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             out_text <- sprintf(
                 "%s present and mapped, %s entries matched", 
                 type, nrow(rv$mapping_obj()$get_combined_dataset())
-            )   
+            )
+            
+            if (type == "Both") {
+                out_text <- c(out_text, sprintf(" (original number of rows: %s and %s)", rv$mapping_obj()$get_dataset1_nrow(), rv$mapping_obj()$get_dataset2_nrow()))
+            }
+            
             if (rv$mapping_obj()$has_full_entries()) {
                 out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
             }

@@ -159,7 +159,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
         ddf_comp$None <- "None"
-        samples_comp <- rv$samples(rv, input$dataset1)
+        samples_comp <- rv$samples(rv, input$dataset2)
         cond_comp <- input$comp_cond
         comp_ind <- di_new(rv, input$dataset2)
         samples_names <- paste0(sprintf("d%s.", comp_ind), samples_comp)
@@ -170,19 +170,6 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             cond=ddf_comp[[cond_comp]] %>% as.factor()
         )
         plt_df_comp
-                
-        # rdf_comp <- rv$rdf_comp(rv, input$dataset2)
-        # ddf_comp <- rv$ddf_comp(rv, input$dataset2)
-        # ddf_comp$None <- "None"
-        # samples_comp <- rv$samples(rv, input$dataset2)
-        # cond_comp <- input$comp_cond
-        # 
-        # plt_df_comp <- tibble(
-        #     sample=samples_comp,
-        #     value=rdf_comp[input$table_display_rows_selected, samples_comp] %>% unlist(),
-        #     cond=ddf_comp[[cond_comp]] %>% as.factor()
-        # )
-        # plt_df_comp
     })
 
     make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin) {
@@ -196,9 +183,6 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             if (show_scatter) {
                 plt <- plt + geom_point(na.rm = TRUE)
             }
-            # if (show_labels) {
-            #     plt <- plt + geom_text_repel(na.rm = TRUE)
-            # }
             plt
         }
         

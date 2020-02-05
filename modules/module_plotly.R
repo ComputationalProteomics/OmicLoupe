@@ -65,6 +65,7 @@ setup_plotly_ui <- function(id) {
                                              style="padding:20px")
                                )),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
+                           sliderInput(ns("pca_variance_cutoff"), "PCA var. cut.", value=0.4, step=0.05, min=0, max=1),
                            checkboxInput(ns("set_same_axis"), "Set same axis ranges", value = FALSE),
                            textInput(ns("ref_custom_header"), "Custom ref. header", value=""),
                            textInput(ns("comp_custom_header"), "Custom comp. header", value=""),
@@ -163,20 +164,20 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                paste(sprintf("d%s", rv$di(rv, input$dataset2, 1)), rv$samples(rv, input$dataset1), sep="."),
+                paste(sprintf("d%s", di(rv, input$dataset1, 1)), rv$samples(rv, input$dataset1), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
-                var_cut = 0.4,
+                var_cut = input$pca_variance_cutoff,
                 return_df = TRUE,
                 col_prefix="ref."
             )
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                paste(sprintf("d%s", rv(rv, input$dataset2, 2)), rv$samples(rv, input$dataset2), sep="."),
+                paste(sprintf("d%s", di(rv, input$dataset2, 2)), rv$samples(rv, input$dataset2), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
-                var_cut = 0.4,
+                var_cut = input$pca_variance_cutoff,
                 return_df = TRUE,
                 col_prefix="comp."
             )
