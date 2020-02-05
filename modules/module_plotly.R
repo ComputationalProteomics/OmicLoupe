@@ -383,6 +383,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         plt + xlim(min_fold, max_fold) + ylim(min_sig, max_sig)
     }
     
+    parse_event_key = function(event_data) {
+        event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
+    }
+    
     output$plotly_volc1 <- renderPlotly({
         
         req(rv$mapping_obj())
@@ -392,7 +396,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         manual_scale <- TRUE
         cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
+            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             color_col <- "selected"
         } 
         else {
@@ -444,7 +448,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         manual_scale <- TRUE
         cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
+            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             color_col <- "selected"
         } 
         else {
@@ -496,7 +500,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         manual_scale <- TRUE
         cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
+            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             color_col <- "selected"
         } 
         else {
@@ -548,7 +552,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         manual_scale <- TRUE
         cont_scale <- NULL
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
+            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             color_col <- "selected"
         } 
         else {
@@ -599,7 +603,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
+            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             color_col <- "selected"
         }
         else {
@@ -627,7 +631,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         event.data <- event_data("plotly_selected", source = "subset")
         
         if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% event.data$key
+            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             color_col <- "selected"
         }
         else {
@@ -651,7 +655,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         target_df <- rv$mapping_obj()$get_combined_dataset()
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
-            target_df <- target_df[target_df$comb_id %in% event.data$key, ] 
+            target_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
         }
         target_df
     }
