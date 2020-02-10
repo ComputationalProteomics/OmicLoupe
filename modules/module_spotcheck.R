@@ -22,6 +22,9 @@ setup_spotcheck_ui <- function(id) {
                             column(4, checkboxInput(ns("show_boxplot"), "Show boxplot", value=TRUE)),
                             column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
                             column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
+                        ),
+                        fluidRow(
+                            column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE))
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -142,10 +145,13 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         ref_ind <- di_new(rv, input$dataset1)
         samples_names <- paste0(sprintf("d%s.", ref_ind), samples_ref)
         
+        if (input$assign_numeric_as_factor) parsed_cond <- ddf_ref[[cond_ref]] %>% as.factor()
+        else parsed_cond <- ddf_ref[[cond_ref]]
+
         plt_df_ref <- tibble(
             sample=samples_names,
             value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(samples_names) %>% unlist(),
-            cond=ddf_ref[[cond_ref]] %>% as.factor()
+            cond=parsed_cond
         )
         plt_df_ref
     })
@@ -164,10 +170,13 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         comp_ind <- di_new(rv, input$dataset2)
         samples_names <- paste0(sprintf("d%s.", comp_ind), samples_comp)
         
+        if (input$assign_numeric_as_factor) parsed_cond <- ddf_comp[[cond_comp]] %>% as.factor()
+        else parsed_cond <- ddf_comp[[cond_comp]]
+        
         plt_df_comp <- tibble(
             sample=samples_names,
             value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(samples_names) %>% unlist(),
-            cond=ddf_comp[[cond_comp]] %>% as.factor()
+            cond=parsed_cond
         )
         plt_df_comp
     })
