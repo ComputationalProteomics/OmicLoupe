@@ -12,7 +12,11 @@ setup_pca_ui <- function(id) {
                 column(4,
                        wellPanel(
                            selectInput(ns("dataset1"), "Reference dataset", choices = c(""), selected = ""),
-                           selectInput(ns("dataset2"), "Comparison dataset", choices = c(""), selected = "")
+                           selectInput(ns("dataset2"), "Comparison dataset", choices = c(""), selected = ""),
+                           fluidRow(
+                               column(6, checkboxInput(ns("pairplot"), "Show pairplot", value=FALSE)),
+                               column(6, numericInput(ns("pairplot_pcs"), "Pairplot PCs", value=3, min=1, step=1))
+                           )
                        ),
                        wellPanel(
                            tabsetPanel(
@@ -71,12 +75,26 @@ setup_pca_ui <- function(id) {
                            sprintf("input['%s'] == 1", ns("show_loadings")),
                            plotOutput(ns("loadings_plot1"), height = "200px")
                        ),
-                       plotlyOutput(ns("pca_plot1"), height = "400px") %>% withSpinner(),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1", ns("pairplot")),
+                           plotOutput(ns("pca_pair_plot1")) %>% withSpinner()
+                       ),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 0", ns("pairplot")),
+                           plotlyOutput(ns("pca_plot1"), height = "400px") %>% withSpinner()
+                       ),
                        conditionalPanel(
                            sprintf("input['%s'] == 1", ns("show_loadings")),
                            plotOutput(ns("loadings_plot2"), height = "200px")
                        ),
-                       plotlyOutput(ns("pca_plot2"), height = "400px") %>% withSpinner()
+                       conditionalPanel(
+                           sprintf("input['%s'] == 1", ns("pairplot")),
+                           plotOutput(ns("pca_pair_plot2")) %>% withSpinner()
+                       ),
+                       conditionalPanel(
+                           sprintf("input['%s'] == 0", ns("pairplot")),
+                           plotlyOutput(ns("pca_plot2"), height = "400px") %>% withSpinner()
+                       )
                 )
             )
         )
@@ -154,7 +172,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         req(rv$rdf_ref(rv, input$dataset1))
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$samples(rv, input$dataset1))
-
+        
         filtered_samples <- filtered_samples_ref()
         calculate_pca_obj(
             rv$rdf_ref(rv, input$dataset1),
@@ -170,7 +188,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         req(rv$rdf_comp(rv, input$dataset2))
         req(rv$ddf_comp(rv, input$dataset2))
         req(rv$samples(rv, input$dataset2))
-
+        
         filtered_samples <- filtered_samples_comp()
         calculate_pca_obj(
             rv$rdf_comp(rv, input$dataset2),
@@ -187,7 +205,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(rv$ddf_comp(rv, input$dataset2))
-
+        
         set_if_new <- function(prev_val, new_values, new_val_selected) {
             if (is.null(prev_val)) new_val_selected
             else if (prev_val %in% new_values) prev_val
@@ -205,18 +223,18 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=set_if_new(input$sample_data2, comp_choices, comp_choices[1]))
         updateSelectInput(session, "filter_cond_data1", choices = ref_choices, selected=set_if_new(input$filter_cond_data1, ref_choices, ref_choices[1]))
         updateSelectInput(session, "filter_cond_data2", choices = comp_choices, selected=set_if_new(input$filter_cond_data2, comp_choices, comp_choices[1]))
-                
+        
         display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[input$filter_cond_data1]]
         updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
         display_levels_data2 <- rv$ddf_ref(rv, input$dataset2)[[input$filter_cond_data2]]
         updateSelectInput(session, "display_levels_data2", choices = display_levels_data2, selected=display_levels_data2)
     }
-
+    
     observeEvent(input$filter_cond_data1, {
         display_levels_data1 <- rv$ddf_ref(rv, input$dataset1)[[input$filter_cond_data1]]
         updateSelectInput(session, "display_levels_data1", choices = display_levels_data1, selected=display_levels_data1)
     })
-        
+    
     observeEvent(input$filter_cond_data2, {
         display_levels_data2 <- rv$ddf_ref(rv, input$dataset2)[[input$filter_cond_data2]]
         updateSelectInput(session, "display_levels_data2", choices = display_levels_data2, selected=display_levels_data2)
@@ -276,6 +294,16 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
     }
     
+    make_pair_pca_plot <- function(ddf, pca_obj, color, color_as_fact=FALSE, pcs) {
+        
+        pc_vars <- pca_obj$sdev[1:pcs] ** 2 / sum(pca_obj$sdev ** 2)
+        plt_df <- cbind(pca_obj$x, ddf)
+        if (color_as_fact) {
+            plt_df[[color]] <- as.factor(plt_df[[color]])
+        }
+        plt_df %>% dplyr::select(c(paste0("PC", 1:pcs), color)) %>% ggpairs(aes_string(color=color, alpha=0.5))
+    }
+    
     make_loadings_plot <- function(pca_obj, title, display_count) {
         vars <- pca_obj$sdev ** 2
         perc_vars <- vars / sum(vars)
@@ -296,11 +324,11 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
             error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
         }
-
+        
         if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
             error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
         }
-
+        
         if (is.null(rv$design_1())) {
             error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
         }
@@ -308,7 +336,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         total_text <- paste(error_vect, collapse="<br>")
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
-
+    
     output$loadings_plot1 <- renderPlot({
         make_loadings_plot(pca_obj1(), "Loadings PCA 1", display_count=10)
     })
@@ -320,6 +348,30 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     has_value <- function(design_col) {
         design_col != "None" && design_col != ""
     }
+    
+    output$pca_pair_plot1 <- renderPlot({
+        if (has_value(input$color_data1)) color_col <- input$color_data1
+        else color_col <- NULL
+        make_pair_pca_plot(
+            ddf=pca_ddf1(),
+            pca_obj=pca_obj1(),
+            color=color_col,
+            color_as_fact=input$data1_as_factor,
+            pcs=input$pairplot_pcs
+        )
+    })
+    
+    output$pca_pair_plot2 <- renderPlot({
+        if (has_value(input$color_data2)) color_col <- input$color_data2
+        else color_col <- NULL
+        make_pair_pca_plot(
+            ddf=pca_ddf2(),
+            pca_obj=pca_obj2(),
+            color=color_col,
+            color_as_fact=input$data2_as_factor,
+            pcs=input$pairplot_pcs
+        )
+    })
     
     output$pca_plot1 <- renderPlotly({
         

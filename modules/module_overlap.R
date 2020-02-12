@@ -21,7 +21,7 @@ setup_overlap_ui <- function(id) {
                             column(6,
                                    selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev"),
                                    selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"),
-                                   selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val"))
+                                   selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val", "logFC"))
                             )
                         ),
                         conditionalPanel(
@@ -90,6 +90,24 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         )
     })
     
+    observeEvent(input$contrast_type, {
+        if (input$contrast_type != "logFC") {
+            updateSliderInput(session, "threshold", min=0, max=1)
+            # updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
+        }
+        else {
+            comb_obj <- rv$mapping_obj()$get_combined_dataset()
+            
+            max_fold <- max(
+                comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset1)), input$upset_ref_comparisons, "logFC")],
+                comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset2)), input$upset_ref_comparisons, "logFC")],
+                na.rm=TRUE
+            )
+            
+            updateSliderInput(session, "threshold", min=0, max=ceiling(max_fold))
+        }
+    })
+    
     selected_id_reactive <- reactive({
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
     })
@@ -104,11 +122,20 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         sig_field <- rv$statcols_ref(rv, target_data, target_contrast)[[contrast_type]]
         fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
         
-        pass_tbl <- combined_dataset %>% 
-            dplyr::filter(UQ(as.name(sig_field)) < input$threshold) %>% 
+        if (contrast_type != "logFC") {
+            pass_tbl <- combined_dataset %>% 
+                dplyr::filter(UQ(as.name(sig_field)) < input$threshold)
+        }
+        else {
+            pass_tbl <- combined_dataset %>% 
+                dplyr::filter(abs(UQ(as.name(sig_field))) > input$threshold)
+        }
+
+        pass_tbl <- pass_tbl %>%
             dplyr::select(c("comb_id", fold_field)) %>%
             dplyr::rename(fold=fold_field) %>%
             mutate(comb_id=as.character(comb_id))
+                
         pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
         pass_list
     }
