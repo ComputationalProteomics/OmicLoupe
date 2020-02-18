@@ -23,9 +23,10 @@ setup_quality_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 'Boxplots'", ns("plot_tabs")),
                             fluidRow(
-                                column(4, checkboxInput(ns("do_violin"), "Do violin", value=FALSE)),
-                                column(4, checkboxInput(ns("rotate_label"), "Rotate label", value=TRUE)),
-                                column(4, checkboxInput(ns("order_on_cond"), "Order on condition", value=FALSE))
+                                column(3, checkboxInput(ns("do_violin"), "Do violin", value=FALSE)),
+                                column(3, checkboxInput(ns("rotate_label"), "Rotate label", value=TRUE)),
+                                column(3, checkboxInput(ns("order_on_cond"), "Order on condition", value=FALSE)),
+                                column(3, checkboxInput(ns("numeric_as_category"), "Numeric as category", value=FALSE))
                             )
                         ),
                         conditionalPanel(
@@ -189,11 +190,19 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     }
     
     reactive_long_sdf_ref <- reactive({
-        get_long(di_new(rv, input$dataset1, 1), rv, ref_ddf_samplecol())
+        long_df <- get_long(di_new(rv, input$dataset1, 1), rv, ref_ddf_samplecol())
+        if (input$numeric_as_category) {
+            long_df[[ref_color()]] <- as.factor(long_df[[ref_color()]])
+        }
+        long_df
     })
     
     reactive_long_sdf_comp <- reactive({
-        get_long(di_new(rv, input$dataset2, 2), rv, comp_ddf_samplecol())
+        long_df <- get_long(di_new(rv, input$dataset2, 2), rv, comp_ddf_samplecol())
+        if (input$numeric_as_category) {
+            long_df[[comp_color()]] <- as.factor(long_df[[comp_color()]])
+        }
+        long_df
     })
     
     ref_sdf <- reactive({
@@ -220,7 +229,9 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         else { NULL }
     })
     comp_color <- reactive({
-        if (input$color_data_comp != "None") { input$color_data_comp }
+        if (input$color_data_comp != "None") { 
+            input$color_data_comp
+        }
         else { NULL }
     })
     
@@ -330,6 +341,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col) {
         
+        # if (!is.null(numeric_as_category) && numeric_as_category) {
+        #     ddf[[ddf_cond_col]] <- as.factor(ddf[[ddf_cond_col]])
+        # }
+        
         if (!do_violin) {
             target_geom <- geom_boxplot
         }
@@ -408,8 +423,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             ggtitle("Density ref.")
         
         plt_ref %>% 
-            ggplotly() %>%
-            layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
+            plotly::ggplotly() %>%
+            plotly::layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
     })
     
     output$density_comp_plotly <- renderPlotly({
@@ -423,8 +438,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             ggtitle("Density comp.")
         
         plt_ref %>% 
-            ggplotly() %>% 
-            layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
+            plotly::ggplotly() %>% 
+            plotly::layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
     })
     
     factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_split_count) {

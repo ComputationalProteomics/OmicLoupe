@@ -8,6 +8,7 @@ library(DT)
 library(stringr)
 library(ggrepel)
 library(ggdendro)
+library(GGally)
 
 options(shiny.maxRequestSize=100*1024^2)
 
