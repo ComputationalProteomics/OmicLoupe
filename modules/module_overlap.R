@@ -384,7 +384,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             mutate(highest_p=pmax(ref_sig, comp_sig)) %>% 
             arrange(highest_p) %>%
             mutate(is_contra=sign(ref_fold) != sign(comp_fold)) %>%
-            mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra))
+            mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra)) %>%
+            mutate(cum_frac_contra=tot_same/(tot_same+tot_contra))
         
         # area <- plot_df %>% group_by(tot_contra) %>% group_map(~min(.$tot_same_frac)) %>% unlist() %>% sum()
         
@@ -397,7 +398,10 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             geom_line(data=plot_df %>% filter(highest_p < input$threshold), aes(x=tot_contra, y=tot_same), size=2) +
             ggtitle("Zoomed in below threshold")
         
-        ggarrange(plt_full, plt_subset, ncol=2, nrow=1)
+        plt_cumfrac_over_logp <- ggplot(plot_df, aes(x=log10(highest_p), y=cum_frac_contra)) + geom_line()
+        plt_cumfrac_over_p <- ggplot(plot_df, aes(x=highest_p, y=cum_frac_contra)) + geom_line()
+        
+        ggarrange(plt_full, plt_subset, plt_cumfrac_over_logp, plt_cumfrac_over_p, ncol=2, nrow=2)
     })
     
     output$table_display <- DT::renderDataTable({
