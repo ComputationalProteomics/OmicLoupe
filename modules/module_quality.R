@@ -581,7 +581,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rdf_comp <- rv$rdf_comp(rv, input$dataset2)
             target_color <- NULL
             if (input$data_cat_col_comp != "None") {
-                rdf_comp <- factor_prep_color_col(rdf_comp, input$data_cat_col_comp, input$max_color_cats)
+                rdf_comp <- factor_prep_color_col(rdf_comp, input$data_cat_col_comp, input$max_color_cats, input$numeric_color_bins)
                 target_color <- input$data_cat_col_comp
             }
             plt_comp <- ggplot(rdf_comp, aes_string(x=input$data_num_col_comp, fill=target_color)) + 

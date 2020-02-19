@@ -47,14 +47,17 @@ setup_overlap_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Venn",
-                            plotOutput(ns("venn")),
-                            DT::DTOutput(ns("table_display"))
+                                 fluidRow(
+                                     column(6, plotOutput(ns("venn"))),
+                                     column(6, plotOutput(ns("fold_fractions_among_sig")))
+                                 ),
+                                 DT::DTOutput(ns("table_display"))
                         ),
                         tabPanel("Upset",
-                            plotOutput(ns("upset"))
+                                 plotOutput(ns("upset"))
                         ),
                         tabPanel("FoldComparison",
-                            plotOutput(ns("fold_comp"))
+                                 plotOutput(ns("fold_comp"))
                         )
                     )
                 )
@@ -130,12 +133,12 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             pass_tbl <- combined_dataset %>% 
                 dplyr::filter(abs(UQ(as.name(sig_field))) > input$threshold)
         }
-
+        
         pass_tbl <- pass_tbl %>%
             dplyr::select(c("comb_id", fold_field)) %>%
             dplyr::rename(fold=fold_field) %>%
             mutate(comb_id=as.character(comb_id))
-                
+        
         pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
         pass_list
     }
@@ -317,11 +320,11 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 mutate(
                     p_sum=rowSums(.[, 
                                     c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
-                                    paste0("d2.", input$upset_comp_comparisons, "P.Value")),
+                                      paste0("d2.", input$upset_comp_comparisons, "P.Value")),
                                     drop=FALSE]),
                     p_prod=rowSums(.[, 
                                      c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
-                                     paste0("d2.", input$upset_comp_comparisons, "P.Value")),
+                                       paste0("d2.", input$upset_comp_comparisons, "P.Value")),
                                      drop=FALSE])
                 ) %>%
                 arrange(p_sum) %>%
@@ -346,12 +349,63 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         plt
     })
     
+    # output$fold_fractions <- renderPlot({
+    #     
+    #     combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+    #     
+    #     plot_df <- data.frame(
+    #         ref_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value]],
+    #         ref_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC]],
+    #         comp_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$P.Value]],
+    #         comp_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$logFC]]
+    #     ) %>%
+    #         dplyr::arrange(ref_sig) %>% mutate(is_contra=sign(ref_fold) != sign(comp_fold)) %>%
+    #         mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra)) %>%
+    #         mutate(tot_contra_frac=tot_contra/sum(tot_contra), tot_same_frac=tot_same/sum(tot_same))
+    #     
+    #     area <- plot_df %>% group_by(tot_contra) %>% group_map(~min(.$tot_same_frac)) %>% unlist() %>% sum()
+    #     
+    #     plt <- ggplot() + 
+    #         geom_line(data=plot_df, aes(x=tot_contra, y=tot_same, color=ref_sig<input$threshold), size=2) +
+    #         ggtitle(sprintf("Number same-fold features, incorrect area calc: %s, p-value colored threshold", round(area, 3)))
+    #     
+    #     plt
+    # })
+    
+    output$fold_fractions_among_sig <- renderPlot({
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+        
+        plot_df <- data.frame(
+            ref_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value]],
+            ref_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC]],
+            comp_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$P.Value]],
+            comp_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$logFC]]
+        ) %>% 
+            mutate(highest_p=pmax(ref_sig, comp_sig)) %>% 
+            arrange(highest_p) %>%
+            mutate(is_contra=sign(ref_fold) != sign(comp_fold)) %>%
+            mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra))
+        
+        # area <- plot_df %>% group_by(tot_contra) %>% group_map(~min(.$tot_same_frac)) %>% unlist() %>% sum()
+        
+        plt_full <- ggplot() + 
+            geom_line(data=data.frame(x=c(0, plot_df$tot_contra %>% max()), y=c(0, plot_df$tot_same %>% max())), aes(x=x, y=y), size=1) +
+            geom_line(data=plot_df, aes(x=tot_contra, y=tot_same, color=highest_p<input$threshold), size=2) +
+            ggtitle("Number same-fold features, incorrect area calc: %s, p-value colored threshold")
+        
+        plt_subset <- ggplot() + 
+            geom_line(data=plot_df %>% filter(highest_p < input$threshold), aes(x=tot_contra, y=tot_same), size=2) +
+            ggtitle("Zoomed in below threshold")
+        
+        ggarrange(plt_full, plt_subset, ncol=2, nrow=1)
+    })
+    
     output$table_display <- DT::renderDataTable({
         rv$dt_parsed_data(rv, output_table_reactive())
     })
     
     output$venn <- renderPlot({
-
+        
         venn$do_paired_expression_venn(
             ref_pass_reactive(), 
             comp_pass_reactive(), 
@@ -387,15 +441,15 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         # updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
         # updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
     }
-
+    
     observeEvent(rv$ddf_ref(rv, input$dataset1), {
         sync_param_choices()
     })
-
+    
     observeEvent(rv$ddf_comp(rv, input$dataset2), {
         sync_param_choices()
     })
-
+    
     
     observeEvent({
         rv$selected_cols_obj() 
@@ -412,7 +466,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             updateSelectInput(session, "comp_contrast", choices=choices_2, selected=choices_2[1])
             updateSelectInput(session, "upset_ref_comparisons", choices=choices_1, selected=choices_1)
             updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=choices_2)
-    })
+        })
     
     output$warnings <- renderUI({
         
