@@ -49,7 +49,7 @@ design_input_well <- function(design_upload_id, sample_col_id, cond_col_id) {
     wellPanel(
         fileInput(
             design_upload_id, 
-            "Choose design file (TSV) (optional)",
+            "Choose design file (TSV)",
             multiple = FALSE,
             accept = c("test/tsv", ".tsv")
         ),

@@ -349,29 +349,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         plt
     })
     
-    # output$fold_fractions <- renderPlot({
-    #     
-    #     combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
-    #     
-    #     plot_df <- data.frame(
-    #         ref_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value]],
-    #         ref_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC]],
-    #         comp_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$P.Value]],
-    #         comp_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$logFC]]
-    #     ) %>%
-    #         dplyr::arrange(ref_sig) %>% mutate(is_contra=sign(ref_fold) != sign(comp_fold)) %>%
-    #         mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra)) %>%
-    #         mutate(tot_contra_frac=tot_contra/sum(tot_contra), tot_same_frac=tot_same/sum(tot_same))
-    #     
-    #     area <- plot_df %>% group_by(tot_contra) %>% group_map(~min(.$tot_same_frac)) %>% unlist() %>% sum()
-    #     
-    #     plt <- ggplot() + 
-    #         geom_line(data=plot_df, aes(x=tot_contra, y=tot_same, color=ref_sig<input$threshold), size=2) +
-    #         ggtitle(sprintf("Number same-fold features, incorrect area calc: %s, p-value colored threshold", round(area, 3)))
-    #     
-    #     plt
-    # })
-    
     output$fold_fractions_among_sig <- renderPlot({
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         

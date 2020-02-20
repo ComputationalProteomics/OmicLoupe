@@ -45,9 +45,6 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         # log2_sdf <- comb_df %>% dplyr::select(paste0("d2.", log2_samp))
         # plt <- ggplot(data.frame(loess=loess_sdf[1, ] %>% unlist(), log2=log2_sdf[1, ] %>% unlist()), aes(x=log2, y=loess)) + geom_point()
         
-        
-        # browser()
-        
         ggpubr::ggarrange(
             make_corr_hist(comb_df, "d2.pearson", "Pearson"),
             make_corr_hist(comb_df, "d2.spearman", "Spearman"),
