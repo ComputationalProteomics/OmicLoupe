@@ -9,6 +9,7 @@ setup_help_ui <- function(id) {
                     type = "tabs",
                     tabPanel(
                         "Setup page", 
+                        h3("Video links here too"),
                         htmlOutput(ns("setup_image_text")),
                         plotOutput(ns("setup_image"), height = 800)
                     ),

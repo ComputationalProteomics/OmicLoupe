@@ -37,17 +37,18 @@ ui <- navbarPage(
     "OmicLoupe",
     id="navbar",
     setup_panel_ui("Setup"),
+    
     setup_quality_ui("Quality"),
     setup_pca_ui("PCA"),
-    setup_spotcheck_ui("Spotcheck"),
     
     setup_plotly_ui("StatDist"),
     setup_overlap_ui("Overlap"),
     
     setup_correlation_ui("Correlation"),
+    setup_spotcheck_ui("Spotcheck"),
     
-    setup_help_ui("Help"),
-    setup_ideas_ui("Ideas")
+    setup_help_ui("Help")
+    # setup_ideas_ui("Ideas")
 )
 
 server <- shinyServer(function(session, input, output) {

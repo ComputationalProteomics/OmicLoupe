@@ -75,16 +75,16 @@ setup_quality_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Boxplots", 
-                                 plotOutput(ns("boxplots_ref")) %>% withSpinner(),
-                                 plotOutput(ns("boxplots_comp")) %>% withSpinner()
+                                 plotlyOutput(ns("boxplots_ref")) %>% withSpinner(),
+                                 plotlyOutput(ns("boxplots_comp")) %>% withSpinner()
                         ),
                         tabPanel("Density", 
                                  plotlyOutput(ns("density_ref_plotly")) %>% withSpinner(),
                                  plotlyOutput(ns("density_comp_plotly")) %>% withSpinner()
                         ),
                         tabPanel("Barplots", 
-                                 plotOutput(ns("bars_ref")) %>% withSpinner(),
-                                 plotOutput(ns("bars_comp")) %>% withSpinner()
+                                 plotlyOutput(ns("bars_ref")) %>% withSpinner(),
+                                 plotlyOutput(ns("bars_comp")) %>% withSpinner()
                         ),
                         tabPanel("Dendrograms",
                                  fluidRow(
@@ -250,93 +250,78 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
     
-    output$bars_ref <- renderPlot({ 
+    make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, show_missing=FALSE, rotate_labels=FALSE) {
+        
+        join_by_ref <- c("name"=sample_col)
+        
+        summed_data <- long_sdf %>%
+            filter(!is.infinite(long_sdf$value)) %>% 
+            mutate(is_na=is.na(value)) %>%
+            group_by(name) %>%
+            summarize_at(c("value", "is_na"), sum, na.rm=TRUE) %>%
+            inner_join(ddf, by=join_by_ref)
+        
+        if (!show_missing) {
+            bar_type <- "Summed abundance"
+            target_col <- "value"
+        }
+        else {
+            bar_type <- "Number missing"
+            target_col <- "is_na"
+        }
+
+        title <- sprintf("%s Dataset: %s Color: %s", bar_type, dataset, color)
+        
+        plt <- ggplot(summed_data, aes_string(x="name", y=target_col, fill=color)) + 
+            geom_col() + 
+            ggtitle(title)
+        
+        if (rotate_labels) {
+            plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+        }
+        
+        if (!show_missing) {
+            plt <- plt + ylab(bar_type)
+        }
+        else {
+            plt <- plt + ylab(bar_type)
+        }
+        plt + xlab("Sample")
+    }
+    
+    # long_sdf, value_col, ddf, join_by_ref, dataset, color, show_missing=FALSE, rotate_labels=FALSE
+    
+    output$bars_ref <- renderPlotly({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
         
-        join_by_ref <- c("name"=ref_ddf_samplecol())
-        ddf_ref <- rv$ddf_ref(rv, input$dataset1)
-        long_sdf_ref <- reactive_long_sdf_ref()
-        
-        if (!input$show_missing_ref) {
-            summed_data_ref <- long_sdf_ref %>% 
-                filter(!is.infinite(long_sdf_ref$value)) %>%
-                group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_ref)
-            title <- "Barplot ref. total intensity"
-        }
-        else {
-            summed_data_ref <- long_sdf_ref %>%
-                filter(!is.infinite(long_sdf_ref$value)) %>%
-                mutate(value=is.na(value)) %>%
-                group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_ref, by=join_by_ref)
-            title <- "Barplot ref. number missing"
-        }
-        
-        plt_ref <- ggplot(
-            summed_data_ref, 
-            aes_string(x="name", y="value", fill=ref_color())) + 
-            geom_col() + 
-            ggtitle(title)
-        
-        if (input$rotate_label_barplot) {
-            plt_ref <- plt_ref + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
-        }
-        
-        if (!input$show_missing_ref) {
-            plt_ref <- plt_ref + ylab("Summed abundance")
-        }
-        else {
-            plt_ref <- plt_ref + ylab("Number missing")
-        }
-        
-        plt_ref + xlab("Sample")
+        make_barplot(
+            reactive_long_sdf_ref(), 
+            "value", 
+            rv$ddf_ref(rv, input$dataset1), 
+            ref_ddf_samplecol(), 
+            input$dataset1, 
+            ref_color(), 
+            show_missing=input$show_missing_ref, 
+            input$rotate_label_barplot) %>%
+            plotly::ggplotly()
     })
     
-    output$bars_comp <- renderPlot({
+    output$bars_comp <- renderPlotly({
         req(rv$ddf_comp(rv, input$dataset2))
         req(reactive_long_sdf_comp())
         
-        join_by_comp <- c("name"=comp_ddf_samplecol())
-        ddf_comp <- rv$ddf_comp(rv, input$dataset2)
-        long_sdf_comp <- reactive_long_sdf_comp()
-        
-        if (!input$show_missing_comp) {
-            summed_data_comp <- long_sdf_comp %>% 
-                filter(!is.infinite(long_sdf_comp$value)) %>%
-                group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
-            title <- "Barplot comp. total intensity"
-        }
-        else {
-            summed_data_comp <- long_sdf_comp %>%
-                filter(!is.infinite(long_sdf_comp$value)) %>%
-                mutate(value=is.na(value)) %>%
-                group_by(name) %>%
-                summarize_at("value", sum, na.rm=TRUE) %>% inner_join(ddf_comp, by=join_by_comp)
-            title <- "Barplot comp. number missing"
-        }
-        
-        plt_comp <- ggplot(
-            summed_data_comp, 
-            aes_string(x="name", y="value", fill=comp_color())) + 
-            geom_col() + 
-            ggtitle(title)
-        
-        if (input$rotate_label_barplot) {
-            plt_comp <- plt_comp + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
-        }
-        
-        if (!input$show_missing_comp) {
-            plt_comp <- plt_comp + ylab("Summed abundance")
-        }
-        else {
-            plt_comp <- plt_comp + ylab("Number missing")
-        }
-        
-        plt_comp + xlab("Sample")
+        make_barplot(
+            reactive_long_sdf_comp(), 
+            "value", 
+            rv$ddf_comp(rv, input$dataset2), 
+            comp_ddf_samplecol(), 
+            input$dataset2, 
+            comp_color(), 
+            show_missing=input$show_missing_comp, 
+            input$rotate_label_barplot) %>%
+            plotly::ggplotly()
     })
 
     adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col) {
@@ -370,7 +355,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         plt + xlab("Sample") + ylab("Abundance")
     }
     
-    output$boxplots_ref <- renderPlot({ 
+    output$boxplots_ref <- renderPlotly({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
@@ -378,7 +363,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
             aes_string(x="name", y="value", color=ref_color())) + 
-            ggtitle("Boxplot ref.")
+            ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
 
         adjust_boxplot(
             plt_ref, 
@@ -388,10 +373,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_ref(rv, input$dataset1),
             rv$ddf_samplecol_ref(rv, input$dataset1),
             input$color_data_ref
-        )
+        ) %>% plotly::ggplotly()
     })
 
-    output$boxplots_comp <- renderPlot({ 
+    output$boxplots_comp <- renderPlotly({ 
         
         req(rv$ddf_comp(rv, input$dataset2))
         req(reactive_long_sdf_comp())
@@ -399,7 +384,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
             aes_string(x="name", y="value", color=comp_color())) + 
-            ggtitle("Boxplot comp.")
+            ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
 
         adjust_boxplot(
             plt_comp, 
@@ -409,37 +394,47 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_comp(rv, input$dataset2),
             rv$ddf_samplecol_comp(rv, input$dataset2),
             input$color_data_comp
-        )
+        ) %>% plotly::ggplotly()
     })
+    
+    make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL) {
+        plt <- ggplot(sdf, aes_string(x="value", group="name", color=color)) + 
+            geom_density(na.rm=TRUE)
+            
+        if (!is.null(title) && title != "") {
+            plt <- plt + ggtitle(title)
+        }
+        else if (!is.null(curr_dataset) && !is.null(color)) {
+            plt <- plt + ggtitle(sprintf("Dataset: %s Color: %s total", curr_dataset, color))
+        }
+        
+        plt %>% 
+            plotly::ggplotly() %>%
+            plotly::layout(xaxis=list(title="Abundance"), yaxis=list(title="Count"))
+    }
     
     output$density_ref_plotly <- renderPlotly({
         req(rv$ddf_ref(rv, input$dataset1))
         req(reactive_long_sdf_ref())
-        
-        plt_ref <- ggplot(
-            reactive_long_sdf_ref(), 
-            aes_string(x="value", group="name", color=ref_color())) + 
-            geom_density(na.rm=TRUE) +
-            ggtitle("Density ref.")
-        
-        plt_ref %>% 
-            plotly::ggplotly() %>%
-            plotly::layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
+
+        make_density_plot(
+            reactive_long_sdf_ref(),
+            ref_color(),
+            curr_dataset=input$dataset1,
+            title=input$custom_title1
+        )
     })
     
     output$density_comp_plotly <- renderPlotly({
         req(rv$ddf_comp(rv, input$dataset2))
         req(reactive_long_sdf_comp())
         
-        plt_ref <- ggplot(
-            reactive_long_sdf_comp(), 
-            aes_string(x="value", group="name", color=comp_color())) + 
-            geom_density(na.rm=TRUE) +
-            ggtitle("Density comp.")
-        
-        plt_ref %>% 
-            plotly::ggplotly() %>% 
-            plotly::layout(xaxis=list(title="P-value"), yaxis=list(title="Count"))
+        make_density_plot(
+            reactive_long_sdf_comp(),
+            comp_color(),
+            curr_dataset=input$dataset2,
+            title=input$custom_title2
+        )
     })
     
     factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_split_count) {
@@ -521,8 +516,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_ref(rv, input$dataset1)[[ref_color()]],
             labels=rv$ddf_ref(rv, input$dataset1)[[ref_ddf_samplecol()]], 
             legend_title = ref_color()
-        )
-        
+        ) + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
+
         if (input$custom_title1 != "") {
             plt <- plt + ggtitle(input$custom_title1)
         }
@@ -540,7 +535,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_comp(rv, input$dataset2)[[comp_color()]],
             labels=rv$ddf_comp(rv, input$dataset2)[[comp_ddf_samplecol()]],
             legend_title = comp_color()
-        )
+        ) + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
         
         if (input$custom_title2 != "") {
             plt <- plt + ggtitle(input$custom_title2)
@@ -563,10 +558,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 target_color <- input$data_cat_col_ref
             }
             plt_ref <- ggplot(rdf_ref, aes_string(x=input$data_num_col_ref, fill=target_color)) + 
-                geom_histogram(na.rm=TRUE, bins=input$hist_bins) + ggtitle("Histogram ref.")
+                geom_histogram(na.rm=TRUE, bins=input$hist_bins) + 
+                ggtitle(sprintf("Dataset: %s Column: %s Fill: %s", input$dataset1, input$data_num_col_ref, input$data_cat_col_ref))
         }
         else {
-            plt_ref <- ggplot() + ggtitle("Empty histogram ref.")
+            plt_ref <- ggplot() + ggtitle("Empty histogram")
         }
 
         plt_ref + ylab("Count") + xlab(input$data_num_col_ref)
@@ -585,10 +581,12 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 target_color <- input$data_cat_col_comp
             }
             plt_comp <- ggplot(rdf_comp, aes_string(x=input$data_num_col_comp, fill=target_color)) + 
-                geom_histogram(na.rm=TRUE, bins=input$hist_bins) + ggtitle("Histogram comp.")
+                geom_histogram(na.rm=TRUE, bins=input$hist_bins) + 
+                ggtitle(sprintf("Dataset: %s Column: %s Fill: %s", input$dataset2, input$data_num_col_comp, input$data_cat_col_comp))
+            
         }
         else {
-            plt_comp <- ggplot() + ggtitle("Empty histogram comp.")
+            plt_comp <- ggplot() + ggtitle("Empty histogram")
         }
         
         plt_comp + ylab("Count") + xlab(input$data_num_col_comp)

@@ -100,8 +100,8 @@ setup_panel_ui <- function(id) {
                              ),
                              column(4, 
                                     p(HTML("<b>Status:</b>")),
-                                    textOutput(ns("column_status")),
-                                    textOutput(ns("load_status"))
+                                    textOutput(ns("column_status")) %>% withSpinner(),
+                                    textOutput(ns("load_status")) %>% withSpinner()
                              ),
                              column(2)
                          ),
