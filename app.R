@@ -24,6 +24,7 @@ source("modules/module_spotcheck.R")
 source("modules/module_correlation.R")
 
 source("R/Venn.R")
+source("R/quality_plots.R")
 source("R/pca.R")
 source("R/reactive_values.R")
 source("R/MapObject.R")

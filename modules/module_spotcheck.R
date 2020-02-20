@@ -150,7 +150,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
 
         plt_df_ref <- tibble(
             sample=samples_names,
-            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(samples_names) %>% unlist(),
+            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(all_of(samples_names)) %>% unlist(),
             cond=parsed_cond
         )
         plt_df_ref
@@ -175,7 +175,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         
         plt_df_comp <- tibble(
             sample=samples_names,
-            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(samples_names) %>% unlist(),
+            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(all_of(samples_names)) %>% unlist(),
             cond=parsed_cond
         )
         plt_df_comp
