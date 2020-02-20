@@ -211,6 +211,9 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             annot_comp = reactive_plot_df()$annot_comp
         )
         
+        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        
+        
         if (input$color_type == "PCA") {
             plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
             plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
@@ -290,8 +293,11 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
             # plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
-            geom_point(alpha=alpha) +
-            ggtitle(title)
+            geom_point(alpha=alpha)
+        
+        if (!title != "") {
+            plt <- plt + ggtitle(title)
+        }
         
         if (!is.null(xlab)) {
             plt <- plt + xlab(x_lab)
@@ -387,6 +393,18 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
     }
     
+    build_plotly <- function(plt, title, dataset, stat_base, custom_header) {
+        t <- list(family="sans serif", size=8)
+        
+        if (custom_header == "") title <- sprintf("Data: %s<br>Contrast: %s", dataset, stat_base)
+        else title <- custom_header
+        
+        plt %>% 
+            ggplotly(source="subset") %>%
+            layout(title=title, dragmode="select", font=t) %>%
+            toWebGL()
+    }
+    
     output$plotly_volc1 <- renderPlotly({
         
         req(rv$mapping_obj())
@@ -411,10 +429,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        if (input$ref_custom_header == "") title <- "Volcano: Reference dataset"
-        else title <- input$ref_custom_header
-        
-        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
         
         base_plt <- make_scatter(
             plot_df, 
@@ -426,17 +441,13 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             hover_text="descr", 
             alpha=input$alpha,
             cont_scale = cont_scale,
-            title=title, 
             manual_scale = manual_scale)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
         }
         
-        base_plt %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+        build_plotly(base_plt, title, input$dataset1, input$stat_base1, input$ref_custom_header)
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -463,10 +474,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        if (input$comp_custom_header == "") title <- "Volcano: Compare dataset"
-        else title <- input$comp_custom_header
-        
-        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
+        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
         
         base_plt <- make_scatter(
             plot_df, 
@@ -478,17 +486,13 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             hover_text="descr", 
             alpha=input$alpha,
             cont_scale = cont_scale,
-            title=title, 
             manual_scale = manual_scale) 
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
         }
         
-        base_plt %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+        build_plotly(base_plt, title, input$dataset2, input$stat_base2, input$comp_custom_header)
     })
     
     output$plotly_ma1 <- renderPlotly({
@@ -515,10 +519,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        if (input$ref_custom_header == "") title <- "MA: Reference dataset"
-        else title <- input$ref_custom_header
-        
-        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
         
         base_plt <- make_scatter(
             plot_df, 
@@ -529,7 +530,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             color_col=color_col, 
             alpha=input$alpha,
             hover_text="descr", 
-            title=title,
             cont_scale = cont_scale,
             manual_scale = manual_scale)
         
@@ -537,10 +537,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
         }
         
-        base_plt %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+        build_plotly(base_plt, title, input$dataset1, input$stat_base1, input$ref_custom_header)
     })
     
     output$plotly_ma2 <- renderPlotly({
@@ -567,10 +564,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        if (input$comp_custom_header == "") title <- "MA: Compare dataset"
-        else title <- input$comp_custom_header
-        
-        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
+        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
         
         base_plt <- make_scatter(
             plot_df, 
@@ -581,7 +575,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             color_col=color_col, 
             alpha=input$alpha,
             hover_text="descr", 
-            title=input$comp_custom_header, 
             cont_scale = cont_scale,
             manual_scale = manual_scale)
         
@@ -589,10 +582,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
         }
         
-        base_plt %>% 
-            ggplotly(source="subset") %>%
-            layout(dragmode="select") %>%
-            toWebGL()
+        build_plotly(base_plt, title, input$dataset2, input$stat_base2, input$comp_custom_header)
     })
     
     output$plotly_hist1 <- renderPlotly({
@@ -610,7 +600,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             color_col <- "pass_thres"
         }
         
-        if (input$ref_custom_header == "") title <- "P-value histogram: Reference dataset"
+        if (input$ref_custom_header == "") title <- sprintf("Dataset: %s", input$dataset1)
         else title <- input$ref_custom_header
         
         make_histogram(
@@ -638,7 +628,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             color_col <- "pass_thres"
         }
         
-        if (input$comp_custom_header == "") title <- "P-value histogram: Compare dataset"
+        if (input$comp_custom_header == "") title <- sprintf("Dataset: %s", input$dataset2)
         else title <- input$comp_custom_header
         
         make_histogram(

@@ -107,15 +107,15 @@ setup_panel_ui <- function(id) {
                          ),
                          fluidRow(
                              column(4,
-                                    h3("Dataset"),
+                                    bar_w_help("Dataset", ns("dataset_help")),
                                     sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"), ns("annot_col_1"), select_size=5)
                              ),
                              column(4,
-                                    h3("Design"),
+                                    bar_w_help("Design", ns("design_help")),
                                     design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
                              ),
                              column(4,
-                                    h3("Assigned columns"),
+                                    bar_w_help("Assigned columns", ns("assign_cols_help")),
                                     wellPanel(
                                         selectInput(
                                             ns("sample_selected_1"),
@@ -223,6 +223,30 @@ module_setup_server <- function(input, output, session, module_name) {
         shinyalert(
             title = "Help: Table setup",
             text = help_table_setup,
+            html = TRUE
+        )
+    })
+
+    observeEvent(input$dataset_help, {
+        shinyalert(
+            title = "Help: Setup dataset",
+            text = "How the data matrix should look",
+            html = TRUE
+        )
+    })
+
+    observeEvent(input$design_help, {
+        shinyalert(
+            title = "Help: Setup design",
+            text = "How the design matrix should look",
+            html = TRUE
+        )
+    })
+    
+    observeEvent(input$assign_cols_help, {
+        shinyalert(
+            title = "Help: Assign columns",
+            text = "How to do the column assignment",
             html = TRUE
         )
     })

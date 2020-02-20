@@ -288,8 +288,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt_base <- plt_base + geom_text(size=dot_size)
         }
         
+        # ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", "))) +
         plt_base + 
-            ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", "))) +
+            ggtitle(sprintf("Dataset: %s (dim: %s)", input$dataset1, paste(dim(pca_obj$rotation), collapse=", "))) +
             xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
             ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
     }

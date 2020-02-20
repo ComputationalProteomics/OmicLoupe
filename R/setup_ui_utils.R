@@ -1,4 +1,4 @@
-top_bar_w_help <- function(title, button_id) {
+bar_w_help <- function(title, button_id) {
     fluidRow(
         span(
             style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
@@ -9,6 +9,11 @@ top_bar_w_help <- function(title, button_id) {
             actionButton(button_id, "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
         )
     )
+}
+
+top_bar_w_help <- function(title, button_id) {
+    warning("top_bar_w_help is replaced with bar_w_help")
+    bar_w_help(title, button_id)
 }
 
 sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_col_id, select_size=12) {
