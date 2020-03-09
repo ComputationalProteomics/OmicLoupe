@@ -10,19 +10,25 @@ Imports:
     tidyverse,
     ggpubr,
     shiny,
+    shinyjs,
+    shinyalert,
     plotly,
     shinycssloaders,
     DT,
     R6,
     stringr,
     ggthemes,
-    shinythemes
+    shinythemes,
+    stringr,
+    ggrepel,
+    ggdendro,
+    GGally
 Suggests:
     knitr,
     testthat
 VignetteBuilder: knitr
 License: Artistic-2.0
 Encoding: UTF-8
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 URL: ""
 Depends: R (>= 3.6)

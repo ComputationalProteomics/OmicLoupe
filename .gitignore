@@ -1,2 +1,5 @@
 .Rhistory
+.Rbuildignore
+OmicLoupe.Rproj
 *_link
+.Rproj.user
