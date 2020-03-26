@@ -22,7 +22,9 @@ Imports:
     stringr,
     ggrepel,
     ggdendro,
-    GGally
+    GGally,
+    ggforce,
+    UpSetR
 Suggests:
     knitr,
     testthat
