@@ -204,7 +204,7 @@ setup_panel_ui <- function(id) {
                              tabPanel("Design1"),
                              tabPanel("Design2")
                          ),
-                         downloadButton("download1", "Download iris as csv"),
+                         downloadButton(ns("download_table"), "Download table"),
                          DT::DTOutput(ns("table_output"))
                 )
             )
@@ -212,64 +212,21 @@ setup_panel_ui <- function(id) {
     )
 }
 
-# dt_output_point <- function(id) {
-#     div(
-#         
-#         DT::DTOutput(ns(id))
-#     )
-# }
-
 # How to access navbar element (from outside module)
 # document.querySelectorAll("#navbar li a[data-value=Correlation]")
-
 # Issue: download all data in displayed DT table buttom
 # https://github.com/rstudio/DT/issues/267
 
 module_setup_server <- function(input, output, session, module_name) {
     
-    # myModal <- function(module_name) {
-    #     div(id = sprintf("%s-test", module_name),
-    #         modalDialog(downloadButton("Setup-download1","Download iris as csv"),
-    #                     br(),
-    #                     br(),
-    #                     downloadButton("Setup-download2","Download iris as csv2"),
-    #                     easyClose = TRUE, title = "Download Table")
-    #     )
-    # }
-    
-    output$dtable <- renderDT(
-        datatable(iris,
-                  extensions = 'Buttons',
-                  options = list(
-                      dom = 'Bfrtip',
-                      buttons = list(
-                          "copy",
-                          list(
-                              extend = "collection",
-                              text = 'download entire dataset',
-                              action = DT::JS("function ( e, dt, node, config ) {
-                                    Shiny.setInputValue('Setup-test', true, {priority: 'event'});
-}")
-                          )
-                      )
-                  )
-        )
-    )
-    
-    # observeEvent(input$test, {
-    #     showModal(myModal(module_name))
-    # })
-    
     output$download_table <- downloadHandler(
         filename = function() {
-            paste("data-", Sys.Date(), ".csv", sep="")
+            paste(input$data_table_tabs, "-", Sys.Date(), ".tsv", sep="")
         },
         content = function(file) {
-            write.csv(iris, file)
+            write_tsv(get_target_data(input$data_table_tabs, get_raw=TRUE), file)
         }
     )
-    
-    
     
     observeEvent(rv$mapping_obj(), {
         req(rv$mapping_obj()$get_combined_dataset())
@@ -308,19 +265,18 @@ module_setup_server <- function(input, output, session, module_name) {
         rv$set_selected_feature(selected_id_reactive(), module_name)
     })
     
-    # tabPanel("MappedData"),
-    # tabPanel("RawData1"),
-    # tabPanel("RawData2"),
-    # tabPanel("Design1"),
-    # tabPanel("Design2")
-    
-    get_target_data <- function(target) {
+    get_target_data <- function(target, get_raw=FALSE) {
         switch(
             target,
             "MappedData"={
                 req(rv$mapping_obj())
                 req(rv$mapping_obj()$get_combined_dataset())
-                rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
+                if (get_raw) {
+                    rv$dt_parsed_data_raw(rv, rv$mapping_obj()$get_combined_dataset())
+                }
+                else {
+                    rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
+                }
             },
             "Design1"={
                 req(rv$design_1)
@@ -332,11 +288,19 @@ module_setup_server <- function(input, output, session, module_name) {
             },
             "RawData1"={
                 req(rv$filedata_1())
-                rv$dt_parsed_data(rv, rv$filedata_1(), with_row_selection=FALSE)
+                rv$dt_parsed_data(
+                    rv, 
+                    rv$filedata_1(), 
+                    with_row_selection=FALSE
+                )
             },
             "RawData2"={
                 req(rv$filedata_2())
-                rv$dt_parsed_data(rv, rv$filedata_2(), with_row_selection=FALSE)
+                rv$dt_parsed_data(
+                    rv, 
+                    rv$filedata_2(), 
+                    with_row_selection=FALSE
+                )
             }
         )
     }

@@ -92,6 +92,7 @@ setup_plotly_ui <- function(id) {
                        )
                 )
             ),
+            downloadButton(ns("download_table"), "Download table"),
             DT::DTOutput(ns("table_display"))
         )
     )
@@ -99,6 +100,17 @@ setup_plotly_ui <- function(id) {
 
 
 module_plotly_server <- function(input, output, session, rv, module_name) {
+    
+    output$download_table <- downloadHandler(
+        filename = function() {
+            paste("comp_scatter-", Sys.Date(), ".tsv", sep="")
+        },
+        content = function(file) {
+            target_df <- get_target_df(rv)
+            dt_parsed_target <- rv$dt_parsed_data_raw(rv, target_df)
+            write_tsv(rv$dt_parsed_data_raw(rv, dt_parsed_target), file)
+        }
+    )
     
     observeEvent(input$help, {
         shinyalert(

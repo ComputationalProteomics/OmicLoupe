@@ -51,6 +51,7 @@ setup_overlap_ui <- function(id) {
                                      column(6, plotOutput(ns("venn"))),
                                      column(6, plotOutput(ns("fold_fractions_among_sig")))
                                  ),
+                                 downloadButton(ns("download_table"), "Download table"),
                                  DT::DTOutput(ns("table_display"))
                         ),
                         tabPanel("Upset",
@@ -84,6 +85,15 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 }
 
 module_overlap_server <- function(input, output, session, rv, module_name) {
+    
+    output$download_table <- downloadHandler(
+        filename = function() {
+            paste("overlap-", Sys.Date(), ".tsv", sep="")
+        },
+        content = function(file) {
+            write_tsv(rv$dt_parsed_data_raw(rv, output_table_reactive()), file)
+        }
+    )
     
     observeEvent(input$help, {
         shinyalert(

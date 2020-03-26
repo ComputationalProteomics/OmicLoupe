@@ -40,7 +40,10 @@ setup_spotcheck_ui <- function(id) {
                     ),
                     tabsetPanel(
                         type = "tabs",
-                        tabPanel("Combined data", DT::DTOutput(ns("table_display")))
+                        tabPanel("Combined data", 
+                                 downloadButton(ns("download_table"), "Download table"),
+                                 DT::DTOutput(ns("table_display"))
+                        )
                     )
                 )
             )
@@ -67,6 +70,15 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 }
 
 module_spotcheck_server <- function(input, output, session, rv, module_name) {
+    
+    output$download_table <- downloadHandler(
+        filename = function() {
+            paste("spotcheck-", Sys.Date(), ".tsv", sep="")
+        },
+        content = function(file) {
+            write_tsv(rv$dt_parsed_data_raw(rv, rv$mapping_obj()$get_combined_dataset()), file)
+        }
+    )
     
     observeEvent(input$help, {
         shinyalert(
