@@ -178,7 +178,13 @@ setup_reactive_values_obj <- function(input) {
                 dplyr::select(table_settings$shown_fields) %>%
                     DT::datatable(data=., 
                     selection=list(mode='single', selected=c(selected_row_nbr)),
-                    options=list(pageLength=page_length, displayStart=display_pos))
+                    options=list(
+                        pageLength=page_length, 
+                        displayStart=display_pos,
+                        buttons = list(
+                            list(exptend='csv', filename = 'test_csv')
+                        )
+                    ))
         }
         else {
             parsed_shown_data
