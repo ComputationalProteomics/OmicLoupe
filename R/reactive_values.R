@@ -157,7 +157,7 @@ setup_reactive_values_obj <- function(input) {
         parsed_shown_data
     }
     
-    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE) {
+    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE, add_show_cols_first=NULL, add_show_cols_last=NULL) {
         
         table_settings <- rv$table_settings()
         parsed_shown_data <- rv$dt_parsed_data_raw(rv, shown_data)
@@ -180,7 +180,7 @@ setup_reactive_values_obj <- function(input) {
         
         if (with_row_selection) {
             parsed_shown_data %>% 
-                dplyr::select(table_settings$shown_fields) %>%
+                dplyr::select(c(add_show_cols_first, table_settings$shown_fields, add_show_cols_last)) %>%
                 DT::datatable(data=., 
                               selection=list(mode='single', selected=c(selected_row_nbr)),
                               # callback = JS(sprintf("$('div.dwnld').append($('#%s'));", download_button_id)),
