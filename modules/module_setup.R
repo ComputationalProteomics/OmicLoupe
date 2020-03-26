@@ -2,9 +2,9 @@ source("R/setup_server_utils.R")
 source("R/setup_ui_utils.R")
 
 setup_panel_ui <- function(id) {
-
+    
     ns <- NS(id)
-
+    
     tabPanel(
         id,
         fluidPage(
@@ -195,32 +195,47 @@ setup_panel_ui <- function(id) {
                                  )
                              )
                          ),
-                         # downloadButton("download1", "Download iris as csv"),
-                ),
-                tabPanel("DTTest",
-                    DT::DTOutput(ns("dtable"))
+                         tabsetPanel(
+                             id=ns("data_table_tabs"),
+                             type = "tabs",
+                             tabPanel("MappedData"),
+                             tabPanel("RawData1"),
+                             tabPanel("RawData2"),
+                             tabPanel("Design1"),
+                             tabPanel("Design2")
+                         ),
+                         downloadButton("download1", "Download iris as csv"),
+                         DT::DTOutput(ns("table_output"))
                 )
             )
         )
     )
 }
 
+# dt_output_point <- function(id) {
+#     div(
+#         
+#         DT::DTOutput(ns(id))
+#     )
+# }
+
 # How to access navbar element (from outside module)
 # document.querySelectorAll("#navbar li a[data-value=Correlation]")
 
-module_setup_server <- function(input, output, session, module_name) {
+# Issue: download all data in displayed DT table buttom
+# https://github.com/rstudio/DT/issues/267
 
-    myModal <- function(module_name) {
-        div(id = sprintf("%s-test", module_name),
-            modalDialog(downloadButton("Setup-download1","Download iris as csv"),
-                        br(),
-                        br(),
-                        downloadButton("Setup-download2","Download iris as csv2"),
-                        easyClose = TRUE, title = "Download Table")
-        )
-    }
+module_setup_server <- function(input, output, session, module_name) {
     
-    
+    # myModal <- function(module_name) {
+    #     div(id = sprintf("%s-test", module_name),
+    #         modalDialog(downloadButton("Setup-download1","Download iris as csv"),
+    #                     br(),
+    #                     br(),
+    #                     downloadButton("Setup-download2","Download iris as csv2"),
+    #                     easyClose = TRUE, title = "Download Table")
+    #     )
+    # }
     
     output$dtable <- renderDT(
         datatable(iris,
@@ -241,13 +256,11 @@ module_setup_server <- function(input, output, session, module_name) {
         )
     )
     
-    observeEvent(input$test, {
-        print("hello")
-        showModal(myModal(module_name))
-    })
+    # observeEvent(input$test, {
+    #     showModal(myModal(module_name))
+    # })
     
-    
-    output$download1 <- downloadHandler(
+    output$download_table <- downloadHandler(
         filename = function() {
             paste("data-", Sys.Date(), ".csv", sep="")
         },
@@ -256,67 +269,17 @@ module_setup_server <- function(input, output, session, module_name) {
         }
     )
     
-    output$download2 <- downloadHandler(
-        filename = function() {
-            paste("data-", Sys.Date(), ".csv", sep="")
-        },
-        content = function(file) {
-            write.csv2(iris, file)
-        }
-    )
-   
-
-    # return("empty")
-
-    observeEvent(input$help, {
-        shinyalert(
-            title = "Help: Setup page",
-            text = help_setup_setup,
-            html = TRUE
-        )
-    })
-
-    observeEvent(input$help_table_setup, {
-        shinyalert(
-            title = "Help: Table setup",
-            text = help_table_setup,
-            html = TRUE
-        )
-    })
-
-    observeEvent(input$dataset_help, {
-        shinyalert(
-            title = "Help: Setup dataset",
-            text = "How the data matrix should look",
-            html = TRUE
-        )
-    })
-
-    observeEvent(input$design_help, {
-        shinyalert(
-            title = "Help: Setup design",
-            text = "How the design matrix should look",
-            html = TRUE
-        )
-    })
-
-    observeEvent(input$assign_cols_help, {
-        shinyalert(
-            title = "Help: Assign columns",
-            text = "How to do the column assignment",
-            html = TRUE
-        )
-    })
-
+    
+    
     observeEvent(rv$mapping_obj(), {
         req(rv$mapping_obj()$get_combined_dataset())
-
+        
         comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
         samples_ref <- NULL
         if (!is.null(input$data_file_1)) {
             samples_ref <- rv$samples(rv, input$data_file_1$name, prefix="d1.")
         }
-
+        
         samples_comp <- NULL
         if (!is.null(input$data_file_2)) {
             samples_comp <- rv$samples(rv, input$data_file_2$name, prefix="d2.")
@@ -324,7 +287,7 @@ module_setup_server <- function(input, output, session, module_name) {
         start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
         updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select)
     })
-
+    
     observeEvent({
         input$trunc_length
         input$round_digits
@@ -336,47 +299,56 @@ module_setup_server <- function(input, output, session, module_name) {
             shown_fields = input$shown_fields
         ))
     })
-
+    
     selected_id_reactive <- reactive({
         rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% as.character()
     })
-
+    
     observeEvent(input$table_display_rows_selected, {
         rv$set_selected_feature(selected_id_reactive(), module_name)
     })
-
-    output$table_display <- DT::renderDataTable({
-
-        req(rv$mapping_obj())
-        req(rv$mapping_obj()$get_combined_dataset())
-        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
+    
+    # tabPanel("MappedData"),
+    # tabPanel("RawData1"),
+    # tabPanel("RawData2"),
+    # tabPanel("Design1"),
+    # tabPanel("Design2")
+    
+    get_target_data <- function(target) {
+        switch(
+            target,
+            "MappedData"={
+                req(rv$mapping_obj())
+                req(rv$mapping_obj()$get_combined_dataset())
+                rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
+            },
+            "Design1"={
+                req(rv$design_1)
+                rv$design_1()
+            },
+            "Design2"={
+                req(rv$design_2)
+                rv$design_2()
+            },
+            "RawData1"={
+                req(rv$filedata_1())
+                rv$dt_parsed_data(rv, rv$filedata_1(), with_row_selection=FALSE)
+            },
+            "RawData2"={
+                req(rv$filedata_2())
+                rv$dt_parsed_data(rv, rv$filedata_2(), with_row_selection=FALSE)
+            }
+        )
+    }
+    
+    output$table_output <- DT::renderDataTable({
+        get_target_data(input$data_table_tabs)
     })
-
-
-    output$raw_data1 <- DT::renderDataTable({
-        req(rv$filedata_1())
-        rv$dt_parsed_data(rv, rv$filedata_1(), with_row_selection=FALSE)
-    })
-
-    output$raw_data2 <- DT::renderDataTable({
-        req(rv$filedata_2())
-        rv$dt_parsed_data(rv, rv$filedata_2(), with_row_selection=FALSE)
-    })
-
-    output$dt_design1 <- DT::renderDataTable({
-        req(rv$design_1)
-        rv$design_1()
-    })
-
-    output$dt_design2 <- DT::renderDataTable({
-        req(rv$design_2)
-        rv$design_2()
-    })
-
+    
     rv <- setup_reactive_values_obj(input)
-
+    
     statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) {
-
+        
         dataset_stat_cols <- rv$selected_cols_obj()[[data_field]]$statcols
         parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field)
         if (!is.null(prefix_index)) {
@@ -384,37 +356,37 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         parsed_cols
     }
-
+    
     rv$statcols_ref <- function(rv, data_field, contrast_field) {
         data_ind <- di_new(rv, data_field, 1)
         statcols(rv, data_field, contrast_field, prefix_index=data_ind)
     }
-
+    
     rv$statcols_comp <- function(rv, data_field, contrast_field) {
         data_ind <- di_new(rv, data_field, 2)
         statcols(rv, data_field, contrast_field, prefix_index=data_ind)
     }
-
+    
     update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
-
+        
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
-
+        
         if (sync_stat_patterns) {
             target_statcols <- selcol_obj[[dataset]][["statcols"]]
             match_bases <- target_statcols[grep(stat_pattern, target_statcols)]
             trimmed_patterns <- gsub(stat_pattern, "", match_bases)
             selcol_obj[[dataset]][["statpatterns"]] <- trimmed_patterns
         }
-
+        
         rv$selected_cols_obj(selcol_obj)
         rv
     }
-
+    
     # ------------------- Sample Management --------------------
-
+    
     update_statpatterns_display <- function(statpatterns, target_out) {
-
+        
         if (!is.null(statpatterns)) {
             out_text <- paste(statpatterns, collapse=", ")
         }
@@ -425,9 +397,9 @@ module_setup_server <- function(input, output, session, module_name) {
             out_text
         })
     }
-
+    
     # --------------------------- End ----------------------------
-
+    
     autodetect_stat_cols <- function() {
         selected_statcols <- autoselect_statpatterns(colnames(rv$filedata_1()))
         if (!is.null(rv$filename_1())) {
@@ -435,7 +407,7 @@ module_setup_server <- function(input, output, session, module_name) {
             sync_select_inputs(session, "data_selected_columns_1", "statcols_selected_1", rv$filedata_1, selected_statcols)
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_1()]]$statpatterns, "found_stat_patterns_1")
         }
-
+        
         selected_statcols_2 <- autoselect_statpatterns(colnames(rv$filedata_2()))
         if (!is.null(rv$filename_2())) {
             rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols_2, sync_stat_patterns = TRUE)
@@ -443,9 +415,9 @@ module_setup_server <- function(input, output, session, module_name) {
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
         }
     }
-
+    
     autodetect_sample_cols <- function(ddf, rdf, data_nbr, rv, filename, sample_col=NULL) {
-
+        
         if (is.null(sample_col)) {
             full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
             sample_col <- colnames(ddf)[which(full_match)[1]]
@@ -456,11 +428,11 @@ module_setup_server <- function(input, output, session, module_name) {
                 selected = sample_col
             )
         }
-
+        
         if (is.null(ddf)) {
             stop("Data frame is NULL, invalid input provided!")
         }
-
+        
         samples_from_ddf <- ddf[[sample_col]]
         if (all(samples_from_ddf %in% colnames(rdf))) {
             sync_select_inputs(
@@ -482,19 +454,19 @@ module_setup_server <- function(input, output, session, module_name) {
             }
         }
     }
-
-
+    
+    
     detect_sample_cols <- function(rv, design, design_sample_col, filedata, filename, data_nbr, autodetect=TRUE) {
-
+        
         if (!is.null(design_sample_col) && design_sample_col != "" && !is.null(filedata)) {
-
+            
             if (autodetect) {
                 sample_col <- NULL
             }
             else {
                 sample_col <- design_sample_col
             }
-
+            
             autodetect_sample_cols(
                 design,
                 filedata,
@@ -505,9 +477,9 @@ module_setup_server <- function(input, output, session, module_name) {
             )
         }
     }
-
+    
     observeEvent(input$autodetect_cols, {
-
+        
         autodetect_stat_cols()
         detect_sample_cols(
             rv,
@@ -527,9 +499,9 @@ module_setup_server <- function(input, output, session, module_name) {
             data_nbr=2,
             autodetect=input$automatic_sample_detect
         )
-
+        
     })
-
+    
     # Clear/reset fildata 1 related fields
     observeEvent(rv$filedata_1(), {
         clear_fields(session, rv$filedata_1, c("sample_selected_1", "statcols_selected_1"))
@@ -538,7 +510,7 @@ module_setup_server <- function(input, output, session, module_name) {
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_1()))
         )
     })
-
+    
     # Clear/reset filedata 2 related fields
     observeEvent(rv$filedata_2(), {
         clear_fields(session, rv$filedata_2, c("sample_selected_2", "statcols_selected_2"))
@@ -547,21 +519,21 @@ module_setup_server <- function(input, output, session, module_name) {
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_2()))
         )
     })
-
+    
     observeEvent(rv$design_1(), {
         updateSelectInput(session, "design_sample_col_1", choices=colnames(rv$design_1()))
         if (length(colnames(rv$design_1())) > 1) start_cond <- colnames(rv$design_1())[2]
         else start_cond <- colnames(rv$design_1())[1]
         updateSelectInput(session, "design_cond_col_1", choices=colnames(rv$design_1()), selected = start_cond)
     })
-
+    
     observeEvent(rv$design_2(), {
         updateSelectInput(session, "design_sample_col_2", choices=colnames(rv$design_2()))
         if (length(colnames(rv$design_2())) > 1) start_cond <- colnames(rv$design_2())[2]
         else start_cond <- colnames(rv$design_2())[1]
         updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()), selected = start_cond)
     })
-
+    
     perform_mapping <- function(rv, output, data_file_1, data_file_2, feature_col_1, feature_col_2) {
         selcol1 <- NULL
         if (!is.null(data_file_1)) {
@@ -570,7 +542,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 selcol1 <- selcol_list$samples
             }
         }
-
+        
         selcol2 <- NULL
         if (!is.null(data_file_2)) {
             selcol2_list <- rv$selected_cols_obj()[[data_file_2$name]]
@@ -578,7 +550,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 selcol2 <- selcol2_list$samples
             }
         }
-
+        
         rv <- do_dataset_mapping(
             rv,
             feature_col_1,
@@ -588,12 +560,12 @@ module_setup_server <- function(input, output, session, module_name) {
             selcol2,
             input$matched_samples
         )
-
+        
         rv
     }
-
+    
     observeEvent(input$perform_map_button, {
-
+        
         if (is.null(input$data_file_1) && is.null(input$design_file_1)) {
             output$load_status <- renderText({ "Neither data file or design file detected, please upload and assign columns before loading data" })
         }
@@ -615,11 +587,11 @@ module_setup_server <- function(input, output, session, module_name) {
             rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
         }
     })
-
+    
     observeEvent(rv$mapping_obj(), {
         req(!is.null(rv$mapping_obj()))
         number_files <- length(which(c(!is.null(input$data_file_1), !is.null(input$data_file_2))))
-
+        
         if (number_files == 2) {
             message("Dual found")
             # output$load_status <- renderText({ "Two datasets detected as assigned" })
@@ -632,7 +604,47 @@ module_setup_server <- function(input, output, session, module_name) {
             message("Number identified files: %s", number_files)
         }
     })
-
+    
+    observeEvent(input$help, {
+        shinyalert(
+            title = "Help: Setup page",
+            text = help_setup_setup,
+            html = TRUE
+        )
+    })
+    
+    observeEvent(input$help_table_setup, {
+        shinyalert(
+            title = "Help: Table setup",
+            text = help_table_setup,
+            html = TRUE
+        )
+    })
+    
+    observeEvent(input$dataset_help, {
+        shinyalert(
+            title = "Help: Setup dataset",
+            text = "How the data matrix should look",
+            html = TRUE
+        )
+    })
+    
+    observeEvent(input$design_help, {
+        shinyalert(
+            title = "Help: Setup design",
+            text = "How the design matrix should look",
+            html = TRUE
+        )
+    })
+    
+    observeEvent(input$assign_cols_help, {
+        shinyalert(
+            title = "Help: Assign columns",
+            text = "How to do the column assignment",
+            html = TRUE
+        )
+    })
+    
     return(rv)
 }
 
