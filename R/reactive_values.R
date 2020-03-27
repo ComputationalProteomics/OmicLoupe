@@ -104,7 +104,6 @@ setup_reactive_values_obj <- function(input) {
     #     rv[[sprintf("data_annotcol_%s", di_new(rv, input_field))]]()
     
     rv$ddf_condcol_ref <- function(rv, input_field) {
-        # browser()
         req(input_field != "")
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 1))]]()
     }

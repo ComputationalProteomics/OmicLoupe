@@ -66,8 +66,6 @@ do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_var
     hc <- stats::hclust(stats::dist(scaledTransposedMatrix), "ave")
     dhc <- stats::as.dendrogram(hc)
 
-    # browser()
-    
     # plot_dendro(dhc)
     
     
