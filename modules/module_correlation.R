@@ -3,7 +3,7 @@ setup_correlation_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            top_bar_w_help("Correlation", ns("help")),
+            bar_w_help("Correlation", ns("help")),
             fluidRow(
                 htmlOutput(ns("warnings")),
                 plotOutput(ns("correlation_histograms"))

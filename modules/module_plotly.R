@@ -92,6 +92,7 @@ setup_plotly_ui <- function(id) {
                        )
                 )
             ),
+            downloadButton(ns("download_table"), "Download table"),
             DT::DTOutput(ns("table_display"))
         )
     )
@@ -99,6 +100,24 @@ setup_plotly_ui <- function(id) {
 
 
 module_plotly_server <- function(input, output, session, rv, module_name) {
+    
+    output$download_table <- downloadHandler(
+        filename = function() {
+            paste("comp_scatter-", Sys.Date(), ".tsv", sep="")
+        },
+        content = function(file) {
+            
+            # event.data <- event_data("plotly_selected", source = "subset")
+            # if (!is.null(event.data) == TRUE) {
+            target_df <- get_target_df(rv)
+            # }
+            # else {
+            #     target_df <- get_pass_thres_df()
+            # }
+            dt_parsed_target <- rv$dt_parsed_data_raw(rv, target_df)
+            write_tsv(rv$dt_parsed_data_raw(rv, dt_parsed_target), file)
+        }
+    )
     
     observeEvent(input$help, {
         shinyalert(
@@ -641,13 +660,40 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             toWebGL()
     })
     
+    # get_pass_thres_df <- function() {
+    #     combined_dataset <- reactive_plot_df()
+    #     pass_thres_col <- get_thres_pass_type_col(
+    #         combined_dataset,
+    #         rv$statcols_ref(rv, input$dataset1, input$stat_base1),
+    #         rv$statcols_comp(rv, input$dataset2, input$stat_base2),
+    #         input$pvalue_cutoff,
+    #         input$fold_cutoff,
+    #         input$pvalue_type_select
+    #     )
+    #     cbind(pass_thres=pass_thres_col, combined_dataset) %>% filter(pass_thres != "None")
+    # }
+    
+    
+    
     get_target_df <- function(rv) {
-        target_df <- rv$mapping_obj()$get_combined_dataset()
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset()
+        pass_thres_col <- get_thres_pass_type_col(
+            combined_dataset,
+            rv$statcols_ref(rv, input$dataset1, input$stat_base1),
+            rv$statcols_comp(rv, input$dataset2, input$stat_base2),
+            input$pvalue_cutoff,
+            input$fold_cutoff,
+            input$pvalue_type_select
+        )
+        target_df <- cbind(pass_thres=pass_thres_col, combined_dataset)
         event.data <- event_data("plotly_selected", source = "subset")
         if (!is.null(event.data) == TRUE) {
-            target_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
+            out_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
         }
-        target_df
+        else {
+            out_df <- target_df %>% filter(pass_thres != "None")
+        }
+        out_df
     }
     
     selected_id_reactive <- reactive({
@@ -664,7 +710,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         req(rv$mapping_obj()$get_combined_dataset())
         
         target_df <- get_target_df(rv)
-        rv$dt_parsed_data(rv, target_df)
+        rv$dt_parsed_data(rv, target_df, add_show_cols_first="pass_thres")
     })
 }
 

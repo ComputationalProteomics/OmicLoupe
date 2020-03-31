@@ -104,7 +104,6 @@ setup_reactive_values_obj <- function(input) {
     #     rv[[sprintf("data_annotcol_%s", di_new(rv, input_field))]]()
     
     rv$ddf_condcol_ref <- function(rv, input_field) {
-        # browser()
         req(input_field != "")
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 1))]]()
     }
@@ -112,14 +111,14 @@ setup_reactive_values_obj <- function(input) {
         req(input_field != "")
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]()
     }
-
+    
     rv$ddf_samplecol_ref <- function(rv, input_field) {
         rv[[sprintf("design_samplecol_%s", di_new(rv, input_field, 1))]]()
     }
     rv$ddf_samplecol_comp <- function(rv, input_field) {
         rv[[sprintf("design_samplecol_%s", di_new(rv, input_field, 2))]]()
     }
-
+    
     rv$rdf_featurecol_ref <- function(rv, input_field)
         rv[[sprintf("data_featurecol_%s", di_new(rv, input_field, 1))]]()
     rv$rdf_featurecol_comp <- function(rv, input_field)
@@ -142,10 +141,25 @@ setup_reactive_values_obj <- function(input) {
         }
     }
     
-    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE) {
+    rv$dt_parsed_data_raw <- function(rv, shown_data) {
+        table_settings <- rv$table_settings()
+        
+        parsed_shown_data <- shown_data %>%
+            mutate_if(
+                is.character,
+                ~str_trunc(., table_settings$trunc_length)
+            ) %>%
+            mutate_if(
+                is.numeric,
+                ~round(., table_settings$round_digits)
+            ) 
+        parsed_shown_data
+    }
+    
+    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE, add_show_cols_first=NULL, add_show_cols_last=NULL) {
         
         table_settings <- rv$table_settings()
-        # shown_data <- rv$mapping_obj()$get_combined_dataset()
+        parsed_shown_data <- rv$dt_parsed_data_raw(rv, shown_data)
         
         if (is.null(rv$selected_feature())) {
             selected_row_nbr <- 1
@@ -159,32 +173,26 @@ setup_reactive_values_obj <- function(input) {
                 selected_row_nbr <- target_index
             }
         }
-
+        
         page_length <- 10
         display_pos <- selected_row_nbr - (selected_row_nbr %% page_length)
-                
-        parsed_shown_data <- shown_data %>%
-            mutate_if(
-                is.character,
-                ~str_trunc(., table_settings$trunc_length)
-            ) %>%
-            mutate_if(
-                is.numeric,
-                ~round(., table_settings$round_digits)
-            ) 
         
         if (with_row_selection) {
             parsed_shown_data %>% 
-                dplyr::select(table_settings$shown_fields) %>%
-                    DT::datatable(data=., 
-                    selection=list(mode='single', selected=c(selected_row_nbr)),
-                    options=list(pageLength=page_length, displayStart=display_pos))
+                dplyr::select(c(add_show_cols_first, table_settings$shown_fields, add_show_cols_last)) %>%
+                DT::datatable(data=., 
+                              selection=list(mode='single', selected=c(selected_row_nbr)),
+                              # callback = JS(sprintf("$('div.dwnld').append($('#%s'));", download_button_id)),
+                              # extensions = 'Buttons',
+                              options=list(
+                                  # dom = sprintf('B<"%s-dwnld">frtip', download_button_id),
+                                  pageLength=page_length, 
+                                  displayStart=display_pos
+                              ))
         }
         else {
             parsed_shown_data
         }
-        
-
     }
     
     rv
