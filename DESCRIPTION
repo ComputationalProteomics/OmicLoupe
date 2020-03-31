@@ -16,6 +16,7 @@ Imports:
     shinycssloaders,
     DT,
     R6,
+    rlang,
     stringr,
     ggthemes,
     shinythemes,
