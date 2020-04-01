@@ -1,14 +1,16 @@
-library(shiny)
-library(shinyjs)
-library(shinyalert)
-library(R6)
-library(plotly)
-library(tidyverse)
-library(DT)
-library(stringr)
-library(ggrepel)
-library(ggdendro)
-library(GGally)
+quiet <- suppressPackageStartupMessages
+
+suppressPackageStartupMessages(library(shiny))
+suppressPackageStartupMessages(library(shinyjs))
+suppressPackageStartupMessages(library(shinyalert))
+suppressPackageStartupMessages(library(R6))
+suppressPackageStartupMessages(library(plotly))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(stringr))
+suppressPackageStartupMessages(library(ggrepel))
+suppressPackageStartupMessages(library(ggdendro))
+suppressPackageStartupMessages(library(GGally))
 
 options(shiny.maxRequestSize=100*1024^2)
 
