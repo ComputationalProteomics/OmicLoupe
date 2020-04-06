@@ -78,7 +78,6 @@ setup_reactive_values_obj <- function(input) {
     rv$table_settings <- reactiveVal(NULL)
     
     # rv$ddf_condcol_ref <- function(rv, input_field) { 
-    #     # browser()
     #     req(input_field != "")
     #     rv[[sprintf("design_condcol_%s", di_new(rv, input_field))]]()
     # } 
@@ -179,7 +178,7 @@ setup_reactive_values_obj <- function(input) {
         
         if (with_row_selection) {
             parsed_shown_data %>% 
-                dplyr::select(c(add_show_cols_first, table_settings$shown_fields, add_show_cols_last)) %>%
+                dplyr::select(all_of(c(add_show_cols_first, table_settings$shown_fields, add_show_cols_last))) %>%
                 DT::datatable(data=., 
                               selection=list(mode='single', selected=c(selected_row_nbr)),
                               # callback = JS(sprintf("$('div.dwnld').append($('#%s'));", download_button_id)),

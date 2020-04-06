@@ -99,21 +99,31 @@ setup_panel_ui <- function(id) {
                                         )
                                     )
                              ),
-                             column(4,
+                             column(6,
                                     p(HTML("<b>Status:</b>")),
                                     textOutput(ns("column_status")),
+                                    br(),
                                     textOutput(ns("load_status"))
-                             ),
-                             column(2)
+                             )
                          ),
                          fluidRow(
                              column(4,
                                     bar_w_help("Dataset", ns("dataset_help")),
-                                    sample_input_well(ns("data_file_1"), ns("data_selected_columns_1"), ns("feature_col_1"), ns("annot_col_1"), select_size=5)
+                                    sample_input_well(
+                                        ns("data_file_1"), 
+                                        ns("data_selected_columns_1"), 
+                                        ns("feature_col_1"), 
+                                        ns("annot_col_1"), 
+                                        ns("parse_err_data_1"), select_size=5)
                              ),
                              column(4,
                                     bar_w_help("Design", ns("design_help")),
-                                    design_input_well(ns("design_file_1"), ns("design_sample_col_1"), ns("design_cond_col_1"))
+                                    design_input_well(
+                                        ns("design_file_1"), 
+                                        ns("design_sample_col_1"), 
+                                        ns("design_cond_col_1"),
+                                        ns("parse_err_design_1")
+                                    )
                              ),
                              column(4,
                                     bar_w_help("Assigned columns", ns("assign_cols_help")),
@@ -142,13 +152,24 @@ setup_panel_ui <- function(id) {
                              column(4,
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1", ns("two_datasets")),
-                                        sample_input_well(ns("data_file_2"), ns("data_selected_columns_2"), ns("feature_col_2"), ns("annot_col_2"), select_size=5)
+                                        sample_input_well(
+                                            ns("data_file_2"), 
+                                            ns("data_selected_columns_2"), 
+                                            ns("feature_col_2"), 
+                                            ns("annot_col_2"), 
+                                            ns("parse_err_data_2"), 
+                                            select_size=5)
                                     )
                              ),
                              column(4,
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1 && input['%s'] == 0", ns("two_datasets"), ns("matched_samples")),
-                                        design_input_well(ns("design_file_2"), ns("design_sample_col_2"), ns("design_cond_col_2"))
+                                        design_input_well(
+                                            ns("design_file_2"), 
+                                            ns("design_sample_col_2"), 
+                                            ns("design_cond_col_2"),
+                                            ns("parse_err_design_2")
+                                        )
                                     )
                              ),
                              column(4,
@@ -227,6 +248,38 @@ module_setup_server <- function(input, output, session, module_name) {
             write_tsv(get_target_data(input$data_table_tabs, get_raw=TRUE), file)
         }
     )
+    
+    output$parse_err_data_1 <- renderUI({
+        req(rv$filedata_1(), readr::problems(rv$filedata_1()) %>% nrow() > 1)
+        downloadButton(sprintf("%s-%s", module_name, "parse_err_data_1_handler"), "Check parsing issues")
+    })
+    
+    output$parse_err_data_2 <- renderUI({
+        req(rv$filedata_2(), readr::problems(rv$filedata_2()) %>% nrow() > 1)
+        downloadButton(sprintf("%s-%s", module_name, "parse_err_data_2_handler"), "Check parsing issues")
+    })
+    
+    output$parse_err_design_1 <- renderUI({
+        req(rv$design_1(), readr::problems(rv$design_1()) %>% nrow() > 1)
+        downloadButton(sprintf("%s-%s", module_name, "parse_err_design_1_handler"), "Check parsing issues")
+    })
+    
+    output$parse_err_design_2 <- renderUI({
+        req(rv$design_2(), readr::problems(rv$design_2()) %>% nrow() > 1)
+        downloadButton(sprintf("%s-%s", module_name, "parse_err_design_2_handler"), "Check parsing issues")
+    })
+    
+    err_log_download_handler <- function(rv, rv_tag) {
+        downloadHandler(
+            filename = function() {sprintf("parsing_errors_%s.txt", rv_tag)},
+            content = function(file) {write_tsv(readr::problems(rv[[rv_tag]]()), path = file)}
+        )
+    }
+
+    output$parse_err_data_1_handler <- err_log_download_handler(rv, "filedata_1")
+    output$parse_err_data_2_handler <- err_log_download_handler(rv, "filedata_2")
+    output$parse_err_design_1_handler <- err_log_download_handler(rv, "design_1")
+    output$parse_err_design_2_handler <- err_log_download_handler(rv, "design_2")
     
     observeEvent(rv$mapping_obj(), {
         req(rv$mapping_obj()$get_combined_dataset())
@@ -380,22 +433,12 @@ module_setup_server <- function(input, output, session, module_name) {
         }
     }
     
-    autodetect_sample_cols <- function(ddf, rdf, data_nbr, rv, filename, sample_col=NULL) {
-        
-        if (is.null(sample_col)) {
-            full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
-            sample_col <- colnames(ddf)[which(full_match)[1]]
-            updateSelectInput(
-                session,
-                sprintf("design_sample_col_%s", data_nbr),
-                choices=colnames(rv[[sprintf("design_%s", data_nbr)]]()),
-                selected = sample_col
-            )
-        }
-        
-        if (is.null(ddf)) {
-            stop("Data frame is NULL, invalid input provided!")
-        }
+    detect_sample_column <- function(ddf, rdf) {
+        full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
+        colnames(ddf)[which(full_match)]
+    }
+    
+    assign_sample_cols <- function(rv, data_nbr, ddf, rdf, sample_col, filename) {
         
         samples_from_ddf <- ddf[[sample_col]]
         if (all(samples_from_ddf %in% colnames(rdf))) {
@@ -407,67 +450,71 @@ module_setup_server <- function(input, output, session, module_name) {
                 samples_from_ddf
             )
             rv <- update_selcol_obj(rv, filename, "samples", samples_from_ddf)
+            status_message <- sprintf("%s columns identified for dataset %s", length(samples_from_ddf), data_nbr)
+            status_val <- 0
         }
         else {
             if (length(which(samples_from_ddf %in% colnames(rdf))) == 0) {
-                message("No samples from design matched to data, something is wrong!")
+                status_message <- "No samples from design matched to data, something is wrong!"
+                status_val <- 1
             }
             else {
                 missing <- colnames(rdf)[!samples_from_ddf %in% colnames(rdf)]
-                message("Not all samples matched, non-missing: ", paste(missing, collapse=", "))
+                status_message <- paste0("Not all samples matched, non-missing: ", paste(missing, collapse=", "))
+                status_val <- 1
             }
         }
-    }
-    
-    
-    detect_sample_cols <- function(rv, design, design_sample_col, filedata, filename, data_nbr, autodetect=TRUE) {
-        
-        if (!is.null(design_sample_col) && design_sample_col != "" && !is.null(filedata)) {
-            
-            if (autodetect) {
-                sample_col <- NULL
-            }
-            else {
-                sample_col <- design_sample_col
-            }
-            
-            autodetect_sample_cols(
-                design,
-                filedata,
-                data_nbr = data_nbr,
-                rv,
-                filename,
-                sample_col = sample_col
-            )
-        }
+        list(message=status_message, status=status_val)
     }
     
     observeEvent(input$autodetect_cols, {
         
+        output$column_status <- renderText("A dataset and a design matrix need to be assigned before being able to detect sample columns")
+        
+        req(!is.null(input$design_sample_col_1), input$design_sample_col_1 != "", !is.null(rv$filedata_1()))
+        
+        if (input$automatic_sample_detect) {
+            sample_col_1 <- detect_sample_column(rv$design_1(), rv$filedata_1())
+        }
+        else {
+            sample_col_1 <- input$design_sample_col_1
+        }
+        
         autodetect_stat_cols()
-        detect_sample_cols(
+        status_data1 <- assign_sample_cols(
             rv,
-            rv$design_1(),
-            input$design_sample_col_1,
-            filedata=rv$filedata_1(),
-            filename=rv$filename_1(),
             data_nbr=1,
-            autodetect=input$automatic_sample_detect
-        )
-        detect_sample_cols(
-            rv,
-            rv$design_2(),
-            input$design_sample_col_2,
-            filedata=rv$filedata_2(),
-            filename=rv$filename_2(),
-            data_nbr=2,
-            autodetect=input$automatic_sample_detect
+            rv$design_1(),
+            rv$filedata_1(),
+            input$design_sample_col_1,
+            rv$filename_1()
         )
         
+        status_data2 <- list(message=NULL, status=0)
+        if (!is.null(rv$design_2()) && !is.null(rv$filedata_2())) {
+            sample_col_2 <- detect_sample_column(rv$design_2(), rv$filedata_2())
+            sample_col_2 <- input$design_sample_col_2
+            
+            status_data2 <- assign_sample_cols(
+                rv,
+                data_nbr=2,
+                rv$design_2(),
+                rv$filedata_2(),
+                input$design_sample_col_2,
+                rv$filename_2()
+            )
+        }
+        
+        info_text <- paste(c(status_data1$message, status_data2$message), sep="\n")
+        if (status_data1$status == 0 && status_data2$status == 0) {
+            info_text <- sprintf("%s\n%s", info_text, "Proceed to load the data using 'Load data'")
+        }
+        output$column_status <- renderText(info_text)
     })
     
     # Clear/reset fildata 1 related fields
     observeEvent(rv$filedata_1(), {
+        
         clear_fields(session, rv$filedata_1, c("sample_selected_1", "statcols_selected_1"))
         clear_file_fields(session, rv$filedata_1, c("data_selected_columns_1", "feature_col_1", "annot_col_1"))
         rv$selected_cols_obj(
@@ -506,6 +553,11 @@ module_setup_server <- function(input, output, session, module_name) {
                 selcol1 <- selcol_list$samples
             }
         }
+        if (is.null(selcol1)) {
+            output$load_status <- renderText("No columns loaded for dataset 1 which is required for analysis, you can inspect your matrices under 'TableSetup'")
+        }
+        
+        req(selcol1)
         
         selcol2 <- NULL
         if (!is.null(data_file_2)) {
