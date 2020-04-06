@@ -1,0 +1,7 @@
+# Version 0.1.2
+
+* Introduces further customization for the Upset-plot and Venn diagram parts:
+    - Allow explicitly control maximum number of intersects
+    - Allow ordering Upset plot on degree
+    - Both Venn and Upset plots can be filtered on a combination of p/FDR-value and fold change
+* Omits less informative contra-regulation fraction/p-threshold illustrations for overlap

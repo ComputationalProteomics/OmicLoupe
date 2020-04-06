@@ -9,20 +9,26 @@ setup_overlap_ui <- function(id) {
                     12,
                     wellPanel(
                         fluidRow(
-                            column(6,
-                                   selectInput(ns("dataset1"), "Reference dataset", choices = c("Dev"), selected = "Dev"),
-                                   selectInput(ns("dataset2"), "Comp. dataset", choices = c("Dev"), selected = "Dev"),
-                                   sliderInput(ns("threshold"), "Threshold", min=0, max=1, step=0.01, value=0.05),
-                                   conditionalPanel(
-                                       sprintf("input['%s'] == 'Venn'", ns("plot_tabs")),
-                                       selectInput(ns("select_target"), "Select target", choices=c("A", "B", "A&B", "A|B"), selected = "A&B")
-                                   )
-                            ),
-                            column(6,
-                                   selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev"),
-                                   selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"),
-                                   selectInput(ns("contrast_type"), "Contrast type", choices=c("P.Value", "adj.P.Val", "logFC"))
-                            )
+                            column(6, selectInput(ns("dataset1"), "Reference dataset", choices = c("Dev"), selected = "Dev")),
+                            column(6, selectInput(ns("dataset2"), "Comp. dataset", choices = c("Dev"), selected = "Dev"))
+                        ),
+                        fluidRow(
+                            column(6, selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev")),
+                            column(6, selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"))
+                        ),
+                        fluidRow(
+                            column(6, sliderInput(ns("stat_threshold"), "Stat. threshold", min=0, max=1, step=0.01, value=0.05)),
+                            column(6, selectInput(ns("stat_contrast_type"), "Stat. contrast type", choices=c("P.Value", "adj.P.Val")))
+                        ),
+                        fluidRow(
+                            column(6, sliderInput(ns("fold_threshold"), "Fold threshold", min=0, max=10, step=0.1, value=1)),
+                            column(6, checkboxInput(ns("use_fold_cutoff"), "Use fold cutoff", value=FALSE))
+                        ),
+                        fluidRow(
+                            column(6, conditionalPanel(
+                                sprintf("input['%s'] == 'Venn'", ns("plot_tabs")),
+                                selectInput(ns("select_target"), "Select target", choices=c("A", "B", "A&B", "A|B"), selected = "A&B")
+                            ))
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Upset' || input['%s'] == 'FoldComparison'", ns("plot_tabs"), ns("plot_tabs")),
@@ -34,8 +40,14 @@ setup_overlap_ui <- function(id) {
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
-                            numericInput(ns("upset_max_comps"), "Upset comparison count", min = 1, value = 10),
-                            checkboxInput(ns("fold_split_upset"), "Fold split upset", value=FALSE)
+                            fluidRow(
+                                column(6, numericInput(ns("upset_max_comps"), "Upset max comparisons (rows)", min = 1, value = 10)),
+                                column(6, numericInput(ns("upset_max_intersects"), "Upset max intersects (columns)", min = 1, value = 40))
+                            ),
+                            fluidRow(
+                                column(6, checkboxInput(ns("fold_split_upset"), "Fold split upset", value=FALSE)),
+                                column(6, checkboxInput(ns("upset_degree_order"), "Order on degree", value=FALSE))
+                            )
                         ),
                         conditionalPanel(
                             sprintf("input['%s'] == 'FoldComparison'", ns("plot_tabs")),
@@ -103,23 +115,23 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         )
     })
     
-    observeEvent(input$contrast_type, {
-        if (input$contrast_type != "logFC") {
-            updateSliderInput(session, "threshold", min=0, max=1)
-            # updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-        }
-        else {
-            comb_obj <- rv$mapping_obj()$get_combined_dataset()
-            
-            max_fold <- max(
-                comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset1)), input$upset_ref_comparisons, "logFC")],
-                comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset2)), input$upset_ref_comparisons, "logFC")],
-                na.rm=TRUE
-            )
-            
-            updateSliderInput(session, "threshold", min=0, max=ceiling(max_fold))
-        }
-    })
+    # observeEvent(input$contrast_type, {
+    #     if (input$contrast_type != "logFC") {
+    #         updateSliderInput(session, "threshold", min=0, max=1)
+    #         # updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
+    #     }
+    #     else {
+    #         comb_obj <- rv$mapping_obj()$get_combined_dataset()
+    #         
+    #         max_fold <- max(
+    #             comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset1)), input$upset_ref_comparisons, "logFC")],
+    #             comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset2)), input$upset_ref_comparisons, "logFC")],
+    #             na.rm=TRUE
+    #         )
+    #         
+    #         updateSliderInput(session, "threshold", min=0, max=ceiling(max_fold))
+    #     }
+    # })
     
     selected_id_reactive <- reactive({
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
@@ -135,30 +147,33 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         sig_field <- rv$statcols_ref(rv, target_data, target_contrast)[[contrast_type]]
         fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
         
-        if (contrast_type != "logFC") {
-            pass_tbl <- combined_dataset %>% 
-                dplyr::filter(UQ(as.name(sig_field)) < input$threshold)
+        pass_stat_contrast <- combined_dataset[, sig_field] < input$stat_threshold
+
+        if (input$use_fold_cutoff) {
+            pass_fold_contrast <- abs(combined_dataset[, fold_field]) > input$fold_threshold
         }
         else {
-            pass_tbl <- combined_dataset %>% 
-                dplyr::filter(abs(UQ(as.name(sig_field))) > input$threshold)
+            pass_fold_contrast <- TRUE
         }
         
-        pass_tbl <- pass_tbl %>%
+        pass_all_contrast <- pass_stat_contrast & pass_fold_contrast
+        
+        pass_tbl <- combined_dataset %>%
+            filter(pass_all_contrast) %>%
             dplyr::select(c("comb_id", fold_field)) %>%
             dplyr::rename(fold=fold_field) %>%
             mutate(comb_id=as.character(comb_id))
-        
+
         pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
         pass_list
     }
     
     ref_pass_reactive <- reactive({
-        parse_contrast_pass_list(input$dataset1, input$ref_contrast, input$contrast_type)
+        parse_contrast_pass_list(input$dataset1, input$ref_contrast, input$stat_contrast_type)
     })
     
     comp_pass_reactive <- reactive({
-        parse_contrast_pass_list(input$dataset2, input$comp_contrast, input$contrast_type)
+        parse_contrast_pass_list(input$dataset2, input$comp_contrast, input$stat_contrast_type)
     })
     
     output_table_reactive <- reactive({
@@ -204,7 +219,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                     down = joint_down_features %>% names()
                 )
             }
-        }, dataset=input$dataset1, contrast_type=input$contrast_type, fold_split=input$fold_split_upset)
+        }, dataset=input$dataset1, contrast_type=input$stat_contrast_type, fold_split=input$fold_split_upset)
         
         if (input$dataset1 != input$dataset2) {
             
@@ -221,7 +236,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                         down = joint_down_features %>% names()
                     )
                 }
-            }, dataset=input$dataset2, contrast_type=input$contrast_type, fold_split=input$fold_split_upset)
+            }, dataset=input$dataset2, contrast_type=input$stat_contrast_type, fold_split=input$fold_split_upset)
             
             if (!input$fold_split_upset) {
                 plot_list <- c(ref_names_list, comp_names_list)
@@ -276,12 +291,20 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             upset_metadata_obj <- NULL
         }
         
+        if (input$upset_degree_order) {
+            upset_order_by <- "degree"
+        }
+        else {
+            upset_order_by <- "freq"
+        }
+        
         plt <- UpSetR::upset(
             UpSetR::fromList(plot_list), 
             set.metadata = upset_metadata_obj,
-            order.by="freq", 
+            order.by=upset_order_by, 
             text.scale=2, 
-            nsets = input$upset_max_comps
+            nsets = input$upset_max_comps,
+            nintersects = input$upset_max_intersects
         )
         plt
     }, height = 800)
@@ -290,12 +313,12 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         
         ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
             parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
-        }, dataset=input$dataset1, contrast_type=input$contrast_type)
+        }, dataset=input$dataset1, contrast_type=input$stat_contrast_type)
         
         if (input$dataset1 != input$dataset2) {
             comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
                 parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
-            }, dataset=input$dataset2, contrast_type=input$contrast_type)
+            }, dataset=input$dataset2, contrast_type=input$stat_contrast_type)
             
             plot_list <- c(ref_names_list, comp_names_list)
             names(plot_list) <- c(
@@ -360,6 +383,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     })
     
     output$fold_fractions_among_sig <- renderPlot({
+        
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         
         plot_df <- data.frame(
@@ -376,19 +400,20 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         
         # area <- plot_df %>% group_by(tot_contra) %>% group_map(~min(.$tot_same_frac)) %>% unlist() %>% sum()
         
-        plt_full <- ggplot() + 
-            geom_line(data=data.frame(x=c(0, plot_df$tot_contra %>% max()), y=c(0, plot_df$tot_same %>% max())), aes(x=x, y=y), size=1) +
-            geom_line(data=plot_df, aes(x=tot_contra, y=tot_same, color=highest_p<input$threshold), size=2) +
-            ggtitle("Number same-fold features, incorrect area calc: %s, p-value colored threshold")
-        
-        plt_subset <- ggplot() + 
-            geom_line(data=plot_df %>% filter(highest_p < input$threshold), aes(x=tot_contra, y=tot_same), size=2) +
-            ggtitle("Zoomed in below threshold")
+        # plt_full <- ggplot() + 
+        #     geom_line(data=data.frame(x=c(0, plot_df$tot_contra %>% max()), y=c(0, plot_df$tot_same %>% max())), aes(x=x, y=y), size=1) +
+        #     geom_line(data=plot_df, aes(x=tot_contra, y=tot_same, color=highest_p<input$threshold), size=2) +
+        #     ggtitle("Number same-fold features, incorrect area calc: %s, p-value colored threshold")
+        # 
+        # plt_subset <- ggplot() + 
+        #     geom_line(data=plot_df %>% filter(highest_p < input$threshold), aes(x=tot_contra, y=tot_same), size=2) +
+        #     ggtitle("Zoomed in below threshold")
         
         plt_cumfrac_over_logp <- ggplot(plot_df, aes(x=log10(highest_p), y=cum_frac_contra)) + geom_line()
         plt_cumfrac_over_p <- ggplot(plot_df, aes(x=highest_p, y=cum_frac_contra)) + geom_line()
         
-        ggarrange(plt_full, plt_subset, plt_cumfrac_over_logp, plt_cumfrac_over_p, ncol=2, nrow=2)
+        ggarrange(plt_cumfrac_over_p, plt_cumfrac_over_logp, ncol=1, nrow=2) %>% ggpubr::annotate_figure(., top="Fraction same fold for different p-value thresholds")
+        # ggarrange(plt_full, plt_subset, plt_cumfrac_over_logp, plt_cumfrac_over_p, ncol=2, nrow=2)
     })
     
     output$table_display <- DT::renderDataTable({

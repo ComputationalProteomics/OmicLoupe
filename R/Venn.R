@@ -79,7 +79,7 @@ Venn <- R6Class(
             plt
         },
         
-        do_paired_expression_venn = function(col1_w_fold, col2_w_fold, title="", colors=c("#CCCCCC", "#CCCCCC"), highlight="A&B") {
+        do_paired_expression_venn = function(col1_w_fold, col2_w_fold, title="", colors=c("#CCCCCC", "#CCCCCC"), highlight="A&B", contrast_names=c("Ref. contrast", "Comp. contrast")) {
 
             both_sig_names <- intersect(col1_w_fold %>% names(), col2_w_fold %>% names())
             
@@ -99,8 +99,8 @@ Venn <- R6Class(
                 as.character(right_count),
                 sprintf("%s same fold dir.", joint_same_count),
                 sprintf("%s reverse fold dir.", joint_contra_count),
-                "Ref. contrast",
-                "Comp. contrast"
+                contrast_names[1],
+                contrast_names[2]
             )
             
             df.vdc <- data.frame(
