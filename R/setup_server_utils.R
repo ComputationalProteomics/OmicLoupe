@@ -24,7 +24,7 @@ sync_select_inputs <- function(session, source_id, selection_id, filedata, joint
     )
 }
 
-autoselect_statpatterns <- function(dataset_cols, stat_patterns=c("P.Value", "adj.P.Val", "logFC", "AveExpr")) {
+autoselect_statpatterns <- function(dataset_cols, stat_patterns=c("P.Value", "PValue", "adj.P.Val", "AdjPVal", "logFC", "log2FoldChange", "AveExpr", "featureAvg")) {
 
     grep_string <- sprintf("%s%s", paste(stat_patterns, collapse="$|"), "$")
     dataset_cols[grepl(grep_string, dataset_cols)]

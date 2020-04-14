@@ -364,27 +364,40 @@ module_setup_server <- function(input, output, session, module_name) {
     
     rv <- setup_reactive_values_obj(input)
     
-    statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) {
-        
+    statcols <- function(rv, data_field, contrast_field, stat_patterns, prefix_index=NULL) {
+        # statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) {
+            
         dataset_stat_cols <- rv$selected_cols_obj()[[data_field]]$statcols
-        parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field)
+        parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field, stat_patterns)
         if (!is.null(prefix_index)) {
             parsed_cols <- lapply(parsed_cols, function(elem) { sprintf("d%s.%s", prefix_index, elem) })
         }
         parsed_cols
     }
     
-    rv$statcols_ref <- function(rv, data_field, contrast_field) {
+    # stat_cols$P.Value <- get_target_column(raw_stat_cols, base, stat_patterns$P.Value)
+    # stat_cols$adj.P.Val <- get_target_column(raw_stat_cols, base, stat_patterns$adj.P.Val)
+    # stat_cols$logFC <- get_target_column(raw_stat_cols, base, stat_patterns$logFC)
+    # stat_cols$AveExpr <- get_target_column(raw_stat_cols, base, stat_patterns$AveExpr, accept_as_is = TRUE)
+    
+    rv$stat_patterns <- list(
+        P.Value=c("P.Value", "PValue"),
+        adj.P.Val=c(""),
+        logFC=c(),
+        avgExpr=c()
+    )
+    
+    rv$statcols_ref <- function(rv, data_field, contrast_field, stat_patterns) {
         data_ind <- di_new(rv, data_field, 1)
-        statcols(rv, data_field, contrast_field, prefix_index=data_ind)
+        statcols(rv, data_field, contrast_field, stat_patterns, prefix_index=data_ind)
     }
     
-    rv$statcols_comp <- function(rv, data_field, contrast_field) {
+    rv$statcols_comp <- function(rv, data_field, contrast_field, stat_patterns) {
         data_ind <- di_new(rv, data_field, 2)
-        statcols(rv, data_field, contrast_field, prefix_index=data_ind)
+        statcols(rv, data_field, contrast_field, stat_patterns, prefix_index=data_ind)
     }
     
-    update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value") {
+    update_selcol_obj <- function(rv, dataset, colname, new_value, sync_stat_patterns=FALSE, stat_pattern="P.Value|PValue") {
         
         selcol_obj <- rv$selected_cols_obj()
         selcol_obj[[dataset]][[colname]] <- new_value
