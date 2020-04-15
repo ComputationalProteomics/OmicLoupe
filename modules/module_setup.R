@@ -390,7 +390,7 @@ module_setup_server <- function(input, output, session, module_name) {
     rv$stat_patterns <- reactive({
         list(
             P.Value=c("P.Value", "PValue", input$statpat_pval) %>% unique(),
-            adj.P.Val=c("adj.P.Val", "adjPVal", input$statpat_fdr) %>% unique(),
+            adj.P.Val=c("adj.P.Val", "AdjPVal", input$statpat_fdr) %>% unique(),
             logFC=c("logFC", "log2FoldChange", input$statpat_fold) %>% unique(),
             AveExpr=c("AveExpr", "featureAvg", input$statpat_expr) %>% unique()
         )
