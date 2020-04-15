@@ -214,6 +214,12 @@ setup_panel_ui <- function(id) {
                                          multiple=TRUE
                                      )
                                  )
+                             ),
+                             fluidRow(
+                                 column(3, textInput(ns("statpat_pval"), label="Stat pattern, P-value", value="P.Value")),
+                                 column(3, textInput(ns("statpat_fdr"), label="Stat pattern, FDR", value="adj.P.Val")),
+                                 column(3, textInput(ns("statpat_fold"), label="Stat pattern, log fold", value="logFC")),
+                                 column(3, textInput(ns("statpat_expr"), label="Stat pattern, expression", value="AvgExpr"))
                              )
                          ),
                          tabsetPanel(
@@ -382,22 +388,27 @@ module_setup_server <- function(input, output, session, module_name) {
         parsed_cols
     }
     
-    rv$stat_patterns <- list(
-        P.Value=c("P.Value", "PValue"),
-        adj.P.Val=c("adj.P.Val", "adjPVal"),
-        logFC=c("logFC", "log2FoldChange"),
-        AveExpr=c("AveExpr", "featureAvg")
-    )
+    rv$stat_patterns <- reactive({
+        list(
+            P.Value=c("P.Value", "PValue", input$statpat_pval),
+            adj.P.Val=c("adj.P.Val", "adjPVal", input$statpat_fdr),
+            logFC=c("logFC", "log2FoldChange", input$statpat_fold),
+            AveExpr=c("AveExpr", "featureAvg", input$statpat_expr)
+        )
+    })
     
+    rv$stat_patterns_parsed <- reactive({
+        map(rv$stat_patterns(), ~paste0(paste(., collapse="$|"), "$"))
+    })
+
     rv$statcols_ref <- function(rv, data_field, contrast_field, stat_patterns) {
-                
         data_ind <- di_new(rv, data_field, 1)
-        statcols(rv, data_field, contrast_field, rv$stat_patterns, prefix_index=data_ind)
+        statcols(rv, data_field, contrast_field, rv$stat_patterns(), prefix_index=data_ind)
     }
     
     rv$statcols_comp <- function(rv, data_field, contrast_field, stat_patterns) {
         data_ind <- di_new(rv, data_field, 2)
-        statcols(rv, data_field, contrast_field, rv$stat_patterns, prefix_index=data_ind)
+        statcols(rv, data_field, contrast_field, rv$stat_patterns(), prefix_index=data_ind)
     }
     
     # stat_pattern - A stat suffix used to assess what contrasts are present
@@ -435,16 +446,20 @@ module_setup_server <- function(input, output, session, module_name) {
     # --------------------------- End ----------------------------
     
     autodetect_stat_cols <- function() {
-        selected_statcols <- autoselect_statpatterns(colnames(rv$filedata_1()))
+        
+        combined_stat_pattern <- rv$stat_patterns_parsed() %>% unlist() %>% paste(collapse="|")
+        dataset_cols <- colnames(rv$filedata_1())
+        selected_statcols <- dataset_cols[grepl(combined_stat_pattern, dataset_cols)]
+
         if (!is.null(rv$filename_1())) {
-            rv <- update_selcol_obj(rv, rv$filename_1(), "statcols", selected_statcols, sync_stat_patterns = TRUE, stat_pattern = rv$stat_patterns$P.Value)
+            rv <- update_selcol_obj(rv, rv$filename_1(), "statcols", selected_statcols, sync_stat_patterns = TRUE, stat_pattern = rv$stat_patterns_parsed()$P.Value)
             sync_select_inputs(session, "data_selected_columns_1", "statcols_selected_1", rv$filedata_1, selected_statcols)
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_1()]]$statpatterns, "found_stat_patterns_1")
         }
         
         selected_statcols_2 <- autoselect_statpatterns(colnames(rv$filedata_2()))
         if (!is.null(rv$filename_2())) {
-            rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols_2, sync_stat_patterns = TRUE, stat_pattern = rv$stat_patterns$P.Value)
+            rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols_2, sync_stat_patterns = TRUE, stat_pattern = rv$stat_patterns()$P.Value)
             sync_select_inputs(session, "data_selected_columns_2", "statcols_selected_2", rv$filedata_2, selected_statcols_2)
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
         }
@@ -466,7 +481,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 rv[[sprintf("filedata_%s", data_nbr)]],
                 samples_from_ddf
             )
-            rv <- update_selcol_obj(rv, filename, "samples", samples_from_ddf, stat_pattern = rv$stat_patterns$P.Value)
+            rv <- update_selcol_obj(rv, filename, "samples", samples_from_ddf, stat_pattern = rv$stat_patterns()$P.Value)
             status_message <- sprintf("%s columns identified for dataset %s", length(samples_from_ddf), data_nbr)
             status_val <- 0
         }

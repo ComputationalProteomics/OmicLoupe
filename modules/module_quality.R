@@ -185,7 +185,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         
         # join_by <- c("name"=ddf_samplecol)
         long_sdf <- sdf %>%
-            pivot_longer(sample_cols) %>%
+            pivot_longer(all_of(sample_cols)) %>%
             inner_join(ddf, by="name")
         long_sdf
     }
