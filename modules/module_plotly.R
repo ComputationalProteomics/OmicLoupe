@@ -205,9 +205,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             pca_df
         }
         else if (input$color_type == "Column") {
-            warning("This needs to be fixed! (How? // Later Jakob and where? // Even later, maybe already fixed, if with the dataset_ind?)")
-            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", rv$di(rv, input$dataset1, 1), input$color_col_1)]]
-            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", rv$di(rv, input$dataset2, 2), input$color_col_2)]]
+            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
+            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
             base_df %>% arrange(ref.color_col)
         }
         else {
@@ -239,8 +238,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             warning("The pass_thres could be better calculated for histograms also in PCA")
             plot_df$pass_thres <- TRUE
         }
-        
-        if (input$color_type == "Column") {
+        else if (input$color_type == "Column") {
             plot_df$ref.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "ref")]]
             plot_df$comp.color_col <- reactive_plot_df()[[sprintf("%s.color_col", "comp")]]
         }
@@ -446,9 +444,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }
         }
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
-        
-        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        validate(
+            need(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS, 
+                 sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
+        )
         
         base_plt <- make_scatter(
             plot_df, 
@@ -491,7 +490,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }        
         }
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
+        validate(
+            need(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS, 
+                 sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
+        )
         
         # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
         
@@ -659,21 +661,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             layout(dragmode="none", barmode="stack") %>% 
             toWebGL()
     })
-    
-    # get_pass_thres_df <- function() {
-    #     combined_dataset <- reactive_plot_df()
-    #     pass_thres_col <- get_thres_pass_type_col(
-    #         combined_dataset,
-    #         rv$statcols_ref(rv, input$dataset1, input$stat_base1),
-    #         rv$statcols_comp(rv, input$dataset2, input$stat_base2),
-    #         input$pvalue_cutoff,
-    #         input$fold_cutoff,
-    #         input$pvalue_type_select
-    #     )
-    #     cbind(pass_thres=pass_thres_col, combined_dataset) %>% filter(pass_thres != "None")
-    # }
-    
-    
     
     get_target_df <- function(rv) {
         combined_dataset <- rv$mapping_obj()$get_combined_dataset()

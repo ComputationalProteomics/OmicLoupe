@@ -160,7 +160,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         
         pass_tbl <- combined_dataset %>%
             filter(pass_all_contrast) %>%
-            dplyr::select(c("comb_id", fold_field)) %>%
+            dplyr::select(all_of(c("comb_id", fold_field))) %>%
             dplyr::rename(fold=fold_field) %>%
             mutate(comb_id=as.character(comb_id))
 

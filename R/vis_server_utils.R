@@ -7,7 +7,6 @@ parse_stat_cols <- function(raw_stat_cols, base, stat_patterns) {
         
         desired_columns <- paste0(base, statistic)
         if (accept_as_is && any(statistic %in% columns)) {
-            # if (accept_as_is && statistic %in% columns) {
             statistic[statistic %in% columns]
         }
         else if (any(desired_columns %in% columns)) {
@@ -28,10 +27,6 @@ parse_stat_cols <- function(raw_stat_cols, base, stat_patterns) {
     stat_cols$logFC <- get_target_column(raw_stat_cols, base, stat_patterns$logFC)
     stat_cols$AveExpr <- get_target_column(raw_stat_cols, base, stat_patterns$AveExpr, accept_as_is = TRUE)
     
-    # stat_cols$P.Value <- get_target_column(raw_stat_cols, base, c("P.Value", "PValue"))
-    # stat_cols$adj.P.Val <- get_target_column(raw_stat_cols, base, c("adj.P.Val", "AdjPVal"))
-    # stat_cols$logFC <- get_target_column(raw_stat_cols, base, c("logFC", "log2FoldChange"))
-    # stat_cols$AveExpr <- get_target_column(raw_stat_cols, base, c("AveExpr", "featureAvg"), accept_as_is = TRUE)
     stat_cols
 }
 
