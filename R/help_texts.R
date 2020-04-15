@@ -28,7 +28,7 @@ help_setup_setup <- sprintf("Expected workflow: %s", parse_vector_to_bullets(
 help_table_setup <- c(
     "
     Gives an overview of the uploaded datasets as well as the mapped dataset. Allows formatting the table display which is displayed
-    in different sections of OmicLoupe.
+    in different sections of OmicLoupe. Also allows adjusting the stat pattern suffixes looked for when running 'Identify columns'.
     "
 )
 

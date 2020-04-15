@@ -672,7 +672,9 @@ module_setup_server <- function(input, output, session, module_name) {
     observeEvent(input$dataset_help, {
         shinyalert(
             title = "Help: Setup dataset",
-            text = "How the data matrix should look",
+            text = "The data file should contain columns with measurements for each samples with a column name specifying the sample name. These names should match to a sample
+            column found in the design file. This file can contain additional columns with feature information. Further information about the format can be found at
+            http://quantitativeproteomics.org/normalyzerde/help",
             html = TRUE
         )
     })
@@ -680,7 +682,8 @@ module_setup_server <- function(input, output, session, module_name) {
     observeEvent(input$design_help, {
         shinyalert(
             title = "Help: Setup design",
-            text = "How the design matrix should look",
+            text = "The design file should contain one column with all sample names (also present among the data file columns). Further, it could contain columns with 
+            conditions which can be used for coloring groups. More information can be found at: http://quantitativeproteomics.org/normalyzerde/help",
             html = TRUE
         )
     })
@@ -688,7 +691,9 @@ module_setup_server <- function(input, output, session, module_name) {
     observeEvent(input$assign_cols_help, {
         shinyalert(
             title = "Help: Assign columns",
-            text = "How to do the column assignment",
+            text = "Looking for suffixes P.Value/PValue, adj.P.Val/adjPVal, logFC/log2FoldChange, AvgExpr/featureAvg or what is specified under the 'TableSetup' tab.
+            The contrasts are expected to follow the pattern contrastname.adj.P.Val, contrastname.P.Value, contrastname.logFC, AvgExpr where AvgExpr specify the average of the
+            feature across all conditions",
             html = TRUE
         )
     })
