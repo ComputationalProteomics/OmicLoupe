@@ -298,6 +298,12 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             upset_order_by <- "freq"
         }
         
+        validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
+        
+        # if (length(plot_list) == 1) {
+        #     plot_list <- plot_list[[1]]
+        # }
+        
         plt <- UpSetR::upset(
             UpSetR::fromList(plot_list), 
             set.metadata = upset_metadata_obj,
@@ -332,40 +338,53 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         }
         
         present_in_all <- Reduce(intersect, plot_list)
+
+        contrast_pval_cols_ref <- map(input$upset_ref_comparisons, ~rv$statcols_ref(rv, input$dataset1, contrast_field = .)$P.Value) %>% unlist()
+        contrast_fold_cols_ref <- map(input$upset_ref_comparisons, ~rv$statcols_ref(rv, input$dataset1, contrast_field = .)$logFC) %>% unlist()
+        contrast_pval_cols_comp <- map(input$upset_comp_comparisons, ~rv$statcols_comp(rv, input$dataset2, contrast_field = .)$P.Value) %>% unlist()
+        contrast_fold_cols_comp <- map(input$upset_comp_comparisons, ~rv$statcols_comp(rv, input$dataset2, contrast_field = .)$logFC) %>% unlist()
         
         if (input$dataset1 == input$dataset2) {
+            
             long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
                 filter(comb_id %in% present_in_all) %>%
                 mutate(
-                    p_sum=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE]),
-                    p_prod=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE])
+                    p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
+                    p_prod=rowSums(.[, contrast_pval_cols_ref, drop=FALSE])
                 ) %>%
+                # mutate(
+                #     p_sum=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE]),
+                #     p_prod=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE])
+                # ) %>%
                 arrange(p_sum) %>%
                 head(input$max_fold_comps) %>%
-                dplyr::select(ID=comb_id, p_sum=p_sum, paste0("d1.", input$upset_ref_comparisons, "logFC")
+                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref
+                              # dplyr::select(ID=comb_id, p_sum=p_sum, paste0("d1.", input$upset_ref_comparisons, "logFC")
                 ) %>%
                 tidyr::gather("Comparison", "Fold", -ID, -p_sum)
             
         }
         else {
+            
             long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
                 filter(comb_id %in% present_in_all) %>%
                 mutate(
-                    p_sum=rowSums(.[, 
-                                    c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
-                                      paste0("d2.", input$upset_comp_comparisons, "P.Value")),
-                                    drop=FALSE]),
-                    p_prod=rowSums(.[, 
-                                     c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
-                                       paste0("d2.", input$upset_comp_comparisons, "P.Value")),
-                                     drop=FALSE])
+                    p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
+                    p_prod=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE])
+                    # p_sum=rowSums(.[, 
+                    #                 c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
+                    #                   paste0("d2.", input$upset_comp_comparisons, "P.Value")),
+                    #                 drop=FALSE]),
+                    # p_prod=rowSums(.[, 
+                    #                  c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
+                    #                    paste0("d2.", input$upset_comp_comparisons, "P.Value")),
+                    #                  drop=FALSE])
                 ) %>%
                 arrange(p_sum) %>%
                 head(input$max_fold_comps) %>%
-                dplyr::select(ID=comb_id, 
-                              p_sum=p_sum,
-                              paste0("d1.", input$upset_ref_comparisons, "logFC"),
-                              paste0("d2.", input$upset_comp_comparisons, "logFC")
+                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
+                              # paste0("d1.", input$upset_ref_comparisons, "logFC"),
+                              # paste0("d2.", input$upset_comp_comparisons, "logFC")
                 ) %>%
                 tidyr::gather("Comparison", "Fold", -ID, -p_sum)
         }
@@ -441,46 +460,43 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    sync_param_choices <- function() {
-        warning("Empty overlap parameter sync for now, probably needed for updating datasets!")
-        # ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
-        # comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-        # # updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
-        # # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-        # # updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
-        # # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
-        # 
-        # ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
-        # comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
-        # updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-        # updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-        # updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
-        # updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
-    }
-    
-    observeEvent(rv$ddf_ref(rv, input$dataset1), {
-        sync_param_choices()
-    })
-    
-    observeEvent(rv$ddf_comp(rv, input$dataset2), {
-        sync_param_choices()
-    })
+    # sync_param_choices <- function() {
+    #     warning("Empty overlap parameter sync for now, probably needed for updating datasets!")
+    #     # ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
+    #     # comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
+    #     # # updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
+    #     # # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
+    #     # # updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
+    #     # # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
+    #     # 
+    #     # ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
+    #     # comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
+    #     # updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
+    #     # updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
+    #     # updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
+    #     # updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
+    # }
+    # 
+    # observeEvent(rv$ddf_ref(rv, input$dataset1), {
+    #     sync_param_choices()
+    # })
+    # 
+    # observeEvent(rv$ddf_comp(rv, input$dataset2), {
+    #     sync_param_choices()
+    # })
     
     
     observeEvent({
         rv$selected_cols_obj() 
         input$dataset1 
         input$dataset2}, {
-            if (is.null(rv$filename_1()) && is.null(rv$filename_2())) {
-                return()
-            }
-            
+            req(rv$filename_1())
             choices_1 <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
-            choices_2 <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
-            
             updateSelectInput(session, "ref_contrast", choices=choices_1, selected=choices_1[1])
-            updateSelectInput(session, "comp_contrast", choices=choices_2, selected=choices_2[1])
             updateSelectInput(session, "upset_ref_comparisons", choices=choices_1, selected=choices_1)
+            
+            choices_2 <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
+            updateSelectInput(session, "comp_contrast", choices=choices_2, selected=choices_2[1])
             updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=choices_2)
         })
     

@@ -462,7 +462,7 @@ module_setup_server <- function(input, output, session, module_name) {
         
         selected_statcols_2 <- autoselect_statpatterns(rv$stat_patterns_parsed(), colnames(rv$filedata_2()))
         if (!is.null(rv$filename_2())) {
-            rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols_2, sync_stat_patterns = TRUE, stat_pattern = rv$stat_patterns()$P.Value)
+            rv <- update_selcol_obj(rv, rv$filename_2(), "statcols", selected_statcols_2, sync_stat_patterns = TRUE, stat_pattern = rv$stat_patterns_parsed()$P.Value)
             sync_select_inputs(session, "data_selected_columns_2", "statcols_selected_2", rv$filedata_2, selected_statcols_2)
             update_statpatterns_display(rv$selected_cols_obj()[[rv$filename_2()]]$statpatterns, "found_stat_patterns_2")
         }
