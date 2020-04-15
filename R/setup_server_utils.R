@@ -50,8 +50,6 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
     get_output_text <- function(rv, type) {
         if (type == "Dataset1" || type == "Dataset2" || type == "Both") {
             
-            # browser()
-            
             out_text <- sprintf(
                 "%s loaded, %s entries matched", 
                 type, nrow(rv$mapping_obj()$get_combined_dataset())
@@ -65,9 +63,6 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             }
             sprintf("%s\n%s", out_text, "You can now explore your dataset using the top bar menu")
         }
-        # else if (type == "Combined") {
-        #     
-        # }
         else {
             stop(sprintf("Unknown type state: %s", type))
         }

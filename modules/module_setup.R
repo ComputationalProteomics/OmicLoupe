@@ -379,7 +379,6 @@ module_setup_server <- function(input, output, session, module_name) {
     
     statcols <- function(rv, data_field, contrast_field, stat_patterns, prefix_index=NULL) {
         # statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) {
-            
         dataset_stat_cols <- rv$selected_cols_obj()[[data_field]]$statcols
         parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field, stat_patterns)
         if (!is.null(prefix_index)) {
@@ -390,10 +389,10 @@ module_setup_server <- function(input, output, session, module_name) {
     
     rv$stat_patterns <- reactive({
         list(
-            P.Value=c("P.Value", "PValue", input$statpat_pval),
-            adj.P.Val=c("adj.P.Val", "adjPVal", input$statpat_fdr),
-            logFC=c("logFC", "log2FoldChange", input$statpat_fold),
-            AveExpr=c("AveExpr", "featureAvg", input$statpat_expr)
+            P.Value=c("P.Value", "PValue", input$statpat_pval) %>% unique(),
+            adj.P.Val=c("adj.P.Val", "adjPVal", input$statpat_fdr) %>% unique(),
+            logFC=c("logFC", "log2FoldChange", input$statpat_fold) %>% unique(),
+            AveExpr=c("AveExpr", "featureAvg", input$statpat_expr) %>% unique()
         )
     })
     
@@ -401,14 +400,16 @@ module_setup_server <- function(input, output, session, module_name) {
         map(rv$stat_patterns(), ~paste0(paste(., collapse="$|"), "$"))
     })
 
-    rv$statcols_ref <- function(rv, data_field, contrast_field, stat_patterns) {
+    rv$statcols_ref <- function(rv, data_field, contrast_field) {
         data_ind <- di_new(rv, data_field, 1)
-        statcols(rv, data_field, contrast_field, rv$stat_patterns(), prefix_index=data_ind)
+        stat_patterns <- rv$stat_patterns()
+        statcols(rv, data_field, contrast_field, stat_patterns, prefix_index=data_ind)
     }
     
-    rv$statcols_comp <- function(rv, data_field, contrast_field, stat_patterns) {
+    rv$statcols_comp <- function(rv, data_field, contrast_field) {
         data_ind <- di_new(rv, data_field, 2)
-        statcols(rv, data_field, contrast_field, rv$stat_patterns(), prefix_index=data_ind)
+        stat_patterns <- rv$stat_patterns()
+        statcols(rv, data_field, contrast_field, stat_patterns, prefix_index=data_ind)
     }
     
     # stat_pattern - A stat suffix used to assess what contrasts are present

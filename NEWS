@@ -1,3 +1,7 @@
+# Version 0.1.4/5
+
+* Minor leftover fixes missed in 0.1.3
+
 # Version 0.1.3
 
 * Flexible stat patterns allows different suffixes than the Limma. Can by default handle NormalyzerDE outputs, and allows the user to specify custom patterns under 'TableSetup'

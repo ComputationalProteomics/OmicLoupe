@@ -389,8 +389,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         plot_df <- data.frame(
             ref_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value]],
             ref_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC]],
-            comp_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$P.Value]],
-            comp_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset2, input$comp_contrast)$logFC]]
+            comp_sig = combined_dataset[[rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$P.Value]],
+            comp_fold = combined_dataset[[rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$logFC]]
         ) %>% 
             mutate(highest_p=pmax(ref_sig, comp_sig)) %>% 
             arrange(highest_p) %>%
