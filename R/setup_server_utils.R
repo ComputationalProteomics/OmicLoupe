@@ -94,7 +94,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         output$load_status <- renderText({ out_text })
     }
     else {
-        rv$mapping_obj(MapObject$new(
+        mo <- MapObject$new(
             rv$filedata_1(), 
             feature_col_1, 
             rv$filedata_2(), 
@@ -102,7 +102,9 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             samples1=sample_cols1,
             samples2=sample_cols2,
             matched=matched_samples
-        ))
+        )
+        
+        rv$mapping_obj(mo)
         
         if (!is.null(rv$mapping_obj()$get_combined_dataset())) {
             out_text <- get_output_text(rv, "Both")

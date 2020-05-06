@@ -86,8 +86,6 @@ MapObject <- R6Class("MapObject", list(
                 self$correlations <- corrs
                 
             }
-            
-
         }
     },
     has_correlations = function() {
@@ -135,7 +133,11 @@ MapObject <- R6Class("MapObject", list(
         }
     },
     has_combined = function() {
-        length(self$joint_indices1) > 0 && length(self$joint_indices1) == length(self$joint_indices2)
+        if (length(self$joint_indices1) != length(self$joint_indices2)) {
+            stop("Different number of joint indices! Indicates non-unique cross dataset mapping. This is currently not supported.")
+        }
+        
+        length(self$joint_indices1) > 0
     },
     get_combined_dataset = function(full_entries = FALSE) {
     

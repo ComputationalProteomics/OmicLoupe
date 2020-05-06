@@ -595,6 +595,7 @@ module_setup_server <- function(input, output, session, module_name) {
     })
     
     perform_mapping <- function(rv, output, data_file_1, data_file_2, feature_col_1, feature_col_2) {
+        
         selcol1 <- NULL
         if (!is.null(data_file_1)) {
             selcol_list <- rv$selected_cols_obj()[[data_file_1$name]]
