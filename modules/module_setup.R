@@ -470,7 +470,14 @@ module_setup_server <- function(input, output, session, module_name) {
     
     detect_sample_column <- function(ddf, rdf) {
         full_match <- lapply(ddf, function(col) { as.character(col) %in% colnames(rdf) %>% all() } ) %>% unlist()
-        colnames(ddf)[which(full_match)]
+        full_matches <- colnames(ddf)[which(full_match)]
+        if (length(full_matches) > 1) {
+            warning(sprintf("More than one column fully matches (%s), picking the first one", paste(full_matches, collapse=", ")))
+            full_matches[1]
+        }
+        else {
+            full_matches
+        }
     }
     
     assign_sample_cols <- function(rv, data_nbr, ddf, rdf, sample_col, filename) {
@@ -485,7 +492,7 @@ module_setup_server <- function(input, output, session, module_name) {
                 samples_from_ddf
             )
             rv <- update_selcol_obj(rv, filename, "samples", samples_from_ddf, stat_pattern = rv$stat_patterns()$P.Value)
-            status_message <- sprintf("%s columns identified for dataset %s", length(samples_from_ddf), data_nbr)
+            status_message <- sprintf("%s sample columns identified for dataset %s.", length(samples_from_ddf), data_nbr)
             status_val <- 0
         }
         else {
@@ -510,6 +517,7 @@ module_setup_server <- function(input, output, session, module_name) {
         
         if (input$automatic_sample_detect) {
             sample_col_1 <- detect_sample_column(rv$design_1(), rv$filedata_1())
+            updateSelectInput(session, "design_sample_col_1", selected = sample_col_1)
         }
         else {
             sample_col_1 <- input$design_sample_col_1
@@ -521,28 +529,34 @@ module_setup_server <- function(input, output, session, module_name) {
             data_nbr=1,
             rv$design_1(),
             rv$filedata_1(),
-            input$design_sample_col_1,
+            sample_col_1,
             rv$filename_1()
         )
         
         status_data2 <- list(message=NULL, status=0)
         if (!is.null(rv$design_2()) && !is.null(rv$filedata_2())) {
-            sample_col_2 <- detect_sample_column(rv$design_2(), rv$filedata_2())
-            sample_col_2 <- input$design_sample_col_2
+            
+            if (input$automatic_sample_detect) {
+                sample_col_2 <- detect_sample_column(rv$design_2(), rv$filedata_2())
+                updateSelectInput(session, "design_sample_col_2", selected = sample_col_2)
+            }
+            else {
+                sample_col_2 <- input$design_sample_col_2
+            }
             
             status_data2 <- assign_sample_cols(
                 rv,
                 data_nbr=2,
                 rv$design_2(),
                 rv$filedata_2(),
-                input$design_sample_col_2,
+                sample_col_2,
                 rv$filename_2()
             )
         }
         
         info_text <- paste(c(status_data1$message, status_data2$message), sep="\n")
         if (status_data1$status == 0 && status_data2$status == 0) {
-            info_text <- sprintf("%s\n%s", info_text, "Proceed to load the data using 'Load data'")
+            info_text <- sprintf("%s\n%s", info_text, "Proceed to load the data using 'Load data'.")
         }
         output$column_status <- renderText(info_text)
     })
