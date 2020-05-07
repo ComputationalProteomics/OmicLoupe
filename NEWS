@@ -1,3 +1,9 @@
+# Version 0.1.6
+
+* Fix bug where sample column not detected automatically
+* Clearer communication for feature mapping
+* Allow discarding duplicates for feature mapping
+
 # Version 0.1.4/5
 
 * Minor leftover fixes missed in 0.1.3

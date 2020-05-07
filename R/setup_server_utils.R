@@ -24,12 +24,6 @@ sync_select_inputs <- function(session, source_id, selection_id, filedata, joint
     )
 }
 
-# autoselect_statpatterns <- function(dataset_cols, stat_patterns=c("P.Value", "PValue", "adj.P.Val", "AdjPVal", "logFC", "log2FoldChange", "AveExpr", "featureAvg")) {
-# 
-#     # grep_string <- sprintf("%s%s", paste(stat_patterns, collapse="$|"), "$")
-#     dataset_cols[grepl(grep_string, dataset_cols)]
-# }
-
 reset_reactive_cols <- function(rv) {
 
     rv$selected_cols_obj(list())
@@ -45,26 +39,53 @@ clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
 }
 
-do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2, matched_samples) {
+do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2, matched_samples, duplicates_method="stop") {
     
     get_output_text <- function(rv, type) {
-        if (type == "Dataset1" || type == "Dataset2" || type == "Both") {
-            
+        
+        mo <- rv$mapping_obj()
+        
+        valid_types <- c("Dataset1", "Dataset2", "Both")
+        if (type %in% valid_types) {
             out_text <- sprintf(
                 "%s loaded, %s entries matched", 
-                type, nrow(rv$mapping_obj()$get_combined_dataset())
+                type, nrow(mo$get_combined_dataset())
             )
             
             if (type == "Both") {
-                out_text <- c(out_text, sprintf(" (original number of rows: %s and %s)", rv$mapping_obj()$get_dataset1_nrow(), rv$mapping_obj()$get_dataset2_nrow()))
-                if (rv$mapping_obj()$has_full_entries()) {
-                    out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)))
+                out_text <- c(out_text, sprintf(" (original number of rows: %s and %s)", mo$get_dataset1_nrow(), mo$get_dataset2_nrow()))
+                if (mo$has_full_entries()) {
+                    out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(mo$get_combined_dataset(full_entries=TRUE)))
                 }
             }
             sprintf("%s\n%s", out_text, "You can now explore your dataset using the top bar menu")
         }
         else {
             stop(sprintf("Unknown type state: %s", type))
+        }
+    }
+    
+    get_mapped_output_text <- function(rv, duplicates_method) {
+        mo <- rv$mapping_obj()
+        
+        if (mo$has_combined()) {
+            if (!mo$has_same_number_entries()) {
+                if (duplicates_method == "stop") {
+                    out_text <- "Datasets mapped, but not equal number of entries. Either fix, or use option 'Discard dups.' to proceed."
+                }
+                else if (duplicates_method == "discard") {
+                    out_text <- "One or both had duplicate entries, discarding duplicates as 'discard' is assigned"
+                }
+                else {
+                    stop("Unknown duplicates_method setting: ", duplicates_method)
+                }
+            }
+            else {
+                out_text <- get_output_text(rv, "Both")
+            }
+        }
+        else {
+            out_text <- "No samples mapped, check your data and your Feature columns!"
         }
     }
     
@@ -79,9 +100,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             feature_col_1, 
             samples1=sample_cols1
         ))
-        
-        out_text <- get_output_text(rv, "Dataset1")
-        output$load_status <- renderText({ out_text })
+        output$load_status <- renderText({ get_output_text(rv, "Dataset1") })
     }
     else if (is.null(rv$filedata_1())) {
         rv$mapping_obj(MapObject$new(
@@ -89,11 +108,10 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             feature_col_2, 
             samples2=sample_cols2
         ))
-        
-        out_text <- get_output_text(rv, "Dataset2")
-        output$load_status <- renderText({ out_text })
+        output$load_status <- renderText({ get_output_text(rv, "Dataset2") })
     }
     else {
+        
         mo <- MapObject$new(
             rv$filedata_1(), 
             feature_col_1, 
@@ -101,18 +119,33 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             feature_col_2,
             samples1=sample_cols1,
             samples2=sample_cols2,
-            matched=matched_samples
+            matched=matched_samples,
+            discard_dups=ifelse(duplicates_method=="discard", TRUE, FALSE)
         )
         
         rv$mapping_obj(mo)
+        out_text <- get_mapped_output_text(rv, duplicates_method)
         
-        if (!is.null(rv$mapping_obj()$get_combined_dataset())) {
-            out_text <- get_output_text(rv, "Both")
-        }
-        else {
-            out_text <- "No samples mapped, check your data and your Feature columns!"
-        }
-
+        # if (mo$has_combined()) {
+        #     if (!mo$has_same_number_entries()) {
+        #         if (duplicates_method == "stop") {
+        #             out_text <- "Datasets mapped, but not equal number of entries. Either fix, or use option 'Discard dups.' to proceed."
+        #         }
+        #         else if (duplicates_method == "discard") {
+        #             out_text <- "One or both had duplicate entries, discarding duplicates as 'discard' is assigned"
+        #         }
+        #         else {
+        #             stop("Unknown duplicates_method setting: ", duplicates_method)
+        #         }
+        #     }
+        #     else {
+        #         out_text <- get_output_text(rv, "Both")
+        #     }
+        # }
+        # else {
+        #     out_text <- "No samples mapped, check your data and your Feature columns!"
+        # }
+        
         output$load_status <- renderText({ out_text })
     }
     rv

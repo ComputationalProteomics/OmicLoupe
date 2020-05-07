@@ -18,14 +18,20 @@ MapObject <- R6Class("MapObject", list(
     
     correlations = NULL,
 
-    initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, samples2=NULL, matched=FALSE) {
+    initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, samples2=NULL, matched=FALSE, discard_dups=FALSE) {
         
         self$dataset1 <- dataset1 %>% arrange(UQ(as.name(target_col1)))
+        if (discard_dups) {
+            self$dataset1 <- self$dataset1 %>% distinct(UQ(as.name(target_col1)), .keep_all=TRUE)
+        }
         self$target_col1 <- target_col1
         
         if (!is.null(dataset2) && !is.null(target_col2)) {
             self$dual_datasets <- TRUE
             self$dataset2 <- dataset2 %>% arrange(UQ(as.name(target_col2)))
+            if (discard_dups) {
+                self$dataset2 <- self$dataset2 %>% distinct(UQ(as.name(target_col2)), .keep_all=TRUE)
+            }
             self$target_col2 <- target_col2
             self$joint_indices1 <- which(self$dataset1[[target_col1]] %in% self$dataset2[[target_col2]])
             self$joint_indices2 <- which(self$dataset2[[target_col2]] %in% self$dataset1[[target_col1]])
@@ -133,11 +139,10 @@ MapObject <- R6Class("MapObject", list(
         }
     },
     has_combined = function() {
-        if (length(self$joint_indices1) != length(self$joint_indices2)) {
-            stop("Different number of joint indices! Indicates non-unique cross dataset mapping. This is currently not supported.")
-        }
-        
         length(self$joint_indices1) > 0
+    },
+    has_same_number_entries = function() {
+        length(self$joint_indices1) == length(self$joint_indices2)
     },
     get_combined_dataset = function(full_entries = FALSE) {
     

@@ -92,7 +92,13 @@ setup_panel_ui <- function(id) {
                                                    
                                             ),
                                             column(6,
-                                                   checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE),
+                                                   fluidRow(
+                                                       column(6, checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE)),
+                                                       conditionalPanel(
+                                                           sprintf("input['%s'] == 1", ns("two_datasets")),
+                                                           column(6, checkboxInput(ns("two_datasets_random_discard"), label = "Discard dups.", value = FALSE))
+                                                       )
+                                                   ),
                                                    checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
                                                    checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE)
                                             )
@@ -608,7 +614,6 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         
         req(selcol1)
-        
         selcol2 <- NULL
         if (!is.null(data_file_2)) {
             selcol2_list <- rv$selected_cols_obj()[[data_file_2$name]]
@@ -624,7 +629,8 @@ module_setup_server <- function(input, output, session, module_name) {
             output,
             selcol1,
             selcol2,
-            input$matched_samples
+            input$matched_samples,
+            duplicates_method=ifelse(input$two_datasets_random_discard, "discard", "stop")
         )
         
         rv
