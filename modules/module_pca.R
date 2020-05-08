@@ -264,7 +264,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     ########### FUNCTIONS ############
     
-    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, label_col, dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
+    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, label_col, title_label="No title set", dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
         
         pc1_lab <- sprintf("PC%s", pc1)
         pc2_lab <- sprintf("PC%s", pc2)
@@ -288,9 +288,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt_base <- plt_base + geom_text(size=dot_size)
         }
         
-        # ggtitle(sprintf("Rotation dimensions: %s", paste(dim(pca_obj$rotation), collapse=", "))) +
         plt_base + 
-            ggtitle(sprintf("Dataset: %s (dim: %s)", input$dataset1, paste(dim(pca_obj$rotation), collapse=", "))) +
+            ggtitle(sprintf("Dataset: %s (dim: %s)", title_label, paste(dim(pca_obj$rotation), collapse=", "))) +
             xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
             ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
     }
@@ -396,6 +395,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             shape=shape_col,
             sample=sample_col,
             label_col="Sample",
+            title_label=input$dataset1,
             dot_size=input$dot_size,
             show_labels = input$show_labels_data, 
             color_as_fact = input$data1_as_factor
@@ -431,6 +431,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             sample_col,
             "label",
             input$dot_size,
+            title_label=input$dataset2,
             show_labels = input$show_labels_data, 
             color_as_fact = input$data2_as_factor
         ) 
