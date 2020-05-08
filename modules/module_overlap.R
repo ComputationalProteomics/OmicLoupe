@@ -206,24 +206,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     output$upset <- renderPlot({
         
-        ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type, fold_split) {
-            joint_entries_w_fold <- parse_contrast_pass_list(dataset, stat_pattern, contrast_type)
-            if (!fold_split) {
-                joint_entries_w_fold %>% names()
-            }
-            else {
-                joint_up_features <- Filter(function(elem) { elem > 0 }, joint_entries_w_fold)
-                joint_down_features <- Filter(function(elem) { elem < 0 }, joint_entries_w_fold)
-                list(
-                    up = joint_up_features %>% names(),
-                    down = joint_down_features %>% names()
-                )
-            }
-        }, dataset=input$dataset1, contrast_type=input$stat_contrast_type, fold_split=input$fold_split_upset)
-        
-        if (input$dataset1 != input$dataset2) {
-            
-            comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type, fold_split) {
+        extract_set_names_list <- function(comparisons, dataset, contrast_type, fold_split) {
+            lapply(comparisons, function(stat_pattern, dataset, contrast_type, fold_split) {
                 joint_entries_w_fold <- parse_contrast_pass_list(dataset, stat_pattern, contrast_type)
                 if (!fold_split) {
                     joint_entries_w_fold %>% names()
@@ -236,59 +220,96 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                         down = joint_down_features %>% names()
                     )
                 }
-            }, dataset=input$dataset2, contrast_type=input$stat_contrast_type, fold_split=input$fold_split_upset)
-            
-            if (!input$fold_split_upset) {
-                plot_list <- c(ref_names_list, comp_names_list)
-                names(plot_list) <- c(
-                    paste("d1", input$upset_ref_comparisons, sep="."),
-                    paste("d2", input$upset_comp_comparisons, sep=".")
-                )
-                metadata <- data.frame(
-                    comparison = c(names(plot_list)),
-                    data_source = c(
-                        rep("d1", length(input$upset_ref_comparisons)),
-                        rep("d2", length(input$upset_comp_comparisons))
-                    )
+            }, dataset=dataset, contrast_type=contrast_type, fold_split=fold_split)
+        }
+        
+        get_plot_list <- function(names_list, comparisons, split_on_fold) {
+            plot_list <- names_list
+            names(plot_list) <- comparisons %>% gsub("\\.$", "", .)
+            if (split_on_fold) {
+                plot_list <- lapply(rapply(plot_list, enquote, how="unlist"), eval)
+            }
+            plot_list
+        }
+        
+        get_name_order <- function(plot_list, split_on_fold) {
+            if (!split_on_fold) {
+                names(plot_list)
+            }
+            else {
+                names(plot_list)[
+                    c( seq(1,length(names(plot_list)),2),
+                       seq(2,length(names(plot_list)),2) ) ]
+            }
+        }
+        
+        get_metadata <- function(plot_list, split_on_fold) {
+            if (split_on_fold) {
+                list(
+                    data = data.frame(
+                        comparison = c(names(plot_list)),
+                        fold_dir = rep(c("up", "down"), length(plot_list)/2)
+                    ),
+                    plots = list(list(
+                        type = "matrix_rows",
+                        column = "fold_dir",
+                        colors = c(up="navy", down="red"),
+                        alpha=0.2
+                    ))
                 )
             }
             else {
-                ref_pltlist <- ref_names_list
-                comp_pltlist <- comp_names_list
-                names(ref_pltlist) <- sprintf("d1.%s", input$upset_ref_comparisons %>% gsub("\\.$", "", .))
-                names(comp_pltlist) <- sprintf("d2.%s", input$upset_comp_comparisons %>% gsub("\\.$", "", .))
-                plot_list <- lapply(rapply(c(ref_pltlist, comp_pltlist), enquote, how="unlist"), eval)
-                
-                metadata <- data.frame(
-                    comparison = c(names(plot_list)),
-                    data_source = c(
-                        rep("d1", length(input$upset_ref_comparisons) * 2),
-                        rep("d2", length(input$upset_comp_comparisons) * 2)
+                list(
+                    data = data.frame(
+                        comparison = c(names(plot_list)),
+                        dataset = "d1"
                     )
                 )
             }
+        }
+        
+        ref_names_list <- extract_set_names_list(input$upset_ref_comparisons, input$dataset1, input$stat_contrast_type, input$fold_split_upset)
+        plot_list <- get_plot_list(ref_names_list, input$upset_ref_comparisons, input$fold_split_upset)
+        name_order <- get_name_order(plot_list, input$fold_split_upset)
+        upset_metadata_obj <- get_metadata(plot_list, input$fold_split_upset)
+
+        if (input$dataset1 != input$dataset2) {
             
+            comp_names_list <- extract_set_names_list(input$upset_comp_comparisons, input$dataset2, input$stat_contrast_type, input$fold_split_upset)
+            plot_list_comp <- get_plot_list(comp_names_list, input$upset_comp_comparisons, input$fold_split_upset)
+            name_order <- c(
+                paste("d1", name_order, sep="."), 
+                paste("d2", get_name_order(plot_list_comp, input$fold_split_upset), sep=".")
+            )
+            
+            plot_list <- c(
+                plot_list %>% `names<-`(paste("d1", names(plot_list), sep=".")), 
+                plot_list_comp %>% `names<-`(paste("d2", names(plot_list), sep="."))
+            )
+
+            if (!input$fold_split_upset) {
+                metadata <- data.frame(
+                    comparison = names(plot_list),
+                    data_source = names(plot_list) %>% gsub("\\..*", "", .)
+                )
+                color_vector <- c(d1 = "navy", d2 = "orange")
+            }
+            else {
+                metadata <- data.frame(
+                    comparison = names(plot_list),
+                    data_source = names(plot_list) %>% gsub("\\..*\\.", "\\.", .)
+                )
+                color_vector <- c(d1.up="red", d1.down="navy", d2.up="orange", d2.down="darkgreen")
+            }
             upset_metadata_obj <- list(
                 data = metadata,
                 plots = list(list(
-                    type = "matrix_rows", 
+                    type = "matrix_rows",
                     column = "data_source",
-                    colors = c(d1 = "navy", d2 = "red"),
+                    colors = color_vector,
                     alpha=0.2
                 ))
             )
-        }
-        else {
-            if (!input$fold_split_upset) {
-                plot_list <- ref_names_list
-                names(plot_list) <- input$upset_ref_comparisons
-            }
-            else {
-                plot_list_joint <- ref_names_list
-                names(plot_list_joint) <- input$upset_ref_comparisons %>% gsub("\\.$", "", .)
-                plot_list <- lapply(rapply(plot_list_joint, enquote, how="unlist"), eval)
-            }
-            upset_metadata_obj <- NULL
         }
         
         if (input$upset_degree_order) {
@@ -300,14 +321,19 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         
         validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
         
-        # if (length(plot_list) == 1) {
-        #     plot_list <- plot_list[[1]]
-        # }
+        if ("plots" %in% names(upset_metadata_obj)) {
+            target_metadata <- upset_metadata_obj
+        }
+        else {
+            target_metadata <- NULL
+        }
         
         plt <- UpSetR::upset(
             UpSetR::fromList(plot_list), 
-            set.metadata = upset_metadata_obj,
+            set.metadata = target_metadata,
             order.by=upset_order_by, 
+            sets=name_order,
+            keep.order=TRUE,
             text.scale=2, 
             nsets = input$upset_max_comps,
             nintersects = input$upset_max_intersects
@@ -416,17 +442,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             mutate(is_contra=sign(ref_fold) != sign(comp_fold)) %>%
             mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra)) %>%
             mutate(cum_frac_contra=tot_same/(tot_same+tot_contra))
-        
-        # area <- plot_df %>% group_by(tot_contra) %>% group_map(~min(.$tot_same_frac)) %>% unlist() %>% sum()
-        
-        # plt_full <- ggplot() + 
-        #     geom_line(data=data.frame(x=c(0, plot_df$tot_contra %>% max()), y=c(0, plot_df$tot_same %>% max())), aes(x=x, y=y), size=1) +
-        #     geom_line(data=plot_df, aes(x=tot_contra, y=tot_same, color=highest_p<input$threshold), size=2) +
-        #     ggtitle("Number same-fold features, incorrect area calc: %s, p-value colored threshold")
-        # 
-        # plt_subset <- ggplot() + 
-        #     geom_line(data=plot_df %>% filter(highest_p < input$threshold), aes(x=tot_contra, y=tot_same), size=2) +
-        #     ggtitle("Zoomed in below threshold")
         
         plt_cumfrac_over_logp <- ggplot(plot_df, aes(x=log10(highest_p), y=cum_frac_contra)) + geom_line()
         plt_cumfrac_over_p <- ggplot(plot_df, aes(x=highest_p, y=cum_frac_contra)) + geom_line()
