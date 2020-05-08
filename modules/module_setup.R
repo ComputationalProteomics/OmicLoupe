@@ -239,6 +239,13 @@ setup_panel_ui <- function(id) {
                          ),
                          downloadButton(ns("download_table"), "Download table"),
                          DT::DTOutput(ns("table_output"))
+                ),
+                tabPanel("InputHelp",
+                         h3("Input help"),
+                         htmlOutput(ns("input_help_text_design")),
+                         plotOutput(ns("input_help_image_design"), height = 200),
+                         htmlOutput(ns("input_help_text_data")),
+                         plotOutput(ns("input_help_image_data"), height = 600)
                 )
             )
         )
@@ -280,6 +287,43 @@ module_setup_server <- function(input, output, session, module_name) {
         req(rv$design_2(), readr::problems(rv$design_2()) %>% nrow() > 1)
         downloadButton(sprintf("%s-%s", module_name, "parse_err_design_2_handler"), "Check parsing issues")
     })
+    
+    output$input_help_text_design <- renderUI({
+        "The design matrix specify sample-specific information, and is used to color different sample groupings.
+        One column (here 'sample') should contain all involved sample IDs. These IDs should all be present in
+        the data matrix header line. Beyond this, any number of additional columns with sample conditions
+        could be included. In this case, samples are divided into two groups, with three samples belonging to
+        group 'A' and three to group 'B'. This matrix should be saved in tab separated format (Save as -> .csv
+        and choose 'tab' as delimitor)."
+    })
+    
+    output$input_help_image_design <- renderImage({
+        filename <- normalizePath(file.path("./doc", "design_help.png"))
+        list(src = filename)
+    }, deleteFile = FALSE)
+    
+    output$input_help_text_data <- renderUI({
+        "The data matrix contains feature information, and measured values across different samples.
+        It can contain any number of annotation columns (here: first four), information from statistical 
+        comparisons and the sample values.
+        
+        Statistical comparisons should include the information 'average expression', 'log fold change', 'p-value'
+        and 'adjusted p-value'. For each, the same prefix should be used (here 'comp'). By default, 'logFC', 'AveExpr', 'P.Value'
+        and 'adj.P.Val' suffixes are expected, but this could be adjusted under the 'TableSetup' page. The contrast
+        prefix and the suffixes should each be separated by a dot (.).
+        
+        Beyond this are the sample columns. These should match the ones specified in the design matrix (if not matching,
+        OmicLoupe will not understand that the non-missing columns are sample columns, and will be handled as normal
+        annotation columns).
+        
+        Numbers should be separated by dot, not comma. Missing values denoted as 'NA'. Similarly to the design matrix,
+        the data matrix should be saved in tab-separated format."
+    })
+    
+    output$input_help_image_data <- renderImage({
+        filename <- normalizePath(file.path("./doc", "data_help.png"))
+        list(src = filename)
+    }, deleteFile = FALSE)
     
     err_log_download_handler <- function(rv, rv_tag) {
         downloadHandler(

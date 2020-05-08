@@ -112,8 +112,6 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
     }
     else {
         
-        # if ((any(duplicated(rv$filedata_1()[[feature_col_1]])) || any(duplicated(rv$filedata_1()[[feature_col_1]])))
-        #     && duplicates_method!="discard") {
         mo <- MapObject$new(
             rv$filedata_1(), 
             feature_col_1, 
