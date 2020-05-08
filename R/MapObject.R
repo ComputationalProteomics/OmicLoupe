@@ -18,7 +18,8 @@ MapObject <- R6Class("MapObject", list(
     
     correlations = NULL,
 
-    initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, samples2=NULL, matched=FALSE, discard_dups=FALSE) {
+    initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, 
+                          samples2=NULL, matched=FALSE, discard_dups=FALSE) {
         
         self$dataset1 <- dataset1 %>% arrange(UQ(as.name(target_col1)))
         if (discard_dups) {
@@ -148,7 +149,7 @@ MapObject <- R6Class("MapObject", list(
     
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
             
-            if (!self$has_combined()) {
+            if (!self$has_combined() || !self$has_same_number_entries()) {
                 return(NULL)
             }
                 

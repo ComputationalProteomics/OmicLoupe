@@ -112,6 +112,8 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
     }
     else {
         
+        # if ((any(duplicated(rv$filedata_1()[[feature_col_1]])) || any(duplicated(rv$filedata_1()[[feature_col_1]])))
+        #     && duplicates_method!="discard") {
         mo <- MapObject$new(
             rv$filedata_1(), 
             feature_col_1, 
@@ -122,33 +124,11 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             matched=matched_samples,
             discard_dups=ifelse(duplicates_method=="discard", TRUE, FALSE)
         )
-        
         rv$mapping_obj(mo)
+        # }
+
         out_text <- get_mapped_output_text(rv, duplicates_method)
-        
-        # if (mo$has_combined()) {
-        #     if (!mo$has_same_number_entries()) {
-        #         if (duplicates_method == "stop") {
-        #             out_text <- "Datasets mapped, but not equal number of entries. Either fix, or use option 'Discard dups.' to proceed."
-        #         }
-        #         else if (duplicates_method == "discard") {
-        #             out_text <- "One or both had duplicate entries, discarding duplicates as 'discard' is assigned"
-        #         }
-        #         else {
-        #             stop("Unknown duplicates_method setting: ", duplicates_method)
-        #         }
-        #     }
-        #     else {
-        #         out_text <- get_output_text(rv, "Both")
-        #     }
-        # }
-        # else {
-        #     out_text <- "No samples mapped, check your data and your Feature columns!"
-        # }
-        
         output$load_status <- renderText({ out_text })
     }
     rv
 }
-
-
