@@ -77,19 +77,32 @@ MapObject <- R6Class("MapObject", list(
                 ref_sdf_joint <- ref_rdf_joint %>% dplyr::select(self$samples1)
                 comp_sdf_joint <- comp_rdf_joint %>% dplyr::select(self$samples2)
                 
-                corr_types <- c("pearson", "spearman", "kendall")
+                corr_types <- list("pearson", "spearman", "kendall")
                 corrs <- lapply(
                     corr_types,
                     function(corr_type) {
-                        pearson_corr <- mapply(
-                            cor,
-                            ref_sdf_joint %>% t() %>% data.frame(),
-                            comp_sdf_joint %>% t() %>% data.frame(),
-                            MoreArgs = list("use" = "pairwise.complete.obs", "method" = corr_type)
-                        )
+                        lapply(seq_len(nrow(ref_sdf_joint)), function(row_i, ref_mat, comp_mat, corr_type) {
+                            ref_row <- ref_mat[row_i, ] %>% unlist()
+                            comp_row <- comp_mat[row_i, ] %>% unlist()
+                            if (length(na.omit(ref_row)) < 3 || length(na.omit(comp_row)) < 3) {
+                                NA
+                            }
+                            else {
+                                if (corr_type == "pearson") {
+                                    cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type)
+                                    data.frame(pval=cor_val$p.value, cor=cor_val$estimate)
+                                }
+                                else {
+                                    cor_val <- cor(ref_row, comp_row, use="pairwise.complete.obs", method=corr_type)
+                                    data.frame(pval=NA, cor=cor_val)
+                                }
+                            }
+                        }, ref_mat=ref_sdf_joint, comp_mat=comp_sdf_joint, corr_type=corr_type) %>% 
+                            do.call("rbind", .) %>%
+                            rename_all(~paste(corr_type, ., sep="."))
                     }
-                )
-                names(corrs) <- corr_types
+                ) %>% do.call("cbind", .) %>% mutate(pearson.fdr=p.adjust(pearson.pval, method = "BH"))
+                # names(corrs) <- corr_types
                 self$correlations <- corrs
                 
             }

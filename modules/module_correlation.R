@@ -5,6 +5,10 @@ setup_correlation_ui <- function(id) {
         fluidPage(
             bar_w_help("Correlation", ns("help")),
             fluidRow(
+                column(6, sliderInput(ns("pthres"), "P-value threshold", min=0, max=1, value=0.05)),
+                column(6, sliderInput(ns("fdrthres"), "FDR threshold", min=0, max=1, value=0.05))
+            ),
+            fluidRow(
                 htmlOutput(ns("warnings")),
                 plotOutput(ns("correlation_histograms"))
             )
@@ -29,24 +33,33 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         
         comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         
-        make_corr_hist <- function(target_df, aes_x, title, bins=100) {
-            mean_corr <- mean(target_df[[aes_x]], na.rm=TRUE)
-            ggplot(target_df, aes_string(x=aes_x)) +
+        make_corr_hist <- function(target_df, corr_base, title, has_sig=FALSE, bins=100) {
+
+            cor_str <- sprintf("%s.cor", corr_base)
+            if (has_sig) {
+                p_str <- sprintf("%s.pval", corr_base)
+                fdr_str <- sprintf("%s.fdr", corr_base)
+                target_df$sig_type <- ifelse(
+                    target_df[[fdr_str]] < input$fdrthres, 
+                    "FDR<0.05", 
+                    ifelse(target_df[[p_str]] < input$pthres, 
+                           "P<0.05", 
+                           "Not sig.")
+                    )
+            }
+            else {
+                target_df$sig_type <- "NA"
+            }
+            mean_corr <- mean(target_df[[cor_str]], na.rm=TRUE)
+            ggplot(target_df, aes_string(x=cor_str, fill="sig_type")) +
                 geom_histogram(bins=bins, na.rm=TRUE) +
                 geom_vline(xintercept = mean_corr, na.rm=TRUE) +
                 ggtitle(sprintf("%s (mean %s)", title, round(mean_corr, 3))) +
-                xlim(-1, 1) + xlab("Correlation") + ylab("Count")
+                xlim(-1, 1) + xlab("Correlation") + ylab("Count") + scale_fill_manual(values=c("#aaaaaa", "#990000", "#000099"))
         }
 
-        # Spotcheck correlation
-        # loess_samp <- rv$selected_cols_obj()$prot_loess_rdf_1819_matched_2out.tsv$samples
-        # log2_samp <- rv$selected_cols_obj()$prot_log2_rdf_1819_matched_2out.tsv$samples
-        # loess_sdf <- comb_df %>% dplyr::select(paste0("d1.", loess_samp))
-        # log2_sdf <- comb_df %>% dplyr::select(paste0("d2.", log2_samp))
-        # plt <- ggplot(data.frame(loess=loess_sdf[1, ] %>% unlist(), log2=log2_sdf[1, ] %>% unlist()), aes(x=log2, y=loess)) + geom_point()
-        
         ggpubr::ggarrange(
-            make_corr_hist(comb_df, "d2.pearson", "Pearson"),
+            make_corr_hist(comb_df, "d2.pearson", "Pearson", has_sig=TRUE),
             make_corr_hist(comb_df, "d2.spearman", "Spearman"),
             make_corr_hist(comb_df, "d2.kendall", "Kendall"),
             nrow=3
