@@ -65,14 +65,14 @@ setup_plotly_ui <- function(id) {
                                              style="padding:20px")
                                )),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
-                           sliderInput(ns("pca_variance_cutoff"), "PCA var. cut.", value=0.4, step=0.05, min=0, max=1),
                            checkboxInput(ns("set_same_axis"), "Set same axis ranges", value = FALSE),
-                           textInput(ns("ref_custom_header"), "Custom ref. header", value=""),
-                           textInput(ns("comp_custom_header"), "Custom comp. header", value=""),
                            checkboxInput(ns("more_settings"), "Show more settings", value = FALSE),
                            conditionalPanel(
                                sprintf("input['%s'] == 1", ns("more_settings")),
-                               sliderInput(ns("bin_count"), "Bin count", value=100, step=10, min=10, max=200),
+                               textInput(ns("ref_custom_header"), "Custom ref. header", value=""),
+                               textInput(ns("comp_custom_header"), "Custom comp. header", value=""),
+                               sliderInput(ns("pca_variance_cutoff"), "PCA var. cut.", value=0.4, step=0.05, min=0, max=1),
+                               sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
                                sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
                            )
                        )
