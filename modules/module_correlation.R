@@ -4,10 +4,8 @@ setup_correlation_ui <- function(id) {
         id,
         fluidPage(
             bar_w_help("Correlation", ns("help")),
-            fluidRow(
-                column(6, sliderInput(ns("pthres"), "P-value threshold", min=0, max=1, value=0.05)),
-                column(6, sliderInput(ns("fdrthres"), "FDR threshold", min=0, max=1, value=0.05))
-            ),
+            sliderInput(ns("pthres"), "P-value threshold", min=0, max=1, value=0.05),
+            sliderInput(ns("fdrthres"), "FDR threshold", min=0, max=1, value=0.05),
             fluidRow(
                 htmlOutput(ns("warnings")),
                 plotOutput(ns("correlation_histograms"))
@@ -35,17 +33,21 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         
         make_corr_hist <- function(target_df, corr_base, title, has_sig=FALSE, bins=100) {
 
+            not_sig_string <- "Not sig."
+            p_level_string <- sprintf("P<%s", input$pthres)
+            fdr_level_string <- sprintf("FDR<%s", input$fdrthres)
+            
             cor_str <- sprintf("%s.cor", corr_base)
             if (has_sig) {
                 p_str <- sprintf("%s.pval", corr_base)
                 fdr_str <- sprintf("%s.fdr", corr_base)
                 target_df$sig_type <- ifelse(
                     target_df[[fdr_str]] < input$fdrthres, 
-                    "FDR<0.05", 
+                    fdr_level_string, 
                     ifelse(target_df[[p_str]] < input$pthres, 
-                           "P<0.05", 
+                           p_level_string, 
                            "Not sig.")
-                    )
+                    ) %>% factor(levels=c("Not sig.", p_level_string, fdr_level_string))
             }
             else {
                 target_df$sig_type <- "NA"
@@ -55,7 +57,7 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
                 geom_histogram(bins=bins, na.rm=TRUE) +
                 geom_vline(xintercept = mean_corr, na.rm=TRUE) +
                 ggtitle(sprintf("%s (mean %s)", title, round(mean_corr, 3))) +
-                xlim(-1, 1) + xlab("Correlation") + ylab("Count") + scale_fill_manual(values=c("#aaaaaa", "#990000", "#000099"))
+                xlim(-1, 1) + xlab("Correlation") + ylab("Count") + scale_fill_manual(values=c("#aaaaaa", "#3399FF", "#FF3333"))
         }
 
         ggpubr::ggarrange(
