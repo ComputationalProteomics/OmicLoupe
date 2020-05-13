@@ -67,8 +67,13 @@ setup_quality_ui <- function(id) {
                         checkboxInput(ns("show_more_settings"), "Show more settings", value = FALSE),
                         conditionalPanel(
                             sprintf("input['%s'] == 1", ns("show_more_settings")),
-                            textInput(ns("custom_title1"), "Custom title 1", value = ""),
-                            textInput(ns("custom_title2"), "Custom title 2", value = "")
+                            fluidRow(
+                                textInput(ns("custom_title1"), "Custom title 1", value = ""),
+                                textInput(ns("custom_title2"), "Custom title 2", value = "")
+                            ),
+                            fluidRow(
+                                numericInput(ns("text_size"), "Text size", value=10)
+                            )
                         )
                     ),
                     htmlOutput(ns("warnings")),
@@ -251,10 +256,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
     })
     
-    
-    
     # long_sdf, value_col, ddf, join_by_ref, dataset, color, show_missing=FALSE, rotate_labels=FALSE
-    
     output$bars_ref <- renderPlotly({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
@@ -268,11 +270,14 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$dataset1, 
             ref_color(), 
             show_missing=input$show_missing_ref, 
-            input$rotate_label_barplot) %>%
-            plotly::ggplotly()
+            input$rotate_label_barplot,
+            title=input$custom_title1,
+            text_size=input$text_size) %>%
+                plotly::ggplotly()
     })
     
     output$bars_comp <- renderPlotly({
+        
         req(rv$ddf_comp(rv, input$dataset2))
         req(reactive_long_sdf_comp())
         
@@ -284,12 +289,12 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$dataset2, 
             comp_color(), 
             show_missing=input$show_missing_comp, 
-            input$rotate_label_barplot) %>%
-            plotly::ggplotly()
+            input$rotate_label_barplot,
+            title=input$custom_title2,
+            text_size=input$text_size) %>%
+                plotly::ggplotly()
     })
 
-
-    
     output$boxplots_ref <- renderPlotly({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
@@ -297,8 +302,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
-            aes_string(x="name", y="value", color=ref_color())) + 
-            ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
+            aes_string(x="name", y="value", color=ref_color()))
+
+        if (input$custom_title1 == "") plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
+        else plt_ref <- plt_ref + ggtitle(input$custom_title1)
 
         adjust_boxplot(
             plt_ref, 
@@ -307,7 +314,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$order_on_cond,
             rv$ddf_ref(rv, input$dataset1),
             rv$ddf_samplecol_ref(rv, input$dataset1),
-            input$color_data_ref
+            input$color_data_ref,
+            text_size=input$text_size
         ) %>% plotly::ggplotly()
     })
 
@@ -318,9 +326,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
-            aes_string(x="name", y="value", color=comp_color())) + 
-            ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
+            aes_string(x="name", y="value", color=comp_color()))
 
+        if (input$custom_title2 == "") plt_comp <- plt_comp + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
+        else plt_comp <- plt_comp + ggtitle(input$custom_title2)
+        
         adjust_boxplot(
             plt_comp, 
             input$do_violin, 
@@ -328,11 +338,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$order_on_cond,
             rv$ddf_comp(rv, input$dataset2),
             rv$ddf_samplecol_comp(rv, input$dataset2),
-            input$color_data_comp
+            input$color_data_comp,
+            text_size=input$text_size
         ) %>% plotly::ggplotly()
     })
-    
-    
     
     output$density_ref_plotly <- renderPlotly({
         req(rv$ddf_ref(rv, input$dataset1))
@@ -342,7 +351,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             reactive_long_sdf_ref(),
             ref_color(),
             curr_dataset=input$dataset1,
-            title=input$custom_title1
+            title=input$custom_title1,
+            text_size=input$text_size
         )
     })
     
@@ -354,7 +364,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             reactive_long_sdf_comp(),
             comp_color(),
             curr_dataset=input$dataset2,
-            title=input$custom_title2
+            title=input$custom_title2,
+            text_size=input$text_size
         )
     })
     
@@ -376,8 +387,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         rdf[[adf_color_col_ref]] <- rdf[[adf_color_col_ref]] %>% fct_collapse(other=combine_names)
         rdf
     }
-    
-    
     
     output$dendrogram_ref <- renderPlot({
         req(rv$ddf_ref(rv, input$dataset1))
@@ -414,10 +423,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         }
         
         plt
-        
     })
-    # height=1000
-    
+
     output$histograms_ref <- renderPlot({ 
         
         req(rv$ddf_ref(rv, input$dataset1))
@@ -431,14 +438,17 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 target_color <- input$data_cat_col_ref
             }
             plt_ref <- ggplot(rdf_ref, aes_string(x=input$data_num_col_ref, fill=target_color)) + 
-                geom_histogram(na.rm=TRUE, bins=input$hist_bins) + 
-                ggtitle(sprintf("Dataset: %s Column: %s Fill: %s", input$dataset1, input$data_num_col_ref, input$data_cat_col_ref))
+                geom_histogram(na.rm=TRUE, bins=input$hist_bins)
+            
+            if (input$custom_title1 == "") plot_title <- sprintf("Dataset: %s Column: %s Fill: %s", input$dataset1, input$data_num_col_ref, input$data_cat_col_ref)
+            else plot_title <- input$custom_title1
+            plt_ref <- plt_ref + ggtitle(plot_title)
         }
         else {
             plt_ref <- ggplot() + ggtitle("Empty histogram")
         }
 
-        plt_ref + ylab("Count") + xlab(input$data_num_col_ref)
+        plt_ref + ylab("Count") + xlab(input$data_num_col_ref) + theme(text=element_text(size=input$text_size))
     })
     
     output$histograms_comp <- renderPlot({ 
@@ -454,32 +464,16 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 target_color <- input$data_cat_col_comp
             }
             plt_comp <- ggplot(rdf_comp, aes_string(x=input$data_num_col_comp, fill=target_color)) + 
-                geom_histogram(na.rm=TRUE, bins=input$hist_bins) + 
-                ggtitle(sprintf("Dataset: %s Column: %s Fill: %s", input$dataset2, input$data_num_col_comp, input$data_cat_col_comp))
+                geom_histogram(na.rm=TRUE, bins=input$hist_bins)
             
+            if (input$custom_title2 == "") plot_title <- sprintf("Dataset: %s Column: %s Fill: %s", input$dataset2, input$data_num_col_comp, input$data_cat_col_comp)
+            else plot_title <- input$custom_title2
+            plt_ref <- plt_comp + ggtitle(plot_title)
         }
         else {
             plt_comp <- ggplot() + ggtitle("Empty histogram")
         }
         
-        plt_comp + ylab("Count") + xlab(input$data_num_col_comp)
+        plt_comp + ylab("Count") + xlab(input$data_num_col_comp) + theme(text=element_text(size=input$text_size))
     })
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

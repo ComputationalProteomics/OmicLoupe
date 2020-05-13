@@ -64,7 +64,8 @@ setup_pca_ui <- function(id) {
                                    checkboxInput(ns("show_loadings"), "Show loadings", value = FALSE),
                                    numericInput(ns("variance_filter_data"), "Variance filter", min=0, max=1, step=0.01, value = 0.1),
                                    textInput(ns("custom_title1"), "Custom title 1", value=""),
-                                   textInput(ns("custom_title2"), "Custom title 2", value="")
+                                   textInput(ns("custom_title2"), "Custom title 2", value=""),
+                                   numericInput(ns("text_size"), "Text size", value=10)
                                )
                            )
                        )
@@ -114,8 +115,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     filtered_samples_ref <- reactive({
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(input$filter_cond_data1 != "")
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found for reference dataset"))
+        validate(need(input$filter_cond_data1 != "", "Expecting the filtering option to be used here, but no filtering condition found"))
         
         if (input$filter_cond_data1 == "None") {
             rv$ddf_ref(rv, input$dataset1) %>%
@@ -132,8 +133,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     filtered_samples_comp <- reactive({
-        req(rv$ddf_ref(rv, input$dataset2))
-        req(input$filter_cond_data2 != "")
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found for reference dataset"))
+        validate(need(input$filter_cond_data2 != "", "Expecting the filtering option to be used here, but no filtering condition found"))
+        
         
         if (input$filter_cond_data2 == "None") {
             rv$ddf_comp(rv, input$dataset2) %>%
@@ -150,8 +152,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     pca_ddf1 <- reactive({
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(rv$samples(rv, input$dataset1))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design found for dataset 1 while generating design 1 for PCA"))
+        validate(need(!is.null(rv$samples(rv, input$dataset1)), "No samples found for dataset 1 while generating design 1 for PCA"))
         
         target_samples <- filtered_samples_ref()
         rv$ddf_ref(rv, input$dataset1) %>% 
@@ -159,8 +161,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     pca_ddf2 <- reactive({
-        req(rv$ddf_comp(rv, input$dataset2))
-        req(rv$samples(rv, input$dataset2))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design found for dataset 1 while generating design 2 for PCA"))
+        validate(need(!is.null(rv$samples(rv, input$dataset2)), "No samples found for dataset 1 while generating design 2 for PCA"))
         
         target_samples <- filtered_samples_comp()
         rv$ddf_comp(rv, input$dataset2) %>% 
@@ -169,10 +171,10 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     pca_obj1 <- reactive({
         
-        req(rv$rdf_ref(rv, input$dataset1))
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(rv$samples(rv, input$dataset1))
-        
+        validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No reference dataset found while building PCA 1"))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No reference design found while building PCA 1"))
+        validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found for reference while building PCA 1"))
+
         filtered_samples <- filtered_samples_ref()
         calculate_pca_obj(
             rv$rdf_ref(rv, input$dataset1),
@@ -185,9 +187,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     pca_obj2 <- reactive({
         
-        req(rv$rdf_comp(rv, input$dataset2))
-        req(rv$ddf_comp(rv, input$dataset2))
-        req(rv$samples(rv, input$dataset2))
+        validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No reference dataset found while building PCA 2"))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No reference design found while building PCA 2"))
+        validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found for reference while building PCA 2"))
         
         filtered_samples <- filtered_samples_comp()
         calculate_pca_obj(
@@ -264,7 +266,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     ########### FUNCTIONS ############
     
-    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, label_col, title_label="No title set", dot_size=3, show_labels=FALSE, color_as_fact=FALSE) {
+    make_pca_plt <- function(ddf, pca_obj, pc1, pc2, color, shape, sample, label_col, title_label="No title set", dot_size=3, show_labels=FALSE, color_as_fact=FALSE, text_size=10) {
         
         pc1_lab <- sprintf("PC%s", pc1)
         pc2_lab <- sprintf("PC%s", pc2)
@@ -291,7 +293,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         plt_base + 
             ggtitle(sprintf("Dataset: %s (dim: %s)", title_label, paste(dim(pca_obj$rotation), collapse=", "))) +
             xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
-            ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%"))
+            ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%")) +
+            theme(text=element_text(size=text_size))
     }
     
     make_pair_pca_plot <- function(ddf, pca_obj, color, color_as_fact=FALSE, pcs) {
@@ -314,28 +317,6 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     }
     
     ########### OUTPUTS ############
-    
-    output$warnings <- renderUI({
-        
-        error_vect <- c()
-        if (is.null(rv$filename_1())) {
-            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-        }
-        else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
-            error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
-        }
-        
-        if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
-            error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
-        }
-        
-        if (is.null(rv$design_1())) {
-            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        }
-        
-        total_text <- paste(error_vect, collapse="<br>")
-        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
     
     output$loadings_plot1 <- renderPlot({
         make_loadings_plot(pca_obj1(), "Loadings PCA 1", display_count=10)
@@ -375,6 +356,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     output$pca_plot1 <- renderPlotly({
         
+        # validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
+        
         if (has_value(input$color_data1)) color_col <- input$color_data1
         else color_col <- NULL
         
@@ -398,7 +381,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             title_label=input$dataset1,
             dot_size=input$dot_size,
             show_labels = input$show_labels_data, 
-            color_as_fact = input$data1_as_factor
+            color_as_fact = input$data1_as_factor,
+            text_size=input$text_size
         )
         
         if (input$custom_title1 != "") {
@@ -432,8 +416,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             "label",
             input$dot_size,
             title_label=input$dataset2,
-            show_labels = input$show_labels_data, 
-            color_as_fact = input$data2_as_factor
+            show_labels=input$show_labels_data, 
+            color_as_fact=input$data2_as_factor,
+            text_size=input$text_size
         ) 
         
         if (input$custom_title2 != "") {
