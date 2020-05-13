@@ -136,9 +136,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     sync_param_choices <- function() {
         
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(rv$ddf_comp(rv, input$dataset2))
-
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(rv$ddf_comp(rv, input$dataset2))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "Didn't find any design for dataset 1 while syncing input choices"))
+        validate(need(!is.null(rv$ddf_comp(rv, input$dataset2)), "Didn't find any design for dataset 2 while syncing input choices"))
+        
         set_if_new <- function(prev_val, new_values, new_val_selected) {
             if (is.null(prev_val)) new_val_selected
             else if (prev_val %in% new_values) prev_val
@@ -174,13 +176,20 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
-        if (is.null(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]])) {
-            stop("Datasets not properly mapped, stopping")
-        }
+        validate(need(
+            !is.null(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]), 
+            "Did not find dataset mapping, have you loaded the data at the Setup page?"))
+        validate(need(
+            !is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]]), 
+            "Did not find sample columns, have you mapped your samples at the Setup page?"))
         
-        if (is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])) {
-            stop("Samples not properly mapped, stopping")
-        }
+        # if (is.null(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]])) {
+        #     stop("Datasets not properly mapped, stopping")
+        # }
+        # 
+        # if (is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])) {
+        #     stop("Samples not properly mapped, stopping")
+        # }
         
         dataset <- rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]
         sample_cols <- rv$mapping_obj()[[sprintf("samples%s", data_ind)]]
@@ -241,26 +250,28 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         else { NULL }
     })
     
-    output$warnings <- renderUI({
-        
-        error_vect <- c()
-        if (is.null(rv$filename_1())) {
-            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-        }
-        
-        if (is.null(rv$design_1())) {
-            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        }
-        
-        total_text <- paste(error_vect, collapse="<br>")
-        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
+    # output$warnings <- renderUI({
+    #     
+    #     error_vect <- c()
+    #     if (is.null(rv$filename_1())) {
+    #         error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+    #     }
+    #     
+    #     if (is.null(rv$design_1())) {
+    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+    #     }
+    #     
+    #     total_text <- paste(error_vect, collapse="<br>")
+    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    # })
     
     # long_sdf, value_col, ddf, join_by_ref, dataset, color, show_missing=FALSE, rotate_labels=FALSE
     output$bars_ref <- renderPlotly({ 
         
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(reactive_long_sdf_ref())
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(reactive_long_sdf_ref())
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         make_barplot(
             reactive_long_sdf_ref(), 
@@ -278,8 +289,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$bars_comp <- renderPlotly({
         
-        req(rv$ddf_comp(rv, input$dataset2))
-        req(reactive_long_sdf_comp())
+        # req(rv$ddf_comp(rv, input$dataset2))
+        # req(reactive_long_sdf_comp())
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         make_barplot(
             reactive_long_sdf_comp(), 
@@ -297,8 +310,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     output$boxplots_ref <- renderPlotly({ 
         
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(reactive_long_sdf_ref())
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(reactive_long_sdf_ref())
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
@@ -321,8 +336,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     output$boxplots_comp <- renderPlotly({ 
         
-        req(rv$ddf_comp(rv, input$dataset2))
-        req(reactive_long_sdf_comp())
+        # req(rv$ddf_comp(rv, input$dataset2))
+        # req(reactive_long_sdf_comp())
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
@@ -344,9 +361,12 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     })
     
     output$density_ref_plotly <- renderPlotly({
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(reactive_long_sdf_ref())
-
+        
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(reactive_long_sdf_ref())
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        
         make_density_plot(
             reactive_long_sdf_ref(),
             ref_color(),
@@ -357,8 +377,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     })
     
     output$density_comp_plotly <- renderPlotly({
-        req(rv$ddf_comp(rv, input$dataset2))
-        req(reactive_long_sdf_comp())
+        # req(rv$ddf_comp(rv, input$dataset2))
+        # req(reactive_long_sdf_comp())
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         make_density_plot(
             reactive_long_sdf_comp(),
@@ -389,8 +411,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     }
     
     output$dendrogram_ref <- renderPlot({
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(rv$rdf_ref(rv, input$dataset1))
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(rv$rdf_ref(rv, input$dataset1))
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         plt <- do_dendrogram(
             ref_sdf(),
@@ -408,8 +432,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     })
     
     output$dendrogram_comp <- renderPlot({
-        req(rv$ddf_ref(rv, input$dataset2))
-        req(rv$rdf_ref(rv, input$dataset2))
+        # req(rv$ddf_ref(rv, input$dataset2))
+        # req(rv$rdf_ref(rv, input$dataset2))
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         plt <- do_dendrogram(
             comp_sdf(),
@@ -427,8 +453,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     output$histograms_ref <- renderPlot({ 
         
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(reactive_long_sdf_ref())
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(reactive_long_sdf_ref())
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         if (input$data_num_col_ref != "None") {
             rdf_ref <- rv$rdf_ref(rv, input$dataset1)
@@ -453,8 +481,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$histograms_comp <- renderPlot({ 
         
-        req(rv$ddf_ref(rv, input$dataset2))
-        req(reactive_long_sdf_comp())
+        # req(rv$ddf_ref(rv, input$dataset2))
+        # req(reactive_long_sdf_comp())
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         if (input$data_num_col_comp != "None") {
             rdf_comp <- rv$rdf_comp(rv, input$dataset2)

@@ -138,16 +138,23 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
     
     output$table_display <- DT::renderDataTable({
-        req(rv$mapping_obj())
-        req(rv$mapping_obj()$get_combined_dataset())
+        # req(rv$mapping_obj())
+        # req(rv$mapping_obj()$get_combined_dataset())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
+        
         rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
     })
     
     plot_df_ref <- reactive({
-        req(rv$rdf_ref(rv, input$dataset1))
-        req(rv$ddf_ref(rv, input$dataset1))
-        req(rv$samples(rv, input$dataset1))
-        req(input$table_display_rows_selected)
+        # req(rv$rdf_ref(rv, input$dataset1))
+        # req(rv$ddf_ref(rv, input$dataset1))
+        # req(rv$samples(rv, input$dataset1))
+        # req(input$table_display_rows_selected)
+        validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No data matrix found, is it loaded at the Setup page?"))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found, is it loaded at the Setup page?"))
+        validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
+        validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
         
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
@@ -169,10 +176,15 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
     
     plot_df_comp <- reactive({
-        req(rv$rdf_comp(rv, input$dataset2))
-        req(rv$ddf_comp(rv, input$dataset2))
-        req(rv$samples(rv, input$dataset2))
-        req(input$table_display_rows_selected)
+        # req(rv$rdf_comp(rv, input$dataset2))
+        # req(rv$ddf_comp(rv, input$dataset2))
+        # req(rv$samples(rv, input$dataset2))
+        # req(input$table_display_rows_selected)
+        validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No data matrix found, is it loaded at the Setup page?"))
+        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
+        validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
+        validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
+        
 
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
@@ -217,7 +229,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     }
         
     output$spot_display_ref <- renderPlotly({
-        req(plot_df_ref())
+        # req(plot_df_ref())
+        validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
 
         target_row <- input$table_display_rows_selected
         make_spotcheck_plot(
@@ -231,7 +244,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
     output$spot_display_comp <- renderPlotly({
         
-        req(plot_df_comp())
+        # req(plot_df_comp())
+        validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
         
         target_row <- input$table_display_rows_selected
         make_spotcheck_plot(
@@ -243,27 +257,27 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         ) %>% ggplotly()
     })
     
-    output$warnings <- renderUI({
-        
-        error_vect <- c()
-        if (is.null(rv$filename_1())) {
-            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-        }
-        else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
-            error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
-        }
-        
-        if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
-            error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
-        }
-        
-        if (is.null(rv$design_1())) {
-            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        }
-        
-        total_text <- paste(error_vect, collapse="<br>")
-        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
+    # output$warnings <- renderUI({
+    #     
+    #     error_vect <- c()
+    #     if (is.null(rv$filename_1())) {
+    #         error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+    #     }
+    #     else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
+    #         error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
+    #     }
+    #     
+    #     if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
+    #         error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
+    #     }
+    #     
+    #     if (is.null(rv$design_1())) {
+    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+    #     }
+    #     
+    #     total_text <- paste(error_vect, collapse="<br>")
+    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    # })
 }
 
 

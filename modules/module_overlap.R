@@ -178,8 +178,10 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     output_table_reactive <- reactive({
         
-        req(rv$mapping_obj())
-        req(rv$mapping_obj()$get_combined_dataset())
+        # req(rv$mapping_obj())
+        # req(rv$mapping_obj()$get_combined_dataset())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
         ref_pass <- names(ref_pass_reactive())
         comp_pass <- names(comp_pass_reactive())
@@ -506,6 +508,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         input$dataset1 
         input$dataset2}, {
             req(rv$filename_1())
+
             choices_1 <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
             updateSelectInput(session, "ref_contrast", choices=choices_1, selected=choices_1[1])
             updateSelectInput(session, "upset_ref_comparisons", choices=choices_1, selected=choices_1)

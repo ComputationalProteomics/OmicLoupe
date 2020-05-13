@@ -338,7 +338,8 @@ module_setup_server <- function(input, output, session, module_name) {
     output$parse_err_design_2_handler <- err_log_download_handler(rv, "design_2")
     
     observeEvent(rv$mapping_obj(), {
-        req(rv$mapping_obj()$get_combined_dataset())
+        # req(rv$mapping_obj()$get_combined_dataset())
+        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, something wrong with the mapping?"))
         
         comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
         samples_ref <- NULL
@@ -378,8 +379,10 @@ module_setup_server <- function(input, output, session, module_name) {
         switch(
             target,
             "MappedData"={
-                req(rv$mapping_obj())
-                req(rv$mapping_obj()$get_combined_dataset())
+                # req(rv$mapping_obj())
+                # req(rv$mapping_obj()$get_combined_dataset())
+                validate(need(!is.null(rv$mapping_obj()), "No mapped data found in get_target_data, something wrong with the mapping?"))
+                validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found in get_target_data, something wrong with the mapping?"))
                 if (get_raw) {
                     rv$dt_parsed_data_raw(rv, rv$mapping_obj()$get_combined_dataset())
                 }
@@ -388,15 +391,18 @@ module_setup_server <- function(input, output, session, module_name) {
                 }
             },
             "Design1"={
-                req(rv$design_1)
+                # req(rv$design_1)
+                validate(need(!is.null(rv$design_1), "No design 1 found in get_target_data, something wrong with the design matrix?"))
                 rv$design_1()
             },
             "Design2"={
-                req(rv$design_2)
+                validate(need(!is.null(rv$design_2), "No design 2 found in get_target_data, something wrong with the design matrix?"))
+                # req(rv$design_2)
                 rv$design_2()
             },
             "RawData1"={
-                req(rv$filedata_1())
+                # req(rv$filedata_1())
+                validate(need(!is.null(rv$filedata_1()), "No filedata 1 found in get_target_data, something wrong with loading the file?"))
                 rv$dt_parsed_data(
                     rv, 
                     rv$filedata_1(), 
@@ -404,7 +410,8 @@ module_setup_server <- function(input, output, session, module_name) {
                 )
             },
             "RawData2"={
-                req(rv$filedata_2())
+                # req(rv$filedata_2())
+                validate(need(!is.null(rv$filedata_2()), "No filedata 2 found in get_target_data, something wrong with loading the file?"))
                 rv$dt_parsed_data(
                     rv, 
                     rv$filedata_2(), 
@@ -563,7 +570,10 @@ module_setup_server <- function(input, output, session, module_name) {
         
         output$column_status <- renderText("A dataset and a design matrix need to be assigned before being able to detect sample columns")
         
-        req(!is.null(input$design_sample_col_1), input$design_sample_col_1 != "", !is.null(rv$filedata_1()))
+        # req(!is.null(input$design_sample_col_1), input$design_sample_col_1 != "", !is.null(rv$filedata_1()))
+        validate(need(!is.null(input$design_sample_col_1), "Autodetect columns didn't find any sample column in the design matrix"))
+        validate(need(input$design_sample_col_1 != "", "Autodetect columns didn't find any non-empty sample column in the design matrix"))
+        validate(need(!is.null(rv$filedata_1()), "Autodetect columns didn't find any filedata 1"))
         
         if (input$automatic_sample_detect) {
             sample_col_1 <- detect_sample_column(rv$design_1(), rv$filedata_1())
@@ -705,7 +715,8 @@ module_setup_server <- function(input, output, session, module_name) {
     })
     
     observeEvent(rv$mapping_obj(), {
-        req(!is.null(rv$mapping_obj()))
+        # req(!is.null(rv$mapping_obj()))
+        
         number_files <- length(which(c(!is.null(input$data_file_1), !is.null(input$data_file_2))))
         
         if (number_files == 2) {
