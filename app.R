@@ -33,6 +33,7 @@ source("R/reactive_values.R")
 source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
 source("R/help_texts.R")
+source("R/upset_utility_functions.R")
 
 ui <- navbarPage(
     

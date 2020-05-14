@@ -75,7 +75,8 @@ setup_overlap_ui <- function(id) {
                                  DT::DTOutput(ns("table_display"))
                         ),
                         tabPanel("Upset",
-                                 plotOutput(ns("upset"))
+                                 plotOutput(ns("upset"), height = 800),
+                                 DT::DTOutput(ns("table_display_upset"))
                         ),
                         tabPanel("FoldComparison",
                                  plotOutput(ns("fold_comp"))
@@ -152,7 +153,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     })
     
     observeEvent(parsed_overlap_entries(), {
-        
         updateSelectInput(session, "upset_crosssec_display", choices=parsed_overlap_entries(), selected = parsed_overlap_entries())
     })
     
@@ -164,39 +164,16 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         rv$set_selected_feature(selected_id_reactive(), module_name)
     })
     
-    parse_contrast_pass_list <- function(target_data, target_contrast, contrast_type) {
-        
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
-        sig_field <- rv$statcols_ref(rv, target_data, target_contrast)[[contrast_type]]
-        fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
-        
-        pass_stat_contrast <- combined_dataset[, sig_field] < input$stat_threshold
-
-        if (input$use_fold_cutoff) {
-            pass_fold_contrast <- abs(combined_dataset[, fold_field]) > input$fold_threshold
-        }
-        else {
-            pass_fold_contrast <- TRUE
-        }
-        
-        pass_all_contrast <- pass_stat_contrast & pass_fold_contrast
-        
-        pass_tbl <- combined_dataset %>%
-            filter(pass_all_contrast) %>%
-            dplyr::select(all_of(c("comb_id", fold_field))) %>%
-            dplyr::rename(fold=fold_field) %>%
-            mutate(comb_id=as.character(comb_id))
-
-        pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
-        pass_list
-    }
-    
     ref_pass_reactive <- reactive({
-        parse_contrast_pass_list(input$dataset1, input$ref_contrast, input$stat_contrast_type)
+        parse_contrast_pass_list(rv, input, input$dataset1, input$ref_contrast, input$stat_contrast_type)
     })
     
     comp_pass_reactive <- reactive({
-        parse_contrast_pass_list(input$dataset2, input$comp_contrast, input$stat_contrast_type)
+        parse_contrast_pass_list(rv, input, input$dataset2, input$comp_contrast, input$stat_contrast_type)
+    })
+    
+    upset_selected_ids <- reactive({
+        
     })
     
     output_table_reactive <- reactive({
@@ -204,141 +181,107 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
-        ref_pass <- names(ref_pass_reactive())
-        comp_pass <- names(comp_pass_reactive())
+        # browser()
         
-        if (input$select_target == "A&B") {
-            target_ids <- union(ref_pass, comp_pass)
+        if (input$plot_tabs == "Venn") {
+            ref_pass <- names(ref_pass_reactive())
+            comp_pass <- names(comp_pass_reactive())
+            
+            if (input$select_target == "A&B") {
+                target_ids <- union(ref_pass, comp_pass)
+            }
+            else if (input$select_target == "A|B") {
+                target_ids <- intersect(ref_pass, comp_pass)
+            }
+            else if (input$select_target == "A") {
+                target_ids <- setdiff(ref_pass, comp_pass)
+            }
+            else if (input$select_target == "B") {
+                target_ids <- setdiff(comp_pass, ref_pass)
+            }
+            else {
+                stop(sprintf("Unknown input$select_target: %s", input$select_target))
+            }
         }
-        else if (input$select_target == "A|B") {
-            target_ids <- intersect(ref_pass, comp_pass)
-        }
-        else if (input$select_target == "A") {
-            target_ids <- setdiff(ref_pass, comp_pass)
-        }
-        else if (input$select_target == "B") {
-            target_ids <- setdiff(comp_pass, ref_pass)
+        else if (input$plot_tabs == "Upset") {
+            plot_list <- upset_plot_list()
+            set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by())
+            crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, upset_order_by()))]
+            input$upset_crosssec_display
+            
+            all_contrasts <- UpSetR::fromList(plot_list) %>% colnames()
+            
+            # browser()
+            
+            
+            
+            all_genes <- plot_list %>% unlist() %>% unique()
+            my_function <- function(x, all_features){
+                is.element(all_features, x)
+            }
+            
+            parsed_w_rownames <- as.data.frame(lapply(plot_list, my_function, all_features=all_genes))
+            rownames(parsed_w_rownames) <- all_genes
+            # test <- as.data.frame(lapply(my_sets, my_function))
+            parsed_w_rownames[parsed_w_rownames=="TRUE"]<- 1
+            parsed_w_rownames[parsed_w_rownames=="FALSE"]<- 0
+            
+            
+            
+            
+            
+            
+            
+            non_selected_contrasts <- c(all_contrasts[!all_contrasts %in% input$upset_crosssec_display])
+            filtered_contrast_matrix <- parsed_w_rownames %>% 
+                rownames_to_column("id_col") %>%
+                filter_at(vars(all_of(input$upset_crosssec_display)), ~.==1)
+
+            if (length(non_selected_contrasts) > 0) {
+                filtered_contrast_matrix <- filtered_contrast_matrix %>% filter_at(vars(all_of(non_selected_contrasts)), ~.==0)
+            }
+            target_ids <- filtered_contrast_matrix %>% pull(id_col)
         }
         else {
-            stop(sprintf("Unknown input$select_target: %s", input$select_target))
+            stop("input$plot_tabs should be either Venn or Upset, found: ", input$plot_tabs)
         }
         
         rv$mapping_obj()$get_combined_dataset() %>%
             filter(comb_id %in% target_ids)
     })
     
-    get_ordered_sets <- function(upset_list, order_on) {
-        # Translates "1010" to retrieving contrast names 1 and 3 in a list
-        retrieve_contrasts_from_union_string <- function(union_string_list) {
-            str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% names(upset_list)[.])
-        }
-        
-        unordered <- upset_list %>% 
-            unite("union_contrast_string", names(upset_list), sep="", remove = FALSE) %>% 
-            group_by(union_contrast_string) %>% 
-            summarize(nbr=n()) %>% 
-            dplyr::mutate(grade=union_contrast_string %>% gsub("0", "", .) %>% str_length()) %>%
-            dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(union_contrast_string)) %>%
-            dplyr::mutate(string_entries=map(included_entries, ~paste(., collapse=",")) %>% unlist())
-        
-        if (order_on == "freq") {
-            unordered %>% arrange(desc(nbr))
-        }
-        else if (order_on == "degree") {
-            unordered %>% arrange(desc(grade))
-        }
-        else {
-            stop("Unknown ordering condition: ", order_on)
-        }
-        
-        # all_combinations <- map(seq_len(length(names(upset_list))), ~combn(names(upset_list), ., FUN=list)) %>% unlist(recursive = F)
-        # str_split("0101", "") %>% unlist() %>% map(~ifelse(.=="1", TRUE, FALSE)) %>% unlist() %>% names(upset_list)[.]
-        # upset_list %>% filter_at(vars("t_2h"), ~.==1) %>% filter_at(vars("t_6h", "t_10h", "t_24h"), ~.==0)
-    }
-    
-    output$upset <- renderPlot({
-        
-        extract_set_names_list <- function(comparisons, dataset, contrast_type, fold_split) {
-            lapply(comparisons, function(stat_pattern, dataset, contrast_type, fold_split) {
-                joint_entries_w_fold <- parse_contrast_pass_list(dataset, stat_pattern, contrast_type)
-                if (!fold_split) {
-                    joint_entries_w_fold %>% names()
-                }
-                else {
-                    joint_up_features <- Filter(function(elem) { elem > 0 }, joint_entries_w_fold)
-                    joint_down_features <- Filter(function(elem) { elem < 0 }, joint_entries_w_fold)
-                    list(
-                        up = joint_up_features %>% names(),
-                        down = joint_down_features %>% names()
-                    )
-                }
-            }, dataset=dataset, contrast_type=contrast_type, fold_split=fold_split)
-        }
-        
-        get_plot_list <- function(names_list, comparisons, split_on_fold) {
-            plot_list <- names_list
-            names(plot_list) <- comparisons %>% gsub("\\.$", "", .)
-            if (split_on_fold) {
-                plot_list <- lapply(rapply(plot_list, enquote, how="unlist"), eval)
-            }
-            plot_list
-        }
-        
-        get_name_order <- function(plot_list, split_on_fold) {
-            if (!split_on_fold) {
-                names(plot_list)
-            }
-            else {
-                names(plot_list)[
-                    c( seq(1,length(names(plot_list)),2),
-                       seq(2,length(names(plot_list)),2) ) ]
-            }
-        }
-        
-        get_metadata <- function(plot_list, split_on_fold) {
-            if (split_on_fold) {
-                list(
-                    data = data.frame(
-                        comparison = c(names(plot_list)),
-                        fold_dir = rep(c("up", "down"), length(plot_list)/2)
-                    ),
-                    plots = list(list(
-                        type = "matrix_rows",
-                        column = "fold_dir",
-                        colors = c(up="navy", down="red"),
-                        alpha=0.2
-                    ))
-                )
-            }
-            else {
-                list(
-                    data = data.frame(
-                        comparison = c(names(plot_list)),
-                        dataset = "d1"
-                    )
-                )
-            }
-        }
-        
-        ref_names_list <- extract_set_names_list(input$upset_ref_comparisons, input$dataset1, input$stat_contrast_type, input$fold_split_upset)
-        plot_list <- get_plot_list(ref_names_list, input$upset_ref_comparisons, input$fold_split_upset)
-        name_order <- get_name_order(plot_list, input$fold_split_upset)
-        upset_metadata_obj <- get_metadata(plot_list, input$fold_split_upset)
+    upset_plot_list <- reactive({
 
+        ref_names_list <- upset_extract_set_names_list(rv, input, input$upset_ref_comparisons, input$dataset1, input$stat_contrast_type, input$fold_split_upset)
+        plot_list <- upset_get_plot_list(ref_names_list, input$upset_ref_comparisons, input$fold_split_upset)
         if (input$dataset1 != input$dataset2) {
-            
-            comp_names_list <- extract_set_names_list(input$upset_comp_comparisons, input$dataset2, input$stat_contrast_type, input$fold_split_upset)
-            plot_list_comp <- get_plot_list(comp_names_list, input$upset_comp_comparisons, input$fold_split_upset)
-            name_order <- c(
-                paste("d1", name_order, sep="."), 
-                paste("d2", get_name_order(plot_list_comp, input$fold_split_upset), sep=".")
-            )
-            
+            comp_names_list <- upset_extract_set_names_list(rv, input, input$upset_comp_comparisons, input$dataset2, input$stat_contrast_type, input$fold_split_upset)
+            plot_list_comp <- upset_get_plot_list(comp_names_list, input$upset_comp_comparisons, input$fold_split_upset)
             plot_list <- c(
                 plot_list %>% `names<-`(paste("d1", names(plot_list), sep=".")), 
                 plot_list_comp %>% `names<-`(paste("d2", names(plot_list_comp), sep="."))
             )
-
+        }
+        plot_list
+    })
+    
+    upset_name_order <- reactive({
+        plot_list <- upset_plot_list()
+        name_order <- upset_get_name_order(plot_list, input$fold_split_upset)
+        if (input$dataset1 != input$dataset2) {
+            
+            name_order <- c(
+                paste("d1", name_order, sep="."), 
+                paste("d2", upset_get_name_order(plot_list_comp, input$fold_split_upset), sep=".")
+            )
+        }
+        name_order
+    })
+    
+    upset_metadata <- reactive({
+        plot_list <- upset_plot_list()
+        upset_metadata_obj <- upset_get_metadata(plot_list, input$fold_split_upset)
+        if (input$dataset1 != input$dataset2) {
             if (!input$fold_split_upset) {
                 metadata <- data.frame(
                     comparison = names(plot_list),
@@ -363,15 +306,35 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 ))
             )
         }
-        
+    })
+    
+    upset_order_by <- reactive({
         if (input$upset_degree_order) {
-            upset_order_by <- "degree"
+            "degree"
         }
         else {
-            upset_order_by <- "freq"
+            "freq"
         }
+    })
+    
+    output$upset <- renderPlot({
         
-        validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
+        plot_list <- upset_plot_list()
+        name_order <- upset_name_order()
+        upset_metadata_obj <- upset_metadata()
+        
+        # if (input$upset_degree_order) {
+        #     upset_order_by <- "degree"
+        # }
+        # else {
+        #     upset_order_by <- "freq"
+        # }
+        
+        validate(need(
+            length(plot_list) > 1, 
+            sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))
+        ))
+        
         if ("plots" %in% names(upset_metadata_obj)) {
             target_metadata <- upset_metadata_obj
         }
@@ -379,34 +342,32 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             target_metadata <- NULL
         }
         
-        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by)
+        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by())
         crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, name_order))]
         bar_coloring <- (set_ordering$string_entries == paste(crosssection_target_ordered, collapse=",")) %>% ifelse("#298ff5", "gray23")
         
-        # browser()
-        
         UpSetR::upset(
             UpSetR::fromList(plot_list), 
-            set.metadata = target_metadata,
-            order.by=upset_order_by, 
+            set.metadata=target_metadata,
+            order.by=upset_order_by(), 
             sets=name_order,
             keep.order=TRUE,
             text.scale=2, 
-            nsets = input$upset_max_comps,
-            nintersects = input$upset_max_intersects,
-            main.bar.color = bar_coloring
+            nsets=input$upset_max_comps,
+            nintersects=input$upset_max_intersects,
+            main.bar.color=bar_coloring
         )
     }, height = 800)
     
     output$fold_comp <- renderPlot({
         
         ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
-            parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
+            parse_contrast_pass_list(rv, input, dataset, stat_pattern, contrast_type) %>% names()
         }, dataset=input$dataset1, contrast_type=input$stat_contrast_type)
         
         if (input$dataset1 != input$dataset2) {
             comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
-                parse_contrast_pass_list(dataset, stat_pattern, contrast_type) %>% names()
+                parse_contrast_pass_list(rv, input, dataset, stat_pattern, contrast_type) %>% names()
             }, dataset=input$dataset2, contrast_type=input$stat_contrast_type)
             
             plot_list <- c(ref_names_list, comp_names_list)
@@ -469,6 +430,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     output$fold_fractions_among_sig <- renderPlot({
         
+        validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
+        
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         
         plot_df <- data.frame(
@@ -490,7 +453,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         # ggarrange(plt_full, plt_subset, plt_cumfrac_over_logp, plt_cumfrac_over_p, ncol=2, nrow=2)
     })
     
-    output$table_display <- DT::renderDataTable({
+    output$table_display <- output$table_display_upset <- DT::renderDataTable({
         rv$dt_parsed_data(rv, output_table_reactive())
     })
     
@@ -529,20 +492,5 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             updateSelectInput(session, "comp_contrast", choices=choices_2, selected=choices_2[1])
             updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=choices_2)
         })
-    
-    # output$warnings <- renderUI({
-    #     
-    #     error_vect <- c()
-    #     if (is.null(rv$filename_1())) {
-    #         error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-    #     }
-    #     
-    #     if (is.null(rv$design_1())) {
-    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-    #     }
-    #     
-    #     total_text <- paste(error_vect, collapse="<br>")
-    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    # })
 }
 
