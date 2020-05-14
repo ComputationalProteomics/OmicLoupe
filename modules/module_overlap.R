@@ -286,7 +286,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             
             plot_list <- c(
                 plot_list %>% `names<-`(paste("d1", names(plot_list), sep=".")), 
-                plot_list_comp %>% `names<-`(paste("d2", names(plot_list), sep="."))
+                plot_list_comp %>% `names<-`(paste("d2", names(plot_list_comp), sep="."))
             )
 
             if (!input$fold_split_upset) {
@@ -330,7 +330,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             target_metadata <- NULL
         }
         
-        plt <- UpSetR::upset(
+        UpSetR::upset(
             UpSetR::fromList(plot_list), 
             set.metadata = target_metadata,
             order.by=upset_order_by, 
@@ -340,7 +340,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             nsets = input$upset_max_comps,
             nintersects = input$upset_max_intersects
         )
-        plt
     }, height = 800)
     
     output$fold_comp <- renderPlot({
