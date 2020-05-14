@@ -55,6 +55,14 @@ setup_overlap_ui <- function(id) {
                         )
                     ),
                     htmlOutput(ns("warnings")),
+                    conditionalPanel(
+                        sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
+                        wellPanel(
+                            h3("Select overlap"),
+                            selectInput(ns("upset_crosssec_display"), "Display cross-section", choices = c("Dev"), selected="Dev", multiple = TRUE),
+                            textOutput(ns("test_crosssec_display"))
+                        )
+                    ),
                     tabsetPanel(
                         id = ns("plot_tabs"),
                         type = "tabs",
@@ -115,23 +123,38 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         )
     })
     
-    # observeEvent(input$contrast_type, {
-    #     if (input$contrast_type != "logFC") {
-    #         updateSliderInput(session, "threshold", min=0, max=1)
-    #         # updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-    #     }
-    #     else {
-    #         comb_obj <- rv$mapping_obj()$get_combined_dataset()
-    #         
-    #         max_fold <- max(
-    #             comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset1)), input$upset_ref_comparisons, "logFC")],
-    #             comb_obj[, paste0(sprintf("d%s.", di_new(rv, input$dataset2)), input$upset_ref_comparisons, "logFC")],
-    #             na.rm=TRUE
-    #         )
-    #         
-    #         updateSliderInput(session, "threshold", min=0, max=ceiling(max_fold))
-    #     }
-    # })
+    parsed_overlap_entries <- reactive({
+        parsed_ref_comps <- input$upset_ref_comparisons %>% gsub("\\.$", "", .)
+        if (input$fold_split_upset) {
+            parsed_ref_comps <- c(
+                paste(parsed_ref_comps, "up", sep="."),
+                paste(parsed_ref_comps, "down", sep=".")
+            )
+        }
+        
+        if (input$dataset1 == input$dataset2) {
+            parsed_ref_comps
+        }
+        else {
+            parsed_comp_comps <- input$upset_comp_comparisons %>% gsub("\\.$", "", .)
+            if (input$fold_split_upset) {
+                parsed_comp_comps <- c(
+                    paste(parsed_comp_comps, "up", sep="."),
+                    paste(parsed_comp_comps, "down", sep=".")
+                )
+            }
+            parsed_combined_comps <- c(
+                paste("d1", parsed_ref_comps, sep="."),
+                paste("d2", parsed_comp_comps, sep=".")
+            )
+            parsed_combined_comps
+        }
+    })
+    
+    observeEvent(parsed_overlap_entries(), {
+        
+        updateSelectInput(session, "upset_crosssec_display", choices=parsed_overlap_entries(), selected = parsed_overlap_entries())
+    })
     
     selected_id_reactive <- reactive({
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
@@ -178,8 +201,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     output_table_reactive <- reactive({
         
-        # req(rv$mapping_obj())
-        # req(rv$mapping_obj()$get_combined_dataset())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
@@ -205,6 +226,35 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         rv$mapping_obj()$get_combined_dataset() %>%
             filter(comb_id %in% target_ids)
     })
+    
+    get_ordered_sets <- function(upset_list, order_on) {
+        # Translates "1010" to retrieving contrast names 1 and 3 in a list
+        retrieve_contrasts_from_union_string <- function(union_string_list) {
+            str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% names(upset_list)[.])
+        }
+        
+        unordered <- upset_list %>% 
+            unite("union_contrast_string", names(upset_list), sep="", remove = FALSE) %>% 
+            group_by(union_contrast_string) %>% 
+            summarize(nbr=n()) %>% 
+            dplyr::mutate(grade=union_contrast_string %>% gsub("0", "", .) %>% str_length()) %>%
+            dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(union_contrast_string)) %>%
+            dplyr::mutate(string_entries=map(included_entries, ~paste(., collapse=",")) %>% unlist())
+        
+        if (order_on == "freq") {
+            unordered %>% arrange(desc(nbr))
+        }
+        else if (order_on == "degree") {
+            unordered %>% arrange(desc(grade))
+        }
+        else {
+            stop("Unknown ordering condition: ", order_on)
+        }
+        
+        # all_combinations <- map(seq_len(length(names(upset_list))), ~combn(names(upset_list), ., FUN=list)) %>% unlist(recursive = F)
+        # str_split("0101", "") %>% unlist() %>% map(~ifelse(.=="1", TRUE, FALSE)) %>% unlist() %>% names(upset_list)[.]
+        # upset_list %>% filter_at(vars("t_2h"), ~.==1) %>% filter_at(vars("t_6h", "t_10h", "t_24h"), ~.==0)
+    }
     
     output$upset <- renderPlot({
         
@@ -322,13 +372,18 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         }
         
         validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
-        
         if ("plots" %in% names(upset_metadata_obj)) {
             target_metadata <- upset_metadata_obj
         }
         else {
             target_metadata <- NULL
         }
+        
+        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by)
+        crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, name_order))]
+        bar_coloring <- (set_ordering$string_entries == paste(crosssection_target_ordered, collapse=",")) %>% ifelse("#298ff5", "gray23")
+        
+        # browser()
         
         UpSetR::upset(
             UpSetR::fromList(plot_list), 
@@ -338,7 +393,8 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             keep.order=TRUE,
             text.scale=2, 
             nsets = input$upset_max_comps,
-            nintersects = input$upset_max_intersects
+            nintersects = input$upset_max_intersects,
+            main.bar.color = bar_coloring
         )
     }, height = 800)
     
@@ -379,39 +435,22 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                     p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
                     p_prod=rowSums(.[, contrast_pval_cols_ref, drop=FALSE])
                 ) %>%
-                # mutate(
-                #     p_sum=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE]),
-                #     p_prod=rowSums(.[, paste0("d1.", input$upset_comp_comparisons, "P.Value"), drop=FALSE])
-                # ) %>%
-                arrange(p_sum) %>%
-                head(input$max_fold_comps) %>%
-                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref
-                              # dplyr::select(ID=comb_id, p_sum=p_sum, paste0("d1.", input$upset_ref_comparisons, "logFC")
+                    arrange(p_sum) %>%
+                    head(input$max_fold_comps) %>%
+                    dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref
                 ) %>%
                 tidyr::gather("Comparison", "Fold", -ID, -p_sum)
-            
         }
         else {
-            
             long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
                 filter(comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
                     p_prod=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE])
-                    # p_sum=rowSums(.[, 
-                    #                 c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
-                    #                   paste0("d2.", input$upset_comp_comparisons, "P.Value")),
-                    #                 drop=FALSE]),
-                    # p_prod=rowSums(.[, 
-                    #                  c(paste0("d1.", input$upset_ref_comparisons, "P.Value"),
-                    #                    paste0("d2.", input$upset_comp_comparisons, "P.Value")),
-                    #                  drop=FALSE])
                 ) %>%
-                arrange(p_sum) %>%
-                head(input$max_fold_comps) %>%
-                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
-                              # paste0("d1.", input$upset_ref_comparisons, "logFC"),
-                              # paste0("d2.", input$upset_comp_comparisons, "logFC")
+                    arrange(p_sum) %>%
+                    head(input$max_fold_comps) %>%
+                    dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
                 ) %>%
                 tidyr::gather("Comparison", "Fold", -ID, -p_sum)
         }
@@ -476,32 +515,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    # sync_param_choices <- function() {
-    #     warning("Empty overlap parameter sync for now, probably needed for updating datasets!")
-    #     # ref_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
-    #     # comp_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
-    #     # # updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=ref_choices[1])
-    #     # # updateSelectInput(session, "sample_data1", choices = ref_choices, selected=ref_choices[1])
-    #     # # updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=comp_choices[1])
-    #     # # updateSelectInput(session, "sample_data2", choices = comp_choices, selected=comp_choices[1])
-    #     # 
-    #     # ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
-    #     # comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
-    #     # updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-    #     # updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=ref_data_choices[1])
-    #     # updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
-    #     # updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=comp_data_choices[1])
-    # }
-    # 
-    # observeEvent(rv$ddf_ref(rv, input$dataset1), {
-    #     sync_param_choices()
-    # })
-    # 
-    # observeEvent(rv$ddf_comp(rv, input$dataset2), {
-    #     sync_param_choices()
-    # })
-    
-    
     observeEvent({
         rv$selected_cols_obj() 
         input$dataset1 
@@ -517,19 +530,19 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=choices_2)
         })
     
-    output$warnings <- renderUI({
-        
-        error_vect <- c()
-        if (is.null(rv$filename_1())) {
-            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-        }
-        
-        if (is.null(rv$design_1())) {
-            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        }
-        
-        total_text <- paste(error_vect, collapse="<br>")
-        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
+    # output$warnings <- renderUI({
+    #     
+    #     error_vect <- c()
+    #     if (is.null(rv$filename_1())) {
+    #         error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+    #     }
+    #     
+    #     if (is.null(rv$design_1())) {
+    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+    #     }
+    #     
+    #     total_text <- paste(error_vect, collapse="<br>")
+    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    # })
 }
 
