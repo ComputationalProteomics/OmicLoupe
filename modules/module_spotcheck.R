@@ -24,6 +24,11 @@ setup_spotcheck_ui <- function(id) {
                             column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
                         ),
                         fluidRow(
+                            column(4, numericInput(ns("text_size"), "Text size", value=10)),
+                            column(4, numericInput(ns("text_angle"), "Axis x text angle", value=90)),
+                            column(4, numericInput(ns("text_vjust"), "Axis x text vjust", value=0.5))
+                        ),
+                        fluidRow(
                             column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE))
                         )
                     ),
@@ -205,7 +210,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         plt_df_comp
     })
 
-    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin) {
+    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, text_size=10, text_angle=90, text_vjust=0.5) {
         add_geoms <- function(plt, show_box, show_scatter, show_violin, show_labels) {
             if (show_violin) {
                 plt <- plt + geom_violin(na.rm = TRUE)
@@ -222,7 +227,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=cond, label=sample)) + 
             ggtitle(sprintf("Spot check feature: %s", target_row)) +
             xlab("Condition") +
-            ylab("Abundance")
+            ylab("Abundance") +
+            theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle))
         
         plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin, show_labels)
         plt_ref
@@ -238,7 +244,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             target_row,
             input$show_boxplot,
             input$show_scatter,
-            input$show_violin
+            input$show_violin,
+            text_size=input$text_size,
+            text_angle=input$text_angle,
+            text_vjust=input$text_vjust
         ) %>% ggplotly()
     })
     
@@ -253,31 +262,12 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             target_row,
             input$show_boxplot,
             input$show_scatter,
-            input$show_violin
+            input$show_violin,
+            text_size=input$text_size,
+            text_angle=input$text_angle,
+            text_vjust=input$text_vjust
         ) %>% ggplotly()
     })
-    
-    # output$warnings <- renderUI({
-    #     
-    #     error_vect <- c()
-    #     if (is.null(rv$filename_1())) {
-    #         error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-    #     }
-    #     else if (is.null(rv$samples(rv, input$dataset1)) || length(rv$samples(rv, input$dataset1)) == 0) {
-    #         error_vect <- c(error_vect, "No mapped samples found, perform sample mapping at Setup page")
-    #     }
-    #     
-    #     if (!is.null(rv$filename_2()) && (is.null(rv$samples(rv, input$dataset2)) || length(rv$samples(rv, input$dataset2)) == 0)) {
-    #         error_vect <- c(error_vect, "No mapped samples found for second dataset, perform mapping at Setup page to show second plot")
-    #     }
-    #     
-    #     if (is.null(rv$design_1())) {
-    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-    #     }
-    #     
-    #     total_text <- paste(error_vect, collapse="<br>")
-    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    # })
 }
 
 

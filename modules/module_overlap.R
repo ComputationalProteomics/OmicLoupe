@@ -76,6 +76,7 @@ setup_overlap_ui <- function(id) {
                         ),
                         tabPanel("Upset",
                                  plotOutput(ns("upset"), height = 800),
+                                 downloadButton(ns("download_table_upset"), "Download table"),
                                  DT::DTOutput(ns("table_display_upset"))
                         ),
                         tabPanel("FoldComparison",
@@ -107,7 +108,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_overlap_server <- function(input, output, session, rv, module_name) {
     
-    output$download_table <- downloadHandler(
+    output$download_table <- output$download_table_upset <- downloadHandler(
         filename = function() {
             paste("overlap-", Sys.Date(), ".tsv", sep="")
         },
@@ -170,10 +171,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
     
     comp_pass_reactive <- reactive({
         parse_contrast_pass_list(rv, input, input$dataset2, input$comp_contrast, input$stat_contrast_type)
-    })
-    
-    upset_selected_ids <- reactive({
-        
     })
     
     output_table_reactive <- reactive({
@@ -265,17 +262,30 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         plot_list
     })
     
+    upset_plot_list_comp <- reactive({
+        validate(need(input$dataset1 != input$dataset2, "Should only be called with different dataset1 and dataset2 selected"))
+        comp_names_list <- upset_extract_set_names_list(rv, input, input$upset_comp_comparisons, input$dataset2, input$stat_contrast_type, input$fold_split_upset)
+        plot_list_comp <- upset_get_plot_list(comp_names_list, input$upset_comp_comparisons, input$fold_split_upset)
+        plot_list_comp
+        # plot_list <- c(
+        #     plot_list %>% `names<-`(paste("d1", names(plot_list), sep=".")), 
+        #     plot_list_comp %>% `names<-`(paste("d2", names(plot_list_comp), sep="."))
+        # )
+    })
+    
+    
+    
     upset_name_order <- reactive({
         plot_list <- upset_plot_list()
-        name_order <- upset_get_name_order(plot_list, input$fold_split_upset)
-        if (input$dataset1 != input$dataset2) {
-            
-            name_order <- c(
-                paste("d1", name_order, sep="."), 
-                paste("d2", upset_get_name_order(plot_list_comp, input$fold_split_upset), sep=".")
-            )
-        }
-        name_order
+        upset_get_name_order(plot_list, input$fold_split_upset)
+        
+        # if (input$dataset1 != input$dataset2) {
+        #     name_order <- c(
+        #         name_order, 
+        #         upset_get_name_order(upset_plot_list_comp(), input$fold_split_upset)
+        #     )
+        # }
+        # name_order
     })
     
     upset_metadata <- reactive({
@@ -306,6 +316,7 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
                 ))
             )
         }
+        upset_metadata_obj
     })
     
     upset_order_by <- reactive({
