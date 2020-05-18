@@ -12,12 +12,12 @@ setup_overlap_ui <- function(id) {
                             column(6, selectInput(ns("dataset1"), "Reference dataset", choices = c("Dev"), selected = "Dev")),
                             column(6, selectInput(ns("dataset2"), "Comp. dataset", choices = c("Dev"), selected = "Dev"))
                         ),
-                        fluidRow(
-                            column(6, selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev")),
-                            column(6, selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"))
-                        ),
                         conditionalPanel(
                             sprintf("input['%s'] != 'UpsetPresence'", ns("plot_tabs")),
+                            fluidRow(
+                                column(6, selectInput(ns("ref_contrast"), "Ref. contr.", choices = c("Dev"), selected = "Dev")),
+                                column(6, selectInput(ns("comp_contrast"), "Comp. contr.", choices = c("Dev"), selected = "Dev"))
+                            ),
                             fluidRow(
                                 column(6, sliderInput(ns("stat_threshold"), "Stat. threshold", min=0, max=1, step=0.01, value=0.05)),
                                 column(6, selectInput(ns("stat_contrast_type"), "Stat. contrast type", choices=c("P.Value", "adj.P.Val")))
@@ -30,10 +30,17 @@ setup_overlap_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 'UpsetPresence'", ns("plot_tabs")),
                             fluidRow(
-                                column(4, selectInput(ns("upset_pres_cond"), "Condition", choices=c(""), selected="")),
-                                column(4, selectInput(ns("upset_pres_levels"), "Selected levels", choices=c(""), selected="", multiple=TRUE))
+                                column(6, selectInput(ns("upset_pres_cond_ref"), "Condition ref.", choices=c(""), selected="")),
+                                column(6, selectInput(ns("upset_pres_levels_ref"), "Selected levels ref.", choices=c(""), selected="", multiple=TRUE))
                             ),
-                            fluidRow(numericInput(ns("upset_pres_frac"), "Presence frac", value = 1, min=0, max=1))
+                            conditionalPanel(
+                                sprintf("input['%s'] != input['%s']", ns("dataset1"), ns("dataset2")),
+                                fluidRow(
+                                    column(6, selectInput(ns("upset_pres_cond_comp"), "Condition comp.", choices=c(""), selected="")),
+                                    column(6, selectInput(ns("upset_pres_levels_comp"), "Selected levels comp.", choices=c(""), selected="", multiple=TRUE))
+                                )
+                            ),
+                            fluidRow(column(12, sliderInput(ns("upset_pres_frac"), "Presence frac.", value=1, min=0, max=1, step=0.05)))
                         ),
                         fluidRow(
                             column(6, conditionalPanel(
@@ -56,8 +63,11 @@ setup_overlap_ui <- function(id) {
                                 column(6, numericInput(ns("upset_max_intersects"), "Upset max intersects (columns)", min = 1, value = 40))
                             ),
                             fluidRow(
-                                column(6, checkboxInput(ns("fold_split_upset"), "Fold split upset", value=FALSE)),
-                                column(6, checkboxInput(ns("upset_degree_order"), "Order on degree", value=FALSE))
+                                column(6, checkboxInput(ns("upset_degree_order"), "Order on degree", value=FALSE)),
+                                conditionalPanel(
+                                    sprintf("input['%s'] == 'Upset'", ns("plot_tabs")),
+                                    column(6, checkboxInput(ns("fold_split_upset"), "Fold split upset", value=FALSE))
+                                )
                             )
                         ),
                         conditionalPanel(
@@ -94,7 +104,7 @@ setup_overlap_ui <- function(id) {
                                  plotOutput(ns("fold_comp"))
                         ),
                         tabPanel("UpsetPresence",
-                                 plotOutput(ns("upset_presence")),
+                                 plotOutput(ns("upset_presence")) %>% withSpinner(),
                                  downloadButton(ns("download_table_upset_presence"), "Download table"),
                                  DT::DTOutput(ns("table_display_upset_presence"))
                         )
@@ -342,52 +352,59 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             match_cond_samples
         }
         
-        # presence_type <- function(high_nbr, low_nbr, tot_high, tot_low, partial_frac=0.5) {
-        #     
-        #     high_partial <- tot_high * partial_frac
-        #     low_partial <- tot_low * partial_frac
-        #     
-        #     if (high_nbr == 0 && low_nbr == 0) "empty"
-        #     else if (high_nbr == tot_high && low_nbr == tot_low) "full"
-        #     else if (low_nbr == 0 && high_nbr == tot_high) "high_only"
-        #     else if (low_nbr == 0 && high_nbr >= high_partial) "high_partial"
-        #     else if (low_nbr == 0 && high_nbr > 0 && high_nbr < high_partial) "high_unclear"
-        #     else if (high_nbr == 0 && low_nbr == tot_low) "low_only"
-        #     else if (high_nbr == 0 && low_nbr >= low_partial) "low_partial"
-        #     else if (low_nbr == 0 && low_nbr > 0 && low_nbr < low_partial) "low_unclear"
-        #     else if (low_nbr > 0 && low_nbr <= tot_low && high_nbr > 0 && high_nbr <= tot_high) "mixed"
-        #     else stop("Unknown situation for combination of low: ", low_nbr, " high: ", high_nbr, " tot_low: ", tot_low, " and tot high: ", tot_high)
-        # }
+        get_na_nbrs_df <- function(selected_cond, selected_levels, dataset_nbr, target) {
+            map(
+                selected_levels, 
+                ~rv$mapping_obj()$get_combined_dataset() %>% 
+                    dplyr::select(paste(
+                        sprintf("d%s", dataset_nbr), 
+                        cond_cols(rv, input[[sprintf("dataset%s", dataset_nbr)]], 
+                                  target, 
+                                  selected_cond, .x), sep=".")) %>%
+                    mutate(nbr_na=(!is.na(.)) %>% rowSums()) %>%
+                    mutate(comb_id=rv$mapping_obj()$get_combined_dataset()$comb_id)
+                ) %>% 
+                map(~dplyr::select(.x, nbr_na)) %>% 
+                do.call("cbind", .) %>%
+                `colnames<-`(paste(selected_levels, "nbr_na", sep=".")) %>%
+                cbind(comb_id=rv$mapping_obj()$get_combined_dataset()$comb_id, .)
+        }
         
-        nbr_nas <- map(
-            input$upset_pres_levels, 
-            ~rv$mapping_obj()$get_combined_dataset() %>% 
-                dplyr::select(paste("d1", cond_cols(rv, input$dataset1, "ref", input$upset_pres_cond, .x), sep=".")) %>%
-                mutate(nbr_na=(!is.na(.)) %>% rowSums()) %>%
-                mutate(comb_id=rv$mapping_obj()$get_combined_dataset()$comb_id)
-            ) %>% 
-            map(~dplyr::select(.x, nbr_na)) %>% 
-            do.call("cbind", .) %>%
-            `colnames<-`(paste(input$upset_pres_levels, "nbr_na", sep=".")) %>%
-            cbind(comb_id=rv$mapping_obj()$get_combined_dataset()$comb_id, .)
+        parse_na_nbrs_to_upset_table <- function(nbr_nas_df, dataset, ddf, selected_cond, selected_levels, presence_fraction_thres) {
+            tot_counts <- table(ddf[[selected_cond]]) %>% as.list()
+            parsed <- nbr_nas[, -1] %>% rename_all(~gsub("\\.nbr_na", "", .))
+            upset_table <- data.frame(ifelse(parsed >= (tot_counts[selected_levels] %>% map(~.*presence_fraction_thres)), 1, 0))
+            upset_table$comb_id <- nbr_nas$comb_id
+            upset_table
+        }
         
-        # Next: Outline how to take it to show the actual missing / non-fraction
-        # Maybe good with a different dataset at this point
-        # Close!
-        # Consider taking also dual datasets, allowing taking conditions from two data frames
+        nbr_nas <- get_na_nbrs_df(input$upset_pres_cond_ref, input$upset_pres_levels_ref, dataset_nbr=1, target="ref")
+        upset_table <- parse_na_nbrs_to_upset_table(
+            nbr_nas, 
+            input$dataset1, 
+            rv$ddf_ref(rv, input$dataset1), 
+            input$upset_pres_cond_ref,
+            input$upset_pres_levels_ref,
+            presence_fraction_thres=input$upset_pres_frac)
         
-        tot_counts <- table(rv$ddf_ref(rv, input$dataset1)[[input$upset_pres_cond]]) %>% as.list()
-        parsed <- nbr_nas[, -1] %>% rename_all(~gsub("\\.nbr_na", "", .))
-        presence_table <- data.frame(ifelse(parsed >= tot_counts[input$upset_pres_levels] * input$upset_pres_frac, 1, 0))
-        presence_table$comb_id <- nbr_nas$comb_id
-        # presence_table
-        
-        # UpSetR::upset(presence_table)
-        
-        # browser()
+        if (input$dataset1 != input$dataset2) {
+            nbr_nas_comp <- get_na_nbrs_df(input$upset_pres_cond_comp, input$upset_pres_levels_comp, dataset_nbr=2, target="comp")
+            upset_table_comp <- parse_na_nbrs_to_upset_table(
+                nbr_nas_comp, 
+                input$dataset2, 
+                rv$ddf_comp(rv, input$dataset2), 
+                input$upset_pres_cond_comp,
+                input$upset_pres_levels_comp,
+                presence_fraction_thres=input$upset_pres_frac)
+            
+            upset_table <- cbind(
+                upset_table[, -ncol(upset_table)] %>% rename_all(~paste("d1", ., sep=".")),
+                upset_table_comp %>% rename_at(vars(!matches("^comb_id$")), ~paste("d2", ., sep="."))
+            )
+        }
         
         UpSetR::upset(
-            presence_table[, -ncol(presence_table)], 
+            upset_table[, -ncol(upset_table)], 
             # set.metadata=target_metadata,
             order.by=upset_order_by(), 
             # sets=name_order,
@@ -397,19 +414,6 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             nintersects=input$upset_max_intersects
             # main.bar.color=bar_coloring
         )
-        
-        # ggsave(ggplotify::as.grob(UpSetR::upset(presence_table)), filename = "~/Desktop/out.png", width=5, height=5)
-        # out <- map(contrast_pairs, 
-        #     function(contrast_pair, nbr_nas) {
-        #         print(contrast_pair[1])
-        #         print(contrast_pair[2])
-        #         cond1 <- nbr_nas[[contrast_pair[1]]]
-        #         cond2 <- nbr_nas[[contrast_pair[2]]]
-        #         map2(cond1, cond2, ~presence_type(.x, .y, 6, 6)) %>% unlist()
-        #         
-        #     }, nbr_nas=nbr_nas) %>% 
-        #     do.call("cbind", .) %>% data.frame()
-        #
     })
     
     output$upset <- renderPlot({
@@ -572,10 +576,16 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    observeEvent(input$upset_pres_cond, {
+    observeEvent(input$upset_pres_cond_ref, {
         req(rv$ddf_ref(rv, input$dataset1))
-        choices <- rv$ddf_ref(rv, input$dataset1)[[input$upset_pres_cond]] %>% unique() 
-        updateSelectInput(session, "upset_pres_levels", choices=choices, selected=choices)
+        choices <- rv$ddf_ref(rv, input$dataset1)[[input$upset_pres_cond_ref]] %>% unique() 
+        updateSelectInput(session, "upset_pres_levels_ref", choices=choices, selected=choices)
+    })
+    
+    observeEvent(input$upset_pres_cond_comp, {
+        req(rv$ddf_comp(rv, input$dataset2))
+        choices <- rv$ddf_comp(rv, input$dataset2)[[input$upset_pres_cond_comp]] %>% unique() 
+        updateSelectInput(session, "upset_pres_levels_comp", choices=choices, selected=choices)
     })
     
     observeEvent({
@@ -586,11 +596,11 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             req(rv$ddf_ref(rv, input$dataset1))
             req(rv$ddf_comp(rv, input$dataset2))
             
-            set_if_new <- function(prev_val, new_values, new_val_selected) {
-                if (is.null(prev_val)) new_val_selected
-                else if (prev_val %in% new_values) prev_val
-                else new_val_selected
-            }
+            # set_if_new <- function(prev_val, new_values, new_val_selected) {
+            #     if (is.null(prev_val)) new_val_selected
+            #     else if (prev_val %in% new_values) prev_val
+            #     else new_val_selected
+            # }
             
             choices_1 <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
             updateSelectInput(session, "ref_contrast", choices=choices_1, selected=choices_1[1])
@@ -601,7 +611,10 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=choices_2)
             
             ref_cond_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
-            updateSelectInput(session, "upset_pres_cond", choices = ref_cond_choices, selected=set_if_new(input$ref_cond, ref_cond_choices, ref_cond_choices[2]))
+            updateSelectInput(session, "upset_pres_cond_ref", choices = ref_cond_choices, selected=ref_cond_choices[2])
+            
+            comp_cond_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
+            updateSelectInput(session, "upset_pres_cond_comp", choices = comp_cond_choices, selected=comp_cond_choices[2])
         })
 }
 
