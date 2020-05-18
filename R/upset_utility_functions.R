@@ -25,7 +25,6 @@ get_ordered_sets <- function(upset_list, order_on) {
 
 parse_contrast_pass_list <- function(rv, input, target_data, target_contrast, contrast_type) {
     
-    # browser()
     validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
     
     combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
