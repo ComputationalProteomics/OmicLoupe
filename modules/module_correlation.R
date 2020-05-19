@@ -26,8 +26,11 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     
     output$correlation_histograms <- renderPlot({
         
-        req(rv$mapping_obj())
-        req(rv$mapping_obj()$has_correlations())
+        # req(rv$mapping_obj())
+        # req(rv$mapping_obj()$has_correlations())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, is data loaded and samples mapped under the Setup page?"))
+        validate(need(!is.null(rv$mapping_obj()$has_correlations()), "No correlation object found, are correlations calculated at the Setup page?"))
+        
         
         comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         
@@ -68,20 +71,20 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         )
     }, height = 800)
     
-    output$warnings <- renderUI({
-        
-        error_vect <- c()
-        if (is.null(rv$mapping_obj())) {
-            error_vect <- c(error_vect, "No loaded data found, load datasets under the 'Setup' tab")
-        }
-        else if (!rv$mapping_obj()$has_correlations()) {
-            error_vect <- c(error_vect, 
-                "No correlations assigned, this requires two matched datasets and that the 'Matched samples' setting in 'Setup' is assigned.")
-        }
-        
-        total_text <- paste(error_vect, collapse="<br>")
-        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
+    # output$warnings <- renderUI({
+    #     
+    #     error_vect <- c()
+    #     if (is.null(rv$mapping_obj())) {
+    #         error_vect <- c(error_vect, "No loaded data found, load datasets under the 'Setup' tab")
+    #     }
+    #     else if (!rv$mapping_obj()$has_correlations()) {
+    #         error_vect <- c(error_vect, 
+    #             "No correlations assigned, this requires two matched datasets and that the 'Matched samples' setting in 'Setup' is assigned.")
+    #     }
+    #     
+    #     total_text <- paste(error_vect, collapse="<br>")
+    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    # })
 }
 
 

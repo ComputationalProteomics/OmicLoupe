@@ -1,4 +1,4 @@
-adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col) {
+adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col, text_size) {
     
     if (!do_violin) {
         target_geom <- geom_boxplot
@@ -20,12 +20,12 @@ adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, 
         )
     }
     
-    plt <- plt + target_geom(na.rm=TRUE)
+    plt <- plt + target_geom(na.rm=TRUE) + theme(text=element_text(size=text_size))
     
     plt + xlab("Sample") + ylab("Abundance")
 }
 
-make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL) {
+make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL, text_size=10) {
     plt <- ggplot(sdf, aes_string(x="value", group="name", color=color)) + 
         geom_density(na.rm=TRUE)
     
@@ -36,9 +36,11 @@ make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL) {
         plt <- plt + ggtitle(sprintf("Dataset: %s Color: %s total", curr_dataset, color))
     }
     
+    plt <- plt + theme(text = element_text(size=text_size))
+    
     plt %>% 
         plotly::ggplotly() %>%
-        plotly::layout(xaxis=list(title="Abundance"), yaxis=list(title="Count"))
+        plotly::layout(xaxis=list(title="Abundance"), yaxis=list(title="Density"))
 }
 
 do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_variance=NULL, title="Dendrogram", omit_samples=NULL, legend_title=NULL, text_size=3, vjust=0.5) {
@@ -98,7 +100,7 @@ do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_var
     plt
 }
 
-make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, show_missing=FALSE, rotate_labels=FALSE) {
+make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, show_missing=FALSE, rotate_labels=FALSE, text_size=10, title="") {
     
     join_by_ref <- c("name"=sample_col)
     
@@ -118,11 +120,17 @@ make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, s
         target_col <- "is_na"
     }
     
-    title <- sprintf("%s Dataset: %s Color: %s", bar_type, dataset, color)
+    if (title == "") {
+        title <- sprintf("%s Dataset: %s Color: %s", bar_type, dataset, color)
+    }
+    else {
+        title <- title
+    }
     
     plt <- ggplot(summed_data, aes_string(x="name", y=target_col, fill=color)) + 
         geom_col() + 
-        ggtitle(title)
+        ggtitle(title) + 
+        theme(text=element_text(size=text_size))
     
     if (rotate_labels) {
         plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))

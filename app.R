@@ -16,7 +16,7 @@ quiet(library(tidyverse))
 options(shiny.maxRequestSize=100*1024^2)
 
 source("modules/module_setup.R")
-source("modules/module_plotly.R")
+source("modules/module_statdist.R")
 source("modules/module_pca.R")
 source("modules/module_help.R")
 source("modules/module_ideas.R")
@@ -33,6 +33,7 @@ source("R/reactive_values.R")
 source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
 source("R/help_texts.R")
+source("R/upset_utility_functions.R")
 
 ui <- navbarPage(
     
@@ -61,7 +62,7 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
     callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="Spotcheck")
 
-    callModule(module_plotly_server, id="StatDist", rv=reactive_values, module_name="StatDist")
+    callModule(module_statdist_server, id="StatDist", rv=reactive_values, module_name="StatDist")
     callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap")
 
     callModule(module_correlation_server, id="Correlation", rv=reactive_values, module_name="Correlation")

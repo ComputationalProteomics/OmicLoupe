@@ -102,7 +102,7 @@ setup_plotly_ui <- function(id) {
 }
 
 
-module_plotly_server <- function(input, output, session, rv, module_name) {
+module_statdist_server <- function(input, output, session, rv, module_name) {
     
     output$download_table <- downloadHandler(
         filename = function() {
@@ -142,8 +142,14 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     reactive_plot_df <- reactive({
         
-        req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
-        req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        # req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        # req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        validate(need(
+            !is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
+            "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
+        validate(need(
+            !is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
+            "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
         
         if (input$color_type == "PCA") {
             combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
@@ -174,8 +180,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         }
         else if (input$color_type == "PCA") {
             
-            req(rv$samples(rv, input$dataset1))
-            req(rv$samples(rv, input$dataset2))
+            # req(rv$samples(rv, input$dataset1))
+            # req(rv$samples(rv, input$dataset2))
+            validate(need(rv$samples(rv, input$dataset1), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
+            validate(need(rv$samples(rv, input$dataset2), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
@@ -243,12 +251,16 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     }
     
     plot_ref_df <- reactive({
-        req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        # req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        validate(need(!is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
+                      "Did not find statistics columns for dataset 1, are they properly assigned at the Setup page?"))
         parse_plot_df(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
     })
     
     plot_comp_df <- reactive({
-        req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        # req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        validate(need(!is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
+                      "Did not find statistics columns for dataset 2, are they properly assigned at the Setup page?"))
         parse_plot_df(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
     })
     
@@ -379,7 +391,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         error_vect <- c()
         if (is.null(rv$filename_1())) {
-            error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+            # error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+            print("Placeholder output, will be removed")
         }
         else {
             if ((is.null(rv$samples(rv, input$dataset1)) || is.null(rv$samples(rv, input$dataset2))) && input$color_type == "PCA") {
@@ -422,7 +435,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_volc1 <- renderPlotly({
         
-        req(rv$mapping_obj())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -471,7 +485,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_volc2 <- renderPlotly({
         
-        req(rv$mapping_obj())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -520,7 +535,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_ma1 <- renderPlotly({
         
-        req(rv$mapping_obj())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -566,7 +582,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_ma2 <- renderPlotly({
         
-        req(rv$mapping_obj())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -586,7 +603,9 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             }
         }
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
+        validate(need(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS, 
+                      sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
+        # req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
         base_plt <- make_scatter(
             plot_df, 
@@ -612,7 +631,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_hist1 <- renderPlotly({
         
-        req(rv$mapping_obj())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -640,7 +660,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$plotly_hist2 <- renderPlotly({
         
-        req(rv$mapping_obj())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
@@ -697,8 +718,11 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     output$table_display = DT::renderDataTable({
         
-        req(rv$mapping_obj())
-        req(rv$mapping_obj()$get_combined_dataset())
+        # req(rv$mapping_obj())
+        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
+        
+        # req(rv$mapping_obj()$get_combined_dataset())
         
         target_df <- get_target_df(rv)
         rv$dt_parsed_data(rv, target_df, add_show_cols_first="pass_thres")
