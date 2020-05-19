@@ -34,6 +34,7 @@ source("R/MapObject.R")
 source("R/shared_visualization_setup.R")
 source("R/help_texts.R")
 source("R/upset_utility_functions.R")
+source("R/upset_presence_utility_functions.R")
 
 ui <- navbarPage(
     

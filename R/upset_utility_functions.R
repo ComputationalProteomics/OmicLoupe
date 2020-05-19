@@ -1,4 +1,4 @@
-get_ordered_sets <- function(upset_list, order_on) {
+get_ordered_sets <- function(upset_list, order_on, omit_empty=TRUE) {
     # Translates "1010" to retrieving contrast names 1 and 3 in a list
     retrieve_contrasts_from_union_string <- function(union_string_list) {
         str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% names(upset_list)[.])
@@ -11,6 +11,11 @@ get_ordered_sets <- function(upset_list, order_on) {
         dplyr::mutate(grade=union_contrast_string %>% gsub("0", "", .) %>% str_length()) %>%
         dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(union_contrast_string)) %>%
         dplyr::mutate(string_entries=map(included_entries, ~paste(., collapse=",")) %>% unlist())
+    
+    if (omit_empty && unordered %>% filter(grade != 0) %>% nrow() > 0) {
+        message(sprintf("Omitting %s entries of grade 0", unordered %>% filter(grade != 0) %>% nrow()))
+        unordered <- unordered %>% filter(grade != 0)
+    }
     
     if (order_on == "freq") {
         unordered %>% arrange(desc(nbr))
