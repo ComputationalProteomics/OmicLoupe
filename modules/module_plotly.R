@@ -73,7 +73,10 @@ setup_plotly_ui <- function(id) {
                                textInput(ns("comp_custom_header"), "Custom comp. header", value=""),
                                sliderInput(ns("pca_variance_cutoff"), "PCA var. cut.", value=0.4, step=0.05, min=0, max=1),
                                sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
-                               sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1)
+                               sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1),
+                               numericInput(ns("text_size"), "Font size", value=10, min=0),
+                               numericInput(ns("dot_size"), "Dot size", value=1.5, min=0),
+                               textInput(ns("legend_text"), "Legend text", value="")
                            )
                        )
                 ),
@@ -81,14 +84,14 @@ setup_plotly_ui <- function(id) {
                        htmlOutput(ns("warnings")),
                        p("Drag in figures to highlight features. Double click to unselect."),
                        column(6,
-                              plotlyOutput(ns("plotly_volc1")) %>% withSpinner(),
-                              plotlyOutput(ns("plotly_ma1")) %>% withSpinner(),
-                              plotlyOutput(ns("plotly_hist1")) %>% withSpinner()
+                              plotlyOutput(ns("plotly_volc1"), height = 400) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_ma1"), height = 400) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_hist1"), height = 400) %>% withSpinner()
                        ),
                        column(6,
-                              plotlyOutput(ns("plotly_volc2")) %>% withSpinner(),
-                              plotlyOutput(ns("plotly_ma2")) %>% withSpinner(),
-                              plotlyOutput(ns("plotly_hist2")) %>% withSpinner()
+                              plotlyOutput(ns("plotly_volc2"), height = 400) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_ma2"), height = 400) %>% withSpinner(),
+                              plotlyOutput(ns("plotly_hist2"), height = 400) %>% withSpinner()
                        )
                 )
             ),
@@ -106,14 +109,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             paste("comp_scatter-", Sys.Date(), ".tsv", sep="")
         },
         content = function(file) {
-            
-            # event.data <- event_data("plotly_selected", source = "subset")
-            # if (!is.null(event.data) == TRUE) {
             target_df <- get_target_df(rv)
-            # }
-            # else {
-            #     target_df <- get_pass_thres_df()
-            # }
             dt_parsed_target <- rv$dt_parsed_data_raw(rv, target_df)
             write_tsv(rv$dt_parsed_data_raw(rv, dt_parsed_target), file)
         }
@@ -306,11 +302,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
     make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", title="", 
-                             manual_scale=TRUE, cont_scale=NULL, alpha=0.5) {
+                             manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, text_size=20, legend_text="") {
         
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
-            # plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=key, text=hover_text)) +
-            geom_point(alpha=alpha)
+            geom_point(alpha=alpha, size=dot_size) + theme(text = element_text(size=text_size))
         
         if (!title != "") {
             plt <- plt + ggtitle(title)
@@ -340,10 +335,15 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
         }
         
+        if (legend_text != "") {
+            plt <- plt + labs(color=legend_text)
+        }
+        
         plt
     }
     
     make_histogram <- function(plot_df, x_col, fill_col, key_vals, title="") {
+        t <- list(family = "sans serif", size = input$text_size)
         plot_ly(
             plot_df,
             x = ~get(x_col),
@@ -354,7 +354,7 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             nbinsx = input$bin_count,
             source = "subset",
             key = key_vals
-        ) %>% layout(title = title, xaxis=list(title="P-value"), yaxis=list(title="Count"))
+        ) %>% layout(title = title, font=t, xaxis=list(title="P-value"), yaxis=list(title="Count"))
     }
     
     retrieve_color_col <- function(color_type, data_pattern) {
@@ -412,10 +412,8 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
     
     build_plotly <- function(plt, title, dataset, stat_base, custom_header) {
         t <- list(family="sans serif", size=8)
-        
         if (custom_header == "") title <- sprintf("Data: %s<br>Contrast: %s", dataset, stat_base)
         else title <- custom_header
-        
         plt %>% 
             ggplotly(source="subset") %>%
             layout(title=title, dragmode="select", font=t) %>%
@@ -453,13 +451,16 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             plot_df, 
             x_col="fold", 
             y_col="sig", 
-            x_lab="Fold change",
+            x_lab="Fold change (log2)",
             y_lab="P-value (-log10)",
             color_col=color_col, 
             hover_text="descr", 
             alpha=input$alpha,
             cont_scale = cont_scale,
-            manual_scale = manual_scale)
+            manual_scale = manual_scale,
+            dot_size=input$dot_size,
+            text_size=input$text_size,
+            legend_text=input$legend_text)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
@@ -495,8 +496,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
                  sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
-        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
-        
         base_plt <- make_scatter(
             plot_df, 
             x_col="fold", 
@@ -507,7 +506,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             hover_text="descr", 
             alpha=input$alpha,
             cont_scale = cont_scale,
-            manual_scale = manual_scale) 
+            manual_scale = manual_scale,
+            dot_size=input$dot_size,
+            text_size=input$text_size,
+            legend_text=input$legend_text) 
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
@@ -540,8 +542,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
-        
         base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
@@ -552,7 +552,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             alpha=input$alpha,
             hover_text="descr", 
             cont_scale = cont_scale,
-            manual_scale = manual_scale)
+            manual_scale = manual_scale,
+            dot_size=input$dot_size,
+            text_size=input$text_size,
+            legend_text=input$legend_text)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
@@ -585,8 +588,6 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
         
         req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
         
-        # plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_comp)), strwrap, width=30), paste, collapse="<br>")
-        
         base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
@@ -597,7 +598,10 @@ module_plotly_server <- function(input, output, session, rv, module_name) {
             alpha=input$alpha,
             hover_text="descr", 
             cont_scale = cont_scale,
-            manual_scale = manual_scale)
+            manual_scale = manual_scale,
+            dot_size=input$dot_size,
+            text_size=input$text_size,
+            legend_text=input$legend_text)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
