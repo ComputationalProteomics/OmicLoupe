@@ -246,31 +246,31 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             }
         }
         else if (input$plot_tabs == "Upset") {
-            plot_list <- upset_plot_list()
-            set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by())
-            crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, upset_order_by()))]
-            all_contrasts <- UpSetR::fromList(plot_list) %>% colnames()
-
-            all_genes <- plot_list %>% unlist() %>% unique()
-            my_function <- function(x, all_features){
-                is.element(all_features, x)
+            
+            get_is_element <- function(target_feature, all_features){
+                is.element(all_features, target_feature)
             }
             
-            parsed_w_rownames <- as.data.frame(lapply(plot_list, my_function, all_features=all_genes))
-            rownames(parsed_w_rownames) <- all_genes
-            # test <- as.data.frame(lapply(my_sets, my_function))
-            parsed_w_rownames[parsed_w_rownames=="TRUE"] <- 1
-            parsed_w_rownames[parsed_w_rownames=="FALSE"] <- 0
+            contrast_features_list <- upset_plot_list()
+            # set_ordering <- get_ordered_sets(UpSetR::fromList(contrast_features_list), order_on = upset_order_by())
+            all_features <- contrast_features_list %>% unlist() %>% unique()
             
-            non_selected_contrasts <- c(all_contrasts[!all_contrasts %in% input$upset_crosssec_display])
-            filtered_contrast_matrix <- parsed_w_rownames %>% 
-                rownames_to_column("id_col") %>%
+            presence_inintersect_df <- lapply(contrast_features_list, get_is_element, all_features=all_features) %>% 
+                map(as.integer) %>% 
+                data.frame() %>%
+                mutate(id_col=all_features) %>%
                 filter_at(vars(all_of(input$upset_crosssec_display)), ~.==1)
 
+            all_contrasts <- UpSetR::fromList(contrast_features_list) %>% colnames()
+            non_selected_contrasts <- all_contrasts %>% discard(~ . %in% input$upset_crosssec_display)
             if (length(non_selected_contrasts) > 0) {
-                filtered_contrast_matrix <- filtered_contrast_matrix %>% filter_at(vars(all_of(non_selected_contrasts)), ~.==0)
+                presence_inintersect_notinothers_df <- presence_inintersect_df %>% filter_at(vars(all_of(non_selected_contrasts)), ~.==0)
+                output_df <- presence_inintersect_notinothers_df
             }
-            target_ids <- filtered_contrast_matrix %>% pull(id_col)
+            else {
+                output_df <- presence_inintersect_df
+            }
+            target_ids <- output_df %>% pull(id_col)
         }
         else if (input$plot_tabs == "UpsetPresence") {
             
