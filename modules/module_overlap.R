@@ -225,6 +225,23 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
+        get_target_ids_from_presence <- function(presence_df, all_conditions, selected_conditions) {
+            non_selected_conditions <- all_conditions %>% discard(~. %in% selected_conditions)
+            presence_inintersect_df <- presence_df %>% 
+                filter_at(vars(all_of(selected_conditions)), ~.==1)
+            
+            if (length(non_selected_conditions) > 0) {
+                presence_inintersect_notinothers_df <- presence_inintersect_df %>% 
+                    filter_at(vars(all_of(non_selected_conditions)), ~.==0)
+                target_ids <- presence_inintersect_notinothers_df %>% pull(id_col)
+            }
+            else {
+                target_ids <- presence_inintersect_df %>% pull(id_col)
+            }
+            target_ids
+        }
+        
+        
         if (input$plot_tabs == "Venn") {
             ref_pass <- names(ref_pass_reactive())
             comp_pass <- names(comp_pass_reactive())
@@ -246,54 +263,45 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             }
         }
         else if (input$plot_tabs == "Upset") {
-            
+
             get_is_element <- function(target_feature, all_features){
                 is.element(all_features, target_feature)
             }
             
             contrast_features_list <- upset_plot_list()
-            # set_ordering <- get_ordered_sets(UpSetR::fromList(contrast_features_list), order_on = upset_order_by())
             all_features <- contrast_features_list %>% unlist() %>% unique()
-            
-            presence_inintersect_df <- lapply(contrast_features_list, get_is_element, all_features=all_features) %>% 
+
+            presence_df <- lapply(contrast_features_list, get_is_element, all_features=all_features) %>% 
                 map(as.integer) %>% 
                 data.frame() %>%
-                mutate(id_col=all_features) %>%
-                filter_at(vars(all_of(input$upset_crosssec_display)), ~.==1)
-
+                mutate(id_col=all_features)
+                
             all_contrasts <- UpSetR::fromList(contrast_features_list) %>% colnames()
-            non_selected_contrasts <- all_contrasts %>% discard(~ . %in% input$upset_crosssec_display)
-            if (length(non_selected_contrasts) > 0) {
-                presence_inintersect_notinothers_df <- presence_inintersect_df %>% filter_at(vars(all_of(non_selected_contrasts)), ~.==0)
-                output_df <- presence_inintersect_notinothers_df
-            }
-            else {
-                output_df <- presence_inintersect_df
-            }
-            target_ids <- output_df %>% pull(id_col)
+            target_ids <- get_target_ids_from_presence(presence_df, all_contrasts, input$upset_crosssec_display)
+            
+            # presence_inintersect_df <- lapply(contrast_features_list, get_is_element, all_features=all_features) %>% 
+            #     map(as.integer) %>% 
+            #     data.frame() %>%
+            #     mutate(id_col=all_features) %>%
+            #     filter_at(vars(all_of(input$upset_crosssec_display)), ~.==1)
+
+            # non_selected_contrasts <- all_contrasts %>% discard(~ . %in% input$upset_crosssec_display)
+            # if (length(non_selected_contrasts) > 0) {
+            #     presence_inintersect_notinothers_df <- presence_inintersect_df %>% filter_at(vars(all_of(non_selected_contrasts)), ~.==0)
+            #     output_df <- presence_inintersect_notinothers_df
+            # }
+            # else {
+            #     output_df <- presence_inintersect_df
+            # }
+            # target_ids <- output_df %>% pull(id_col)
         }
         else if (input$plot_tabs == "UpsetPresence") {
             
-            plot_list <- upset_presence_dataframe() %>% filter_at(vars(!matches("^comb_id$")), any_vars(. != "0"))
-            rownames(plot_list) <- plot_list$comb_id
-            plot_list <- plot_list[, -ncol(plot_list)]
-            
-            set_ordering <- get_ordered_sets(plot_list, order_on = upset_order_by())
-            crosssection_target_ordered <- input$upset_crosssec_display_presence[
-                order(match(input$upset_crosssec_display_presence, upset_order_by()))
-            ]
-            all_condition_levels <- UpSetR::fromList(plot_list) %>% colnames()
-            non_selected_conditions <- all_condition_levels[!all_condition_levels %in% input$upset_crosssec_display_presence]
-            
-            output_plot_list <- plot_list %>% 
-                rownames_to_column("id_col") %>%
-                filter_at(vars(all_of(input$upset_crosssec_display_presence)), ~.==1)
-            
-            if (length(non_selected_conditions) > 0) {
-                output_plot_list <- output_plot_list %>% 
-                    filter_at(vars(all_of(non_selected_conditions)), ~.==0)
-            }
-            target_ids <- output_plot_list %>% pull(id_col)
+            presence_df <- upset_presence_dataframe() %>% 
+                filter_at(vars(!matches("^comb_id$")), any_vars(. != "0")) %>%
+                dplyr::rename(id_col=comb_id)
+            all_condition_levels <- UpSetR::fromList(presence_df) %>% colnames() %>% discard(~.=="id_col")
+            target_ids <- get_target_ids_from_presence(presence_df, all_condition_levels, input$upset_crosssec_display_presence)
         }
         else {
             stop("input$plot_tabs should be either Venn or Upset, found: ", input$plot_tabs)

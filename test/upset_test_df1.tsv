@@ -1,0 +1,11 @@
+Feature	s1	s2	s3	s4	s5	s6
+Gene_A	NA	NA	NA	4	5	6
+Gene_B	2	3	4	NA	NA	NA
+Gene_C	3	NA	NA	NA	7	8
+Gene_D	4	5	NA	NA	NA	9
+Gene_E	5	6	NA	8	9	10
+Gene_F	6	7	8	9	10	11
+Gene_G	7	8	9	10	11	12
+Gene_H	8	9	10	11	12	13
+Gene_I	9	10	11	12	13	14
+Gene_J	10	11	12	13	14	15
