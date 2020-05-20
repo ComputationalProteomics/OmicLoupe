@@ -92,15 +92,13 @@ setup_panel_ui <- function(id) {
                                                    
                                             ),
                                             column(6,
-                                                   fluidRow(
-                                                       column(6, checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE)),
-                                                       conditionalPanel(
-                                                           sprintf("input['%s'] == 1", ns("two_datasets")),
-                                                           column(6, checkboxInput(ns("two_datasets_random_discard"), label = "Discard dups.", value = FALSE))
-                                                       )
-                                                   ),
-                                                   checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
-                                                   checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE)
+                                                   checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE),
+                                                   checkboxInput(ns("two_datasets"), label = "Two datasets", value = FALSE),
+                                                   conditionalPanel(
+                                                       sprintf("input['%s'] == 1", ns("two_datasets")),
+                                                       checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
+                                                       checkboxInput(ns("two_datasets_random_discard"), label = "Discard dups.", value = FALSE)
+                                                   )
                                             )
                                         )
                                     )
@@ -762,6 +760,17 @@ module_setup_server <- function(input, output, session, module_name) {
                 
                 For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.", 
                 type = "error")
+            return()
+        }
+        
+        if (input$matched_samples && (is.null(input$data_file_1) || is.null(input$data_file_2))) {
+            shinyalert(
+                "Input error",
+                "Matched samples requires two uploaded data files, at least one was not found
+                
+                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.",
+                type = "error"
+            )
             return()
         }
         
