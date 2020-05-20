@@ -74,7 +74,7 @@ setup_panel_ui <- function(id) {
                                                    fluidRow(
                                                        class = "button_row",
                                                        actionButton(
-                                                           ns("autodetect_cols"),
+                                                           ns("identify_columns"),
                                                            class = "recolor_button",
                                                            width = "80%",
                                                            "Identify columns"
@@ -566,7 +566,9 @@ module_setup_server <- function(input, output, session, module_name) {
         list(message=status_message, status=status_val)
     }
     
-    observeEvent(input$autodetect_cols, {
+    observeEvent(input$identify_columns, {
+        
+        
         
         output$column_status <- renderText("A dataset and a design matrix need to be assigned before being able to detect sample columns")
         
@@ -581,6 +583,20 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         else {
             sample_col_1 <- input$design_sample_col_1
+        }
+        
+        if (length(sample_col_1) == 0) {
+            shinyalert(
+                "Input error", 
+                "No column in design matrix matches column names in the data matrix. 
+                
+                Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
+                what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
+                on input format.
+                
+                If neither helps, please send a message to the developer.", 
+                type="error")
+            return()
         }
         
         autodetect_stat_cols()
@@ -693,25 +709,55 @@ module_setup_server <- function(input, output, session, module_name) {
     observeEvent(input$perform_map_button, {
         
         if (is.null(input$data_file_1) && is.null(input$design_file_1)) {
-            output$load_status <- renderText({ "Neither data file or design file detected, please upload and assign columns before loading data" })
+            shinyalert("Input error", "Neither data file or design file detected, please upload and assign columns before loading data", type = "error")
+            return()
         }
-        else if (!is.null(input$data_file_1) && is.null(input$design_file_1)) {
-            output$load_status <- renderText({ "No design file detected, please upload and assign columns before loading data" })
+        
+        if (!is.null(input$data_file_1) && is.null(input$design_file_1)) {
+            shinyalert(
+                "Input error", 
+                "No design file detected, please upload in the 'Choose design file' field and assign columns using 'Identify columns' before loading data
+                
+                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.", 
+                type = "error")
+            return()
         }
-        else if (is.null(input$data_file_1) && !is.null(input$design_file_1)) {
-            output$load_status <- renderText({ "No data file detected, please upload and assign columns before loading data" })
+        
+        if (is.null(input$data_file_1) && !is.null(input$design_file_1)) {
+            # output$load_status <- renderText({ "No data file detected, please upload and assign columns before loading data" })
+            shinyalert(
+                "Input error", 
+                "No data file detected, please upload in the 'Choose data file' field and assign columns using 'Identify columns' before loading data
+                
+                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.", 
+                type = "error")
+            return()
         }
-        else if (length(rv$selected_cols_obj()[[input$data_file_1$name]]) == 0) {
-            output$load_status <- renderText({ "Data present but no columns assigned, please identify columns before loading" })
+        
+        if (length(rv$selected_cols_obj()[[input$data_file_1$name]]) == 0) {
+            shinyalert(
+                "Input error", 
+                "Data present but no sample columns assigned, please identify columns using 'Identify columns' before loading
+                
+                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.", 
+                type = "error")
+            return()
         }
-        else if (input$matched_samples &&
+        
+        if (input$matched_samples &&
                  (is.null(rv$selected_cols_obj()[[input$data_file_1$name]]$samples) ||
                   is.null(rv$selected_cols_obj()[[input$data_file_2$name]]$samples))) {
-            output$load_status <- renderText({ "Matched samples requires identified assigned sample columns for both datasets, now at least one is missing" })
+            
+            shinyalert(
+                "Input error", 
+                "Matched samples requires identified assigned sample columns for both datasets, now at least one is missing. Either run a single sample, or make sure columns for the second dataset are properly assigned.
+                
+                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.", 
+                type = "error")
+            return()
         }
-        else {
-            rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
-        }
+        
+        rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
     })
     
     observeEvent(rv$mapping_obj(), {

@@ -240,10 +240,6 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
     })
     
-    # observeEvent(input$table_display_rows_selected, {
-    #     rv$set_selected_feature(selected_id_reactive(), module_name)
-    # })
-    
     ref_pass_reactive <- reactive({
         parse_contrast_pass_list(rv, input, input$dataset1, input$ref_contrast, input$stat_contrast_type)
     })
