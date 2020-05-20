@@ -9,7 +9,7 @@ setup_correlation_ui <- function(id) {
                     12,
                     wellPanel(
                         sliderInput(ns("pthres"), "P-value threshold", min=0, max=1, value=0.05),
-                        sliderInput(ns("fdrthres"), "FDR threshold", min=0, max=1, value=0.05),
+                        sliderInput(ns("fdrthres"), "FDR threshold", min=0, max=1, value=0.05)
                     )
                 )
             ),
