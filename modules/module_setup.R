@@ -554,11 +554,33 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         else {
             if (length(which(samples_from_ddf %in% colnames(rdf))) == 0) {
-                status_message <- "No samples from design matched to data, something is wrong!"
+                # status_message <- "No samples from design matched to data, something is wrong!"
+                shinyalert(
+                    "Input error", 
+                    "No samples from design matched to data. 
+                
+                    Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
+                    what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
+                    on input format.
+                    
+                    If neither helps, please send a message to the developer.", 
+                    type="error")
+                status_message <- ""
                 status_val <- 1
             }
             else {
                 missing <- colnames(rdf)[!samples_from_ddf %in% colnames(rdf)]
+                shinyalert(
+                    "Input error", 
+                    sprintf("%s
+                
+                    Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
+                    what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
+                    on input format.
+                    
+                    If neither helps, please send a message to the developer.", paste0("Not all samples matched, non-missing: ", paste(missing, collapse=", "))), 
+                    type="error")
+                
                 status_message <- paste0("Not all samples matched, non-missing: ", paste(missing, collapse=", "))
                 status_val <- 1
             }
@@ -567,8 +589,6 @@ module_setup_server <- function(input, output, session, module_name) {
     }
     
     observeEvent(input$identify_columns, {
-        
-        
         
         output$column_status <- renderText("A dataset and a design matrix need to be assigned before being able to detect sample columns")
         
@@ -598,6 +618,8 @@ module_setup_server <- function(input, output, session, module_name) {
                 type="error")
             return()
         }
+        
+        
         
         autodetect_stat_cols()
         status_data1 <- assign_sample_cols(
@@ -724,7 +746,6 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         
         if (is.null(input$data_file_1) && !is.null(input$design_file_1)) {
-            # output$load_status <- renderText({ "No data file detected, please upload and assign columns before loading data" })
             shinyalert(
                 "Input error", 
                 "No data file detected, please upload in the 'Choose data file' field and assign columns using 'Identify columns' before loading data
