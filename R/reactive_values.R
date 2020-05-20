@@ -165,7 +165,7 @@ setup_reactive_values_obj <- function(input) {
         parsed_shown_data
     }
     
-    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE, add_show_cols_first=NULL, add_show_cols_last=NULL) {
+    rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE, add_show_cols_first=NULL, add_show_cols_last=NULL, selection_mode='single') {
         
         table_settings <- rv$table_settings()
         parsed_shown_data <- rv$dt_parsed_data_raw(rv, shown_data)
@@ -190,11 +190,8 @@ setup_reactive_values_obj <- function(input) {
             parsed_shown_data %>% 
                 dplyr::select(all_of(c(add_show_cols_first, table_settings$shown_fields, add_show_cols_last))) %>%
                 DT::datatable(data=., 
-                              selection=list(mode='single', selected=c(selected_row_nbr)),
-                              # callback = JS(sprintf("$('div.dwnld').append($('#%s'));", download_button_id)),
-                              # extensions = 'Buttons',
+                              selection=list(mode=selection_mode, selected=c(selected_row_nbr)),
                               options=list(
-                                  # dom = sprintf('B<"%s-dwnld">frtip', download_button_id),
                                   pageLength=page_length, 
                                   displayStart=display_pos
                               ))

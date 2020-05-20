@@ -29,25 +29,21 @@ setup_spotcheck_ui <- function(id) {
                             column(4, numericInput(ns("text_vjust"), "Axis x text vjust", value=0.5))
                         ),
                         fluidRow(
-                            column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE))
+                            column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
+                            column(6, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
                         )
                     ),
-                    htmlOutput(ns("warnings")),
-                    tabsetPanel(
-                        type = "tabs",
-                        tabPanel(
-                            "Combined view", 
-                            fluidRow(
-                                column(6, plotlyOutput(ns("spot_display_ref")) %>% withSpinner()),
-                                column(6, plotlyOutput(ns("spot_display_comp")) %>% withSpinner())
-                            )
-                        )
-                    ),
-                    tabsetPanel(
-                        type = "tabs",
-                        tabPanel("Combined data", 
-                                 downloadButton(ns("download_table"), "Download table"),
-                                 DT::DTOutput(ns("table_display"))
+                    fluidRow(
+                        column(6, 
+                               fluidRow(
+                                   column(6, actionButton(ns("update_spotcheck"), "Visualize selected features")),
+                                   column(6, downloadButton(ns("download_table"), "Download table"))
+                               ),
+                               fluidRow(DT::DTOutput(ns("table_display")), style="overflow-x:scroll;")
+                        ),
+                        column(6, 
+                               plotlyOutput(ns("spot_display_ref")) %>% withSpinner(),
+                               plotlyOutput(ns("spot_display_comp")) %>% withSpinner()
                         )
                     )
                 )
@@ -75,6 +71,23 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 }
 
 module_spotcheck_server <- function(input, output, session, rv, module_name) {
+    
+    v <- reactiveValues(plot = NULL, text = NULL, table_ind = NULL)
+    output$test_output <- renderPlot({
+        if (is.null(v$plot)) return()
+        message(v$text)
+        message(v$table_ind)
+        v$plot
+    })
+    
+    observeEvent(input$update_spotcheck, {
+        message("Update spotcheck clicked")
+        v$plot <- ggplot() + ggtitle(sprintf("Curr ind: %s", input$table_display_rows_selected))
+        v$text <- "Reactivity test"
+        v$table_ind <- input$table_display_rows_selected
+        
+        #rv$set_selected_feature(selected_id_reactive(), module_name)
+    })
     
     output$download_table <- downloadHandler(
         filename = function() {
@@ -106,14 +119,14 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
-    selected_id_reactive <- reactive({
-        rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% 
-            as.character()
-    })
+    # selected_id_reactive <- reactive({
+    #     rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% 
+    #         as.character()
+    # })
     
-    observeEvent(input$table_display_rows_selected, {
-        rv$set_selected_feature(selected_id_reactive(), module_name)
-    })
+    # observeEvent(input$table_display_rows_selected, {
+    #     rv$set_selected_feature(selected_id_reactive(), module_name)
+    # })
     
     sync_param_choices <- function() {
         
@@ -143,19 +156,13 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
     
     output$table_display <- DT::renderDataTable({
-        # req(rv$mapping_obj())
-        # req(rv$mapping_obj()$get_combined_dataset())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
-        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset())
+        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset(), selection_mode=input$multiselect)
     })
     
     plot_df_ref <- reactive({
-        # req(rv$rdf_ref(rv, input$dataset1))
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(rv$samples(rv, input$dataset1))
-        # req(input$table_display_rows_selected)
         validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No data matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
@@ -172,25 +179,29 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         if (input$assign_numeric_as_factor) parsed_cond <- ddf_ref[[cond_ref]] %>% as.factor()
         else parsed_cond <- ddf_ref[[cond_ref]]
 
-        plt_df_ref <- tibble(
-            sample=samples_names,
-            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(all_of(samples_names)) %>% unlist(),
-            cond=parsed_cond
-        )
+        plt_df_ref <- map_df %>% 
+            filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+            dplyr::select(comb_id, all_of(samples_names)) %>%
+            tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
+            dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
+        
+        # plt_df_ref <- tibble(
+        #     sample=samples_names,
+        #     value=map_df %>% 
+        #         filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>% 
+        #         dplyr::select(all_of(samples_names)) %>% 
+        #         unlist(),
+        #     cond=parsed_cond
+        # )
         plt_df_ref
     })
     
     plot_df_comp <- reactive({
-        # req(rv$rdf_comp(rv, input$dataset2))
-        # req(rv$ddf_comp(rv, input$dataset2))
-        # req(rv$samples(rv, input$dataset2))
-        # req(input$table_display_rows_selected)
         validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No data matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
         validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
         
-
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
         ddf_comp$None <- "None"
@@ -201,15 +212,22 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         
         if (input$assign_numeric_as_factor) parsed_cond <- ddf_comp[[cond_comp]] %>% as.factor()
         else parsed_cond <- ddf_comp[[cond_comp]]
+
+        plt_df_comp <- map_df %>% 
+            filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+            dplyr::select(comb_id, all_of(samples_names)) %>%
+            tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
+            dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
-        plt_df_comp <- tibble(
-            sample=samples_names,
-            value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(all_of(samples_names)) %>% unlist(),
-            cond=parsed_cond
-        )
+        # plt_df_comp <- tibble(
+        #     sample=samples_names,
+        #     value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(all_of(samples_names)) %>% unlist(),
+        #     cond=parsed_cond
+        # )
         plt_df_comp
     })
 
+    
     make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, text_size=10, text_angle=90, text_vjust=0.5) {
         add_geoms <- function(plt, show_box, show_scatter, show_violin, show_labels) {
             if (show_violin) {
@@ -219,13 +237,20 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
                 plt <- plt + geom_boxplot(na.rm = TRUE)
             }
             if (show_scatter) {
-                plt <- plt + geom_point(na.rm = TRUE)
+                plt <- plt + geom_point(na.rm = TRUE, position=position_dodge(width=0.75))
             }
             plt
         }
         
-        plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=cond, label=sample)) + 
-            ggtitle(sprintf("Spot check feature: %s", target_row)) +
+        if (length(unique(plot_df$comb_id)) == 1) {
+            plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=cond, label=sample))
+        }
+        else {
+            plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=comb_id, group=comb_id, label=sample))
+        }
+        
+        plt_ref_base <- plt_ref_base +
+            ggtitle(sprintf("Spot check feature(s): %s", paste(target_row, collapse=","))) +
             xlab("Condition") +
             ylab("Abundance") +
             theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle))
@@ -238,17 +263,17 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         # req(plot_df_ref())
         validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
 
-        target_row <- input$table_display_rows_selected
+        target_rows <- input$table_display_rows_selected
         make_spotcheck_plot(
             plot_df_ref(),
-            target_row,
+            target_rows,
             input$show_boxplot,
             input$show_scatter,
             input$show_violin,
             text_size=input$text_size,
             text_angle=input$text_angle,
             text_vjust=input$text_vjust
-        ) %>% ggplotly()
+        ) %>% ggplotly() %>% layout(boxmode="group")
     })
     
     output$spot_display_comp <- renderPlotly({
@@ -266,7 +291,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             text_size=input$text_size,
             text_angle=input$text_angle,
             text_vjust=input$text_vjust
-        ) %>% ggplotly()
+        ) %>% ggplotly() %>% layout(boxmode="group")
     })
 }
 

@@ -310,8 +310,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     output$boxplots_ref <- renderPlotly({ 
         
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(reactive_long_sdf_ref())
         validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
@@ -336,8 +334,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     output$boxplots_comp <- renderPlotly({ 
         
-        # req(rv$ddf_comp(rv, input$dataset2))
-        # req(reactive_long_sdf_comp())
         validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
