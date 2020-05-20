@@ -14,7 +14,6 @@ setup_correlation_ui <- function(id) {
                 )
             ),
             fluidRow(
-                # htmlOutput(ns("warnings")),
                 plotOutput(ns("correlation_histograms"))
             )
         )
