@@ -1,4 +1,3 @@
-
 library(ggplot2)
 theme_set(theme_classic())
 library(ggpubr)
@@ -81,8 +80,8 @@ setup_plotly_ui <- function(id) {
                        )
                 ),
                 column(8,
-                       htmlOutput(ns("warnings")),
                        p("Drag in figures to highlight features. Double click to unselect."),
+                       actionButton(ns("clear_selection"), "Clear selections"),
                        column(6,
                               plotlyOutput(ns("plotly_volc1"), height = 400) %>% withSpinner(),
                               plotlyOutput(ns("plotly_ma1"), height = 400) %>% withSpinner(),
@@ -142,8 +141,6 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
     
     reactive_plot_df <- reactive({
         
-        # req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
-        # req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
         validate(need(
             !is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
             "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
@@ -180,8 +177,6 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         }
         else if (input$color_type == "PCA") {
             
-            # req(rv$samples(rv, input$dataset1))
-            # req(rv$samples(rv, input$dataset2))
             validate(need(rv$samples(rv, input$dataset1), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
             validate(need(rv$samples(rv, input$dataset2), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
             
@@ -387,29 +382,29 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
     
     # ---------------- OUTPUTS ---------------- 
     
-    output$warnings <- renderUI({
-        
-        error_vect <- c()
-        if (is.null(rv$filename_1())) {
-            # error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-            print("Placeholder output, will be removed")
-        }
-        else {
-            if ((is.null(rv$samples(rv, input$dataset1)) || is.null(rv$samples(rv, input$dataset2))) && input$color_type == "PCA") {
-                error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
-            }
-            if (is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)) || is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2))) {
-                error_vect <- c(error_vect, "ref_statcols or comp_statcols not found, assign stat-columns at Setup page")
-            }
-        }
-        
-        if (is.null(rv$design_1()) && input$color_type == "PCA") {
-            error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-        }
-        
-        total_text <- paste(error_vect, collapse="<br>")
-        HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    })
+    # output$warnings <- renderUI({
+    #     
+    #     error_vect <- c()
+    #     if (is.null(rv$filename_1())) {
+    #         # error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
+    #         print("Placeholder output, will be removed")
+    #     }
+    #     else {
+    #         if ((is.null(rv$samples(rv, input$dataset1)) || is.null(rv$samples(rv, input$dataset2))) && input$color_type == "PCA") {
+    #             error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
+    #         }
+    #         if (is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)) || is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2))) {
+    #             error_vect <- c(error_vect, "ref_statcols or comp_statcols not found, assign stat-columns at Setup page")
+    #         }
+    #     }
+    #     
+    #     if (is.null(rv$design_1()) && input$color_type == "PCA") {
+    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
+    #     }
+    #     
+    #     total_text <- paste(error_vect, collapse="<br>")
+    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
+    # })
     
     set_shared_max_lims <- function(plt, xcol, ycol, ref_df, comp_df) {
         min_fold <- min(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
@@ -433,17 +428,28 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
             toWebGL()
     }
     
+    selected_data <- reactiveValues(event_data=NULL)
+    observe({
+        selected_data$event_data <- event_data("plotly_selected", source="subset")
+    })
+    observeEvent(input$clear_selection, {
+        selected_data$event_data <- NULL
+    })
+    
+    
+    
     output$plotly_volc1 <- renderPlotly({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
-        event.data <- event_data("plotly_selected", source = "subset")
+        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        if (!is.null(selected_data$event_data) == TRUE) {
+            # if (!is.null(event.data) == TRUE) {
+            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
         else {
@@ -489,11 +495,17 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
-        event.data <- event_data("plotly_selected", source = "subset")
+        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        # if (!is.null(event.data) == TRUE) {
+        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        #     color_col <- "selected"
+        # } 
+        if (!is.null(selected_data$event_data) == TRUE) {
+            # if (!is.null(event.data) == TRUE) {
+            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
         else {
@@ -539,11 +551,17 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
-        event.data <- event_data("plotly_selected", source = "subset")
+        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        # if (!is.null(event.data) == TRUE) {
+        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        #     color_col <- "selected"
+        # } 
+        if (!is.null(selected_data$event_data) == TRUE) {
+            # if (!is.null(event.data) == TRUE) {
+            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
         else {
@@ -586,11 +604,17 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
-        event.data <- event_data("plotly_selected", source = "subset")
+        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        # if (!is.null(event.data) == TRUE) {
+        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        #     color_col <- "selected"
+        # } 
+        if (!is.null(selected_data$event_data) == TRUE) {
+            # if (!is.null(event.data) == TRUE) {
+            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
         else {
@@ -635,12 +659,16 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
-        event.data <- event_data("plotly_selected", source = "subset")
+        # event.data <- event_data("plotly_selected", source = "subset")
         
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        # if (!is.null(event.data) == TRUE) {
+        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        #     color_col <- "selected"
+        # }
+        if (!is.null(selected_data$event_data) == TRUE) {
+            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
-        }
+        } 
         else {
             color_col <- "pass_thres"
         }
@@ -666,10 +694,14 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         plot_df <- plot_comp_df()
         event.data <- event_data("plotly_selected", source = "subset")
         
-        if (!is.null(event.data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        # if (!is.null(event.data) == TRUE) {
+        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        #     color_col <- "selected"
+        # }
+        if (!is.null(selected_data$event_data) == TRUE) {
+            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
-        }
+        } 
         else {
             color_col <- "pass_thres"
         }

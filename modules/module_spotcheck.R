@@ -25,19 +25,18 @@ setup_spotcheck_ui <- function(id) {
                         ),
                         fluidRow(
                             column(4, numericInput(ns("text_size"), "Text size", value=10)),
-                            column(4, numericInput(ns("text_angle"), "Axis x text angle", value=90)),
-                            column(4, numericInput(ns("text_vjust"), "Axis x text vjust", value=0.5))
+                            column(4, numericInput(ns("text_angle"), "Axis x text angle", value=0))
                         ),
                         fluidRow(
-                            column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
-                            column(6, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
+                            column(4, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
+                            column(4, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
                         )
                     ),
                     fluidRow(
                         column(6, 
                                fluidRow(
-                                   column(6, actionButton(ns("update_spotcheck"), "Visualize selected features")),
-                                   column(6, downloadButton(ns("download_table"), "Download table"))
+                                   actionButton(ns("update_spotcheck"), "Visualize selected features"),
+                                   downloadButton(ns("download_table"), "Download table")
                                ),
                                fluidRow(DT::DTOutput(ns("table_display")), style="overflow-x:scroll;")
                         ),
@@ -72,30 +71,6 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
-    # v <- reactiveValues(plot = NULL, text = NULL, table_inds = NULL)
-    # output$test_output <- renderPlot({
-    #     if (is.null(v$plot)) return()
-    #     message(v$text)
-    #     message(v$table_inds)
-    #     v$plot
-    # })
-    
-    # observeEvent(rv$selected_feature(), {
-    #     v$table_inds <- c(3,5)
-    # })
-    
-    # observeEvent(input$update_spotcheck, {
-    #     message("Update spotcheck clicked")
-    #     
-    #     v$plot <- ggplot() + ggtitle(sprintf("Curr ind: %s", input$table_display_rows_selected))
-    #     v$text <- "Reactivity test"
-    #     v$table_inds <- input$table_display_rows_selected
-    #     
-    #     # ?isolate
-    #     
-    #     #rv$set_selected_feature(selected_id_reactive(), module_name)
-    # })
-    
     output$download_table <- downloadHandler(
         filename = function() {
             paste("spotcheck-", Sys.Date(), ".tsv", sep="")
@@ -125,15 +100,6 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
-    
-    # selected_id_reactive <- reactive({
-    #     rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ]$comb_id %>% 
-    #         as.character()
-    # })
-    
-    # observeEvent(input$table_display_rows_selected, {
-    #     rv$set_selected_feature(selected_id_reactive(), module_name)
-    # })
     
     sync_param_choices <- function() {
         
@@ -174,9 +140,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
         validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
-        # validate(need(!is.null(v$table_inds), "TESTING"))
-        
-        
+
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
         ddf_ref$None <- "None"
@@ -196,21 +160,6 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
-
-        # plt_df_ref <- map_df %>% 
-        #     filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
-        #     dplyr::select(comb_id, all_of(samples_names)) %>%
-        #     tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
-        #     dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
-        
-        # plt_df_ref <- tibble(
-        #     sample=samples_names,
-        #     value=map_df %>% 
-        #         filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>% 
-        #         dplyr::select(all_of(samples_names)) %>% 
-        #         unlist(),
-        #     cond=parsed_cond
-        # )
         plt_df_ref
     })
     
@@ -219,8 +168,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
         validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
-        # validate(need(!is.null(v$table_inds), "TESTING"))
-        
+
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
         ddf_comp$None <- "None"
@@ -238,11 +186,6 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
-        # plt_df_comp <- tibble(
-        #     sample=samples_names,
-        #     value=map_df %>% filter(comb_id == sprintf("C%s", input$table_display_rows_selected)) %>% dplyr::select(all_of(samples_names)) %>% unlist(),
-        #     cond=parsed_cond
-        # )
         plt_df_comp
     })
 
@@ -297,6 +240,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         if (input$multiselect == "multiple") {
             plt <- plt %>% layout(boxmode="group")
         }
+        
+        plt <- plt %>% layout(xaxis=list(tickangle=input$text_angle))
         plt
     })
     
@@ -319,6 +264,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         if (input$multiselect == "multiple") {
             plt <- plt %>% layout(boxmode="group")
         }
+        
+        plt <- plt %>% layout(xaxis=list(tickangle=input$text_angle))
         plt
     })
 }

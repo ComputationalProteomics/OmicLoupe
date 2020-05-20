@@ -88,23 +88,28 @@ MapObject <- R6Class("MapObject", list(
                                 NA
                             }
                             else {
-                                if (corr_type == "pearson") {
-                                    cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type)
-                                    data.frame(pval=cor_val$p.value, cor=cor_val$estimate)
-                                }
-                                else {
-                                    cor_val <- cor(ref_row, comp_row, use="pairwise.complete.obs", method=corr_type)
-                                    data.frame(pval=NA, cor=cor_val)
-                                }
+                                # if (corr_type == "pearson" || corr_type == "spearman") {
+                                cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type, exact=FALSE)
+                                data.frame(pval=cor_val$p.value, cor=cor_val$estimate)
+                                # }
+                                # else {
+                                #     cor_val <- cor(ref_row, comp_row, use="pairwise.complete.obs", method=corr_type)
+                                #     data.frame(pval=NA, cor=cor_val)
+                                # }
                             }
                         }, ref_mat=ref_sdf_joint, comp_mat=comp_sdf_joint, corr_type=corr_type) %>% 
                             do.call("rbind", .) %>%
                             rename_all(~paste(corr_type, ., sep="."))
                     }
-                ) %>% do.call("cbind", .) %>% mutate(pearson.fdr=p.adjust(pearson.pval, method = "BH"))
-                # names(corrs) <- corr_types
-                self$correlations <- corrs
+                ) %>% 
+                    do.call("cbind", .) %>% 
+                    mutate(
+                        pearson.fdr=p.adjust(pearson.pval, method = "BH"),
+                        spearman.fdr=p.adjust(spearman.pval, method = "BH"),
+                        kendall.fdr=p.adjust(kendall.pval, method = "BH")
+                    )
                 
+                self$correlations <- corrs
             }
         }
     },
