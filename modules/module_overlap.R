@@ -99,11 +99,13 @@ setup_overlap_ui <- function(id) {
                                      column(6, plotOutput(ns("venn"))),
                                      column(6, plotOutput(ns("fold_fractions_among_sig")))
                                  ),
+                                 actionButton(ns("update_spotcheck"), "Visualize selected features"),
                                  downloadButton(ns("download_table"), "Download table"),
                                  DT::DTOutput(ns("table_display"))
                         ),
                         tabPanel("Upset",
                                  plotOutput(ns("upset"), height = 800) %>% withSpinner(),
+                                 actionButton(ns("update_spotcheck_upset"), "Visualize selected features"),
                                  downloadButton(ns("download_table_upset"), "Download table"),
                                  DT::DTOutput(ns("table_display_upset"))
                         ),
@@ -112,6 +114,7 @@ setup_overlap_ui <- function(id) {
                         ),
                         tabPanel("UpsetPresence",
                                  plotOutput(ns("upset_presence"), height = 800) %>% withSpinner(),
+                                 actionButton(ns("update_spotcheck_upset_pres"), "Visualize selected features"),
                                  downloadButton(ns("download_table_upset_presence"), "Download table"),
                                  DT::DTOutput(ns("table_display_upset_presence"))
                         )
@@ -139,7 +142,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-module_overlap_server <- function(input, output, session, rv, module_name) {
+module_overlap_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
     output$download_table <- output$download_table_upset <- downloadHandler(
         filename = function() {
@@ -149,6 +152,35 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
             write_tsv(rv$dt_parsed_data_raw(rv, output_table_reactive()), file)
         }
     )
+    
+    spotcheck_listen <- reactive({
+        list(input$update_spotcheck, input$update_spotcheck_upset, input$update_spotcheck_upset_pres)
+    })
+    
+    observeEvent(spotcheck_listen(), {
+        if (!is.null(parent_session)) {
+            
+            if (input$plot_tabs == "Venn") {
+                selected_rows <- input$table_display_rows_selected
+            }
+            else if (input$plot_tabs == "Upset") {
+                selected_rows <- input$table_display_upset_rows_selected
+            }
+            else if (input$plot_tabs == "UpsetPresence") {
+                selected_rows <- input$table_display_upset_presence_rows_selected
+            }
+            else {
+                warning("Unknown situation, cannot spotcheck for tab: ", input$plot_tabs)
+            }
+            
+            selected_ids <- output_table_reactive()[selected_rows, ]$comb_id %>% as.character()
+            rv$set_selected_feature(selected_ids, module_name)
+            updateTabsetPanel(session=parent_session, inputId="navbar", selected="Spotcheck")
+        }
+        else {
+            warning("Switching navbar requires access to parent session")
+        }
+    })
     
     observeEvent(input$help, {
         shinyalert(
@@ -208,9 +240,9 @@ module_overlap_server <- function(input, output, session, rv, module_name) {
         output_table_reactive()[input$table_display_rows_selected, ]$comb_id %>% as.character()
     })
     
-    observeEvent(input$table_display_rows_selected, {
-        rv$set_selected_feature(selected_id_reactive(), module_name)
-    })
+    # observeEvent(input$table_display_rows_selected, {
+    #     rv$set_selected_feature(selected_id_reactive(), module_name)
+    # })
     
     ref_pass_reactive <- reactive({
         parse_contrast_pass_list(rv, input, input$dataset1, input$ref_contrast, input$stat_contrast_type)

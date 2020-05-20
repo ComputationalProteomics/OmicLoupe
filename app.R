@@ -56,7 +56,7 @@ ui <- navbarPage(
     setup_help_ui("Help")
 )
 
-server <- shinyServer(function(session, input, output) {
+server <- shinyServer(function(input, output, session) {
   
     reactive_values <- callModule(module_setup_server, id="Setup", module_name="Setup")
     callModule(module_quality_server, id="Quality", rv=reactive_values, module_name="Quality")
@@ -64,7 +64,7 @@ server <- shinyServer(function(session, input, output) {
     callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="Spotcheck")
 
     callModule(module_statdist_server, id="StatDist", rv=reactive_values, module_name="StatDist")
-    callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap")
+    callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap", parent_session=session)
 
     callModule(module_correlation_server, id="Correlation", rv=reactive_values, module_name="Correlation")
 

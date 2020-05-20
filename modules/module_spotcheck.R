@@ -72,22 +72,29 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
-    v <- reactiveValues(plot = NULL, text = NULL, table_ind = NULL)
-    output$test_output <- renderPlot({
-        if (is.null(v$plot)) return()
-        message(v$text)
-        message(v$table_ind)
-        v$plot
-    })
+    # v <- reactiveValues(plot = NULL, text = NULL, table_inds = NULL)
+    # output$test_output <- renderPlot({
+    #     if (is.null(v$plot)) return()
+    #     message(v$text)
+    #     message(v$table_inds)
+    #     v$plot
+    # })
     
-    observeEvent(input$update_spotcheck, {
-        message("Update spotcheck clicked")
-        v$plot <- ggplot() + ggtitle(sprintf("Curr ind: %s", input$table_display_rows_selected))
-        v$text <- "Reactivity test"
-        v$table_ind <- input$table_display_rows_selected
-        
-        #rv$set_selected_feature(selected_id_reactive(), module_name)
-    })
+    # observeEvent(rv$selected_feature(), {
+    #     v$table_inds <- c(3,5)
+    # })
+    
+    # observeEvent(input$update_spotcheck, {
+    #     message("Update spotcheck clicked")
+    #     
+    #     v$plot <- ggplot() + ggtitle(sprintf("Curr ind: %s", input$table_display_rows_selected))
+    #     v$text <- "Reactivity test"
+    #     v$table_inds <- input$table_display_rows_selected
+    #     
+    #     # ?isolate
+    #     
+    #     #rv$set_selected_feature(selected_id_reactive(), module_name)
+    # })
     
     output$download_table <- downloadHandler(
         filename = function() {
@@ -167,6 +174,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
         validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
+        # validate(need(!is.null(v$table_inds), "TESTING"))
+        
         
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
@@ -179,11 +188,20 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         if (input$assign_numeric_as_factor) parsed_cond <- ddf_ref[[cond_ref]] %>% as.factor()
         else parsed_cond <- ddf_ref[[cond_ref]]
 
+        
+        
         plt_df_ref <- map_df %>% 
             filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
             dplyr::select(comb_id, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
+        
+
+        # plt_df_ref <- map_df %>% 
+        #     filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+        #     dplyr::select(comb_id, all_of(samples_names)) %>%
+        #     tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
+        #     dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
         # plt_df_ref <- tibble(
         #     sample=samples_names,
@@ -201,6 +219,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
         validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
         validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
+        # validate(need(!is.null(v$table_inds), "TESTING"))
         
         map_df <- rv$mapping_obj()$get_combined_dataset()
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
@@ -256,15 +275,15 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle))
         
         plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin, show_labels)
-        plt_ref
+        plt_ref + theme_bw()
     }
         
     output$spot_display_ref <- renderPlotly({
-        # req(plot_df_ref())
+
         validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
 
         target_rows <- input$table_display_rows_selected
-        make_spotcheck_plot(
+        plt <- make_spotcheck_plot(
             plot_df_ref(),
             target_rows,
             input$show_boxplot,
@@ -273,16 +292,20 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             text_size=input$text_size,
             text_angle=input$text_angle,
             text_vjust=input$text_vjust
-        ) %>% ggplotly() %>% layout(boxmode="group")
+        ) %>% ggplotly()
+        
+        if (input$multiselect == "multiple") {
+            plt <- plt %>% layout(boxmode="group")
+        }
+        plt
     })
     
     output$spot_display_comp <- renderPlotly({
         
-        # req(plot_df_comp())
         validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
         
         target_row <- input$table_display_rows_selected
-        make_spotcheck_plot(
+        plt <- make_spotcheck_plot(
             plot_df_comp(),
             target_row,
             input$show_boxplot,
@@ -291,16 +314,11 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             text_size=input$text_size,
             text_angle=input$text_angle,
             text_vjust=input$text_vjust
-        ) %>% ggplotly() %>% layout(boxmode="group")
+        ) %>% ggplotly()
+        
+        if (input$multiselect == "multiple") {
+            plt <- plt %>% layout(boxmode="group")
+        }
+        plt
     })
 }
-
-
-
-
-
-
-
-
-
-
