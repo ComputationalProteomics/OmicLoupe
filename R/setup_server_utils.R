@@ -71,6 +71,11 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         if (mo$has_combined()) {
             if (!mo$has_same_number_entries()) {
                 if (duplicates_method == "stop") {
+                    shinyalert(
+                        "Input error", 
+                        "Datasets mapped, but not equal number of entries. This is likely due to having duplicate IDs in your 'Feature column'. 
+                        Either process the IDs to be unique, or use option 'Discard dups.' to proceed (which will simply discard rows with duplicate IDs).", 
+                        type="error")                    
                     out_text <- "Datasets mapped, but not equal number of entries. Either fix, or use option 'Discard dups.' to proceed."
                 }
                 else if (duplicates_method == "discard") {

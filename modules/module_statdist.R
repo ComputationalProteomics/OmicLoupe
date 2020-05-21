@@ -6,7 +6,8 @@ library(shinycssloaders)
 source("R/vis_server_utils.R")
 source("R/vis_server_plots.R")
 
-MY_COLORS <- c("grey50", "blue", "red", "orange")
+MY_COLORS_COMPARISON <- c("grey50", "blue", "red", "orange")
+MY_COLORS_SELECTED <- c("grey50", "green")
 
 MAX_DISCRETE_LEVELS <- 20
 
@@ -80,8 +81,8 @@ setup_plotly_ui <- function(id) {
                        )
                 ),
                 column(8,
-                       p("Drag in figures to highlight features. Double click to unselect."),
-                       actionButton(ns("clear_selection"), "Clear selections"),
+                       fluidRow(p("Drag in figures to highlight features. Double click to unselect.")),
+                       fluidRow(actionButton(ns("clear_selection"), "Clear selections")),
                        column(6,
                               plotlyOutput(ns("plotly_volc1"), height = 400) %>% withSpinner(),
                               plotlyOutput(ns("plotly_ma1"), height = 400) %>% withSpinner(),
@@ -336,7 +337,12 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         # )
         
         if (manual_scale) {
-            plt <- plt + scale_color_manual(values=MY_COLORS)
+            if (color_col == "selected") {
+                plt <- plt + scale_color_manual(values=MY_COLORS_SELECTED)
+            }
+            else {
+                plt <- plt + scale_color_manual(values=MY_COLORS_COMPARISON)
+            }
         }
         else if (!is.null(cont_scale)) {
             plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
@@ -351,12 +357,20 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
     
     make_histogram <- function(plot_df, x_col, fill_col, key_vals, title="") {
         t <- list(family = "sans serif", size = input$text_size)
+        
+        if (fill_col == "selected") {
+            target_colors <- MY_COLORS_SELECTED
+        }
+        else {
+            target_colors <- MY_COLORS_COMPARISON
+        }
+        
         plot_ly(
             plot_df,
             x = ~get(x_col),
             color = ~get(fill_col),
             type = "histogram", 
-            colors = MY_COLORS, 
+            colors = target_colors, 
             alpha = 0.6,
             nbinsx = input$bin_count,
             source = "subset",
@@ -381,30 +395,6 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
     }
     
     # ---------------- OUTPUTS ---------------- 
-    
-    # output$warnings <- renderUI({
-    #     
-    #     error_vect <- c()
-    #     if (is.null(rv$filename_1())) {
-    #         # error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-    #         print("Placeholder output, will be removed")
-    #     }
-    #     else {
-    #         if ((is.null(rv$samples(rv, input$dataset1)) || is.null(rv$samples(rv, input$dataset2))) && input$color_type == "PCA") {
-    #             error_vect <- c(error_vect, "No mapped samples found needed for PCA, map at Setup page")
-    #         }
-    #         if (is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)) || is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2))) {
-    #             error_vect <- c(error_vect, "ref_statcols or comp_statcols not found, assign stat-columns at Setup page")
-    #         }
-    #     }
-    #     
-    #     if (is.null(rv$design_1()) && input$color_type == "PCA") {
-    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-    #     }
-    #     
-    #     total_text <- paste(error_vect, collapse="<br>")
-    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    # })
     
     set_shared_max_lims <- function(plt, xcol, ycol, ref_df, comp_df) {
         min_fold <- min(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
@@ -436,19 +426,14 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         selected_data$event_data <- NULL
     })
     
-    
-    
     output$plotly_volc1 <- renderPlotly({
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
-        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
         if (!is.null(selected_data$event_data) == TRUE) {
-            # if (!is.null(event.data) == TRUE) {
-            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
