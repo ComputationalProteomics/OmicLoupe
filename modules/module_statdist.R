@@ -95,6 +95,7 @@ setup_plotly_ui <- function(id) {
                        )
                 )
             ),
+            actionButton(ns("spotcheck"), "Visualize selected features"),
             downloadButton(ns("download_table"), "Download table"),
             DT::DTOutput(ns("table_display"))
         )
@@ -102,7 +103,7 @@ setup_plotly_ui <- function(id) {
 }
 
 
-module_statdist_server <- function(input, output, session, rv, module_name) {
+module_statdist_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
     output$download_table <- downloadHandler(
         filename = function() {
@@ -114,6 +115,18 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
             write_tsv(rv$dt_parsed_data_raw(rv, dt_parsed_target), file)
         }
     )
+    
+    observeEvent(input$spotcheck, {
+        if (!is.null(parent_session)) {
+            selected_rows <- input$table_display_rows_selected
+            selected_ids <- get_target_df(rv)[selected_rows, ]$comb_id %>% as.character()
+            rv$set_selected_feature(selected_ids, module_name)
+            updateTabsetPanel(session=parent_session, inputId="navbar", selected="Spotcheck")
+        }
+        else {
+            warning("Switching navbar requires access to parent session")
+        }
+    })
     
     observeEvent(input$help, {
         shinyalert(
@@ -725,13 +738,13 @@ module_statdist_server <- function(input, output, session, rv, module_name) {
         out_df
     }
     
-    selected_id_reactive <- reactive({
-        get_target_df(rv)[input$table_display_rows_selected, ]$comb_id %>% as.character()
-    })
+    # selected_id_reactive <- reactive({
+    #     get_target_df(rv)[input$table_display_rows_selected, ]$comb_id %>% as.character()
+    # })
     
-    observeEvent(input$table_display_rows_selected, {
-        rv$set_selected_feature(selected_id_reactive(), module_name)
-    })
+    # observeEvent(input$table_display_rows_selected, {
+    #     rv$set_selected_feature(selected_id_reactive(), module_name)
+    # })
     
     output$table_display = DT::renderDataTable({
         

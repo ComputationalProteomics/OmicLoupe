@@ -63,7 +63,7 @@ server <- shinyServer(function(input, output, session) {
     callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
     callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="Spotcheck")
 
-    callModule(module_statdist_server, id="StatDist", rv=reactive_values, module_name="StatDist")
+    callModule(module_statdist_server, id="StatDist", rv=reactive_values, module_name="StatDist", parent_session=session)
     callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap", parent_session=session)
 
     callModule(module_correlation_server, id="Correlation", rv=reactive_values, module_name="Correlation")

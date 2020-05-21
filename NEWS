@@ -1,3 +1,12 @@
+# Version 0.2.0
+
+* Feature selection in Upset plot
+* Presence / absence selection in Upset plot based on sample conditions
+* Directly go to spot-check from features 
+* Separate coloring in StatDist when selecting features, and button to clean it up
+* Clearer communication in Setup page, with alert boxes for incorrect input
+* Clean-up in statistics module, including statistical measures also for non-parametric correlation types
+
 # Version 0.1.6
 
 * Fix bug where sample column not detected automatically

@@ -184,7 +184,7 @@ setup_reactive_values_obj <- function(input) {
         }
         
         page_length <- 10
-        display_pos <- selected_row_nbr - (selected_row_nbr %% page_length)
+        display_pos <- (selected_row_nbr-1) - ((selected_row_nbr-1) %% page_length)
         
         if (with_row_selection) {
             parsed_shown_data %>% 
