@@ -63,7 +63,10 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
                 geom_histogram(bins=bins, na.rm=TRUE) +
                 geom_vline(xintercept = mean_corr, na.rm=TRUE) +
                 ggtitle(sprintf("%s (mean %s)", title, round(mean_corr, 3))) +
-                xlim(-1, 1) + xlab("Correlation") + ylab("Count") + scale_fill_manual(values=c("#aaaaaa", "#3399FF", "#FF3333"))
+                xlim(-1, 1) + 
+                xlab("Correlation") + 
+                ylab("Count") + 
+                scale_fill_manual(values=setNames(c("#aaaaaa", "#3399FF", "#FF3333"), c(not_sig_string, p_level_string, fdr_level_string)))
         }
         
         ggpubr::ggarrange(

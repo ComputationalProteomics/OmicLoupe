@@ -39,7 +39,7 @@ clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
 }
 
-do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2, matched_samples, duplicates_method="stop") {
+do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_cols1, sample_cols2, matched_samples, skip_correlation=FALSE, duplicates_method="stop") {
     
     get_output_text <- function(rv, type) {
         
@@ -120,6 +120,7 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
             samples1=sample_cols1,
             samples2=sample_cols2,
             matched=matched_samples,
+            skip_correlation = skip_correlation,
             discard_dups=ifelse(duplicates_method=="discard", TRUE, FALSE)
         )
         rv$mapping_obj(mo)

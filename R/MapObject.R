@@ -19,7 +19,7 @@ MapObject <- R6Class("MapObject", list(
     correlations = NULL,
 
     initialize = function(dataset1, target_col1, dataset2=NULL, target_col2=NULL, samples1=NULL, 
-                          samples2=NULL, matched=FALSE, discard_dups=FALSE) {
+                          samples2=NULL, matched=FALSE, skip_correlation=FALSE, discard_dups=FALSE) {
         
         self$dataset1 <- dataset1 %>% arrange(UQ(as.name(target_col1)))
         if (discard_dups) {
@@ -57,6 +57,9 @@ MapObject <- R6Class("MapObject", list(
             if (length(self$samples1) != length(self$samples2)) {
                 warning(sprintf("Number of samples (%s and %s) does not match, not calculating correlations", length(self$samples1), length(self$samples2)))
             }
+            else if (skip_correlation) {
+                message("Option 'skip_correlation' set, skipping...")
+            }
             else {            
                 message("Calculating correlations")
                 ref_rdf <- self$dataset1
@@ -77,6 +80,8 @@ MapObject <- R6Class("MapObject", list(
                 ref_sdf_joint <- ref_rdf_joint %>% dplyr::select(self$samples1)
                 comp_sdf_joint <- comp_rdf_joint %>% dplyr::select(self$samples2)
                 
+                showNotification(sprintf("Correlation started for %s features, might take a few moments...", nrow(ref_sdf_joint)))
+                
                 corr_types <- list("pearson", "spearman", "kendall")
                 corrs <- lapply(
                     corr_types,
@@ -88,14 +93,8 @@ MapObject <- R6Class("MapObject", list(
                                 NA
                             }
                             else {
-                                # if (corr_type == "pearson" || corr_type == "spearman") {
                                 cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type, exact=FALSE)
                                 data.frame(pval=cor_val$p.value, cor=cor_val$estimate)
-                                # }
-                                # else {
-                                #     cor_val <- cor(ref_row, comp_row, use="pairwise.complete.obs", method=corr_type)
-                                #     data.frame(pval=NA, cor=cor_val)
-                                # }
                             }
                         }, ref_mat=ref_sdf_joint, comp_mat=comp_sdf_joint, corr_type=corr_type) %>% 
                             do.call("rbind", .) %>%

@@ -98,6 +98,10 @@ setup_panel_ui <- function(id) {
                                                        sprintf("input['%s'] == 1", ns("two_datasets")),
                                                        checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
                                                        checkboxInput(ns("two_datasets_random_discard"), label = "Discard dups.", value = FALSE)
+                                                   ),
+                                                   conditionalPanel(
+                                                       sprintf("input['%s'] == 1", ns("matched_samples")),
+                                                       checkboxInput(ns("skip_correlation"), label = "Skip correlation", value=FALSE)
                                                    )
                                             )
                                         )
@@ -720,7 +724,8 @@ module_setup_server <- function(input, output, session, module_name) {
             selcol1,
             selcol2,
             input$matched_samples,
-            duplicates_method=ifelse(input$two_datasets_random_discard, "discard", "stop")
+            duplicates_method=ifelse(input$two_datasets_random_discard, "discard", "stop"),
+            skip_correlation=input$skip_correlation
         )
         
         rv
