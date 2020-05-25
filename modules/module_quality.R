@@ -81,8 +81,8 @@ setup_quality_ui <- function(id) {
                         id = ns("plot_tabs"),
                         type = "tabs",
                         tabPanel("Boxplots", 
-                                 plotlyOutput(ns("boxplots_ref")) %>% withSpinner(),
-                                 plotlyOutput(ns("boxplots_comp")) %>% withSpinner()
+                                 plotOutput(ns("boxplots_ref")) %>% withSpinner(),
+                                 plotOutput(ns("boxplots_comp")) %>% withSpinner()
                         ),
                         tabPanel("Density", 
                                  plotlyOutput(ns("density_ref_plotly")) %>% withSpinner(),
@@ -308,7 +308,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 plotly::ggplotly()
     })
 
-    output$boxplots_ref <- renderPlotly({ 
+    output$boxplots_ref <- renderPlot({ 
         
         validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
@@ -329,10 +329,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_samplecol_ref(rv, input$dataset1),
             input$color_data_ref,
             text_size=input$text_size
-        ) %>% plotly::ggplotly()
+        )
+    # ) %>% plotly::ggplotly() %>% toWebGL()
     })
 
-    output$boxplots_comp <- renderPlotly({ 
+    output$boxplots_comp <- renderPlot({ 
         
         validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
@@ -353,7 +354,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_samplecol_comp(rv, input$dataset2),
             input$color_data_comp,
             text_size=input$text_size
-        ) %>% plotly::ggplotly()
+        )
+    # ) %>% plotly::ggplotly() %>% toWebGL()
     })
     
     output$density_ref_plotly <- renderPlotly({

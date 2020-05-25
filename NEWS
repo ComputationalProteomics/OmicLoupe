@@ -1,3 +1,8 @@
+# Version 0.2.2
+
+* Fix issue where correlation crashed when total combined NA went below required for statistical test
+* Fix some issues in Upset overlaps and targeting
+
 # Version 0.2.0
 
 * Feature selection in Upset plot

@@ -142,7 +142,7 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
 
 module_overlap_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
-    output$download_table <- output$download_table_upset <- downloadHandler(
+    output$download_table <- output$download_table_upset <- output$download_table_upset_presence <- downloadHandler(
         filename = function() {
             paste("overlap-", Sys.Date(), ".tsv", sep="")
         },
@@ -637,12 +637,23 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         else new_val_selected
     }
     
-    observeEvent(input$upset_ref_comparisons, {
+    observeEvent({
+        input$upset_ref_comparisons
+        input$fold_split_upset
+        input$dataset1
+        input$dataset2
+        }, {
         updateSelectInput(session, "upset_crosssec_display", choices=parsed_overlap_entries(), 
                           selected = set_if_new(input$upset_crosssec_display, parsed_overlap_entries(), parsed_overlap_entries()))
     })
     
-    observeEvent(input$upset_pres_levels_ref, {
+    observeEvent({
+        input$upset_pres_levels_ref
+        input$dataset1
+        input$dataset2
+        input$upset_pres_cond_ref
+        input$upset_pres_cond_comp
+    }, {
         updateSelectInput(session, "upset_crosssec_display_presence", choices=parsed_presence_entries(), 
                           selected = set_if_new(input$upset_crosssec_display_presence, parsed_presence_entries(), parsed_presence_entries()))
     })
@@ -664,7 +675,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             
             choices_2 <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
             updateSelectInput(session, "comp_contrast", choices=choices_2, selected=set_if_new(input$comp_contrast, choices_2, choices_2[1]))
-            updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=set_if_new(input$upset_comp_comparisons, choices_2, choices_2[1]))
+            updateSelectInput(session, "upset_comp_comparisons", choices=choices_2, selected=set_if_new(input$upset_comp_comparisons, choices_2, choices_2))
             
             ref_cond_choices <- c("None", rv$ddf_cols_ref(rv, input$dataset1))
             updateSelectInput(session, "upset_pres_cond_ref", choices = ref_cond_choices, selected=set_if_new(input$upset_pres_cond_ref, ref_cond_choices, ref_cond_choices[2]))

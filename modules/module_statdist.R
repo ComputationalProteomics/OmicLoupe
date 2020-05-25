@@ -690,7 +690,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
-        event.data <- event_data("plotly_selected", source = "subset")
+        # event.data <- event_data("plotly_selected", source = "subset")
         
         # if (!is.null(event.data) == TRUE) {
         #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)

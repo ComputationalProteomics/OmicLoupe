@@ -33,7 +33,7 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     output$correlation_histograms <- renderPlot({
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, is data loaded and samples mapped under the Setup page?"))
-        validate(need(rv$mapping_obj()$has_correlations(), "No correlation object found, do you have two matched datasets?"))
+        validate(need(rv$mapping_obj()$has_correlations(), "No correlation object found! At the Setup page, do you have two matched datasets and the checkbox 'Skip correlation' unchecked?"))
         
         comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
         make_corr_hist <- function(target_df, corr_base, title, has_sig=FALSE, bins=100) {
