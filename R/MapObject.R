@@ -89,7 +89,7 @@ MapObject <- R6Class("MapObject", list(
                         lapply(seq_len(nrow(ref_sdf_joint)), function(row_i, ref_mat, comp_mat, corr_type) {
                             ref_row <- ref_mat[row_i, ] %>% unlist()
                             comp_row <- comp_mat[row_i, ] %>% unlist()
-                            if (length(na.omit(ref_row)) < 3 || length(na.omit(comp_row)) < 3) {
+                            if (length(na.omit(ref_row + comp_row)) < 3) {
                                 NA
                             }
                             else {

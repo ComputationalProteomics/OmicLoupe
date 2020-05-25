@@ -190,6 +190,8 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     
     parsed_overlap_entries <- reactive({
         
+        req(input$upset_ref_comparisons != "Dev")
+
         parsed_ref_comps <- input$upset_ref_comparisons %>% gsub("\\.$", "", .)
         if (input$fold_split_upset) {
             parsed_ref_comps <- c(
@@ -218,6 +220,9 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     })
     
     parsed_presence_entries <- reactive({
+        
+        req(input$upset_pres_levels_ref != "Dev")
+        
         if (input$dataset1 == input$dataset2) {
             input$upset_pres_levels_ref
         }
@@ -626,19 +631,21 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         updateSelectInput(session, "upset_pres_levels_comp", choices=choices, selected=choices)
     })
     
-    # observeEvent({
-    #     parsed_overlap_entries()
-    #     input$dataset1 
-    #     input$dataset2
-    # }, {
-    #     updateSelectInput(session, "upset_crosssec_display", choices=parsed_overlap_entries(), selected = parsed_overlap_entries())
-    # })
-    # 
-    # observeEvent(parsed_presence_entries(), {
-    #     updateSelectInput(session, "upset_crosssec_display_presence", choices=parsed_presence_entries(), selected = parsed_presence_entries())
-    # })
+    set_if_new <- function(prev_val, new_values, new_val_selected) {
+        if (is.null(prev_val)) new_val_selected
+        else if (prev_val %in% new_values) prev_val
+        else new_val_selected
+    }
     
+    observeEvent(input$upset_ref_comparisons, {
+        updateSelectInput(session, "upset_crosssec_display", choices=parsed_overlap_entries(), 
+                          selected = set_if_new(input$upset_crosssec_display, parsed_overlap_entries(), parsed_overlap_entries()))
+    })
     
+    observeEvent(input$upset_pres_levels_ref, {
+        updateSelectInput(session, "upset_crosssec_display_presence", choices=parsed_presence_entries(), 
+                          selected = set_if_new(input$upset_crosssec_display_presence, parsed_presence_entries(), parsed_presence_entries()))
+    })
     
     observeEvent({
         rv$selected_cols_obj() 
@@ -648,11 +655,8 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             req(rv$ddf_ref(rv, input$dataset1))
             req(rv$ddf_comp(rv, input$dataset2))
             
-            set_if_new <- function(prev_val, new_values, new_val_selected) {
-                if (is.null(prev_val)) new_val_selected
-                else if (prev_val %in% new_values) prev_val
-                else new_val_selected
-            }
+            
+            # browser()
             
             choices_1 <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
             updateSelectInput(session, "ref_contrast", choices=choices_1, selected=set_if_new(input$ref_contrast, choices_1, choices_1[1]))
@@ -669,12 +673,6 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             comp_cond_choices <- c("None", rv$ddf_cols_comp(rv, input$dataset2))
             updateSelectInput(session, "upset_pres_cond_comp", choices = comp_cond_choices, selected=set_if_new(input$upset_pres_cond_ref, ref_cond_choices, ref_cond_choices[2]))
             # updateSelectInput(session, "upset_pres_cond_comp", choices = comp_cond_choices, selected=comp_cond_choices[2])
-            
-            updateSelectInput(session, "upset_crosssec_display", choices=parsed_overlap_entries(), 
-                              selected = set_if_new(input$upset_crosssec_display, parsed_overlap_entries(), parsed_overlap_entries()))
-            
-            updateSelectInput(session, "upset_crosssec_display_presence", choices=parsed_presence_entries(), 
-                              selected = set_if_new(input$upset_crosssec_display_presence, parsed_presence_entries(), parsed_presence_entries()))
         })
 }
 
