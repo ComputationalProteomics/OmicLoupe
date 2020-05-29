@@ -1,15 +1,21 @@
-get_ordered_sets <- function(upset_list, order_on, omit_empty=TRUE) {
-    # Translates "1010" to retrieving contrast names 1 and 3 in a list
-    retrieve_contrasts_from_union_string <- function(union_string_list) {
-        str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% names(upset_list)[.])
-    }
+get_ordered_sets <- function(upset_list, order_on, name_order, omit_empty=TRUE) {
     
-    unordered <- upset_list %>% 
-        unite("union_contrast_string", names(upset_list), sep="", remove = FALSE) %>% 
+    # Translates "1010" to retrieving contrast names 1 and 3 in a list
+    retrieve_contrasts_from_union_string <- function(union_string_list, name_order) {
+        str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% name_order[.])
+        # str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% names(upset_list)[.])
+    }
+
+    ordered_upset_list <- upset_list[name_order]
+    
+    # name_order
+    
+    unordered <- ordered_upset_list %>% 
+        unite("union_contrast_string", names(ordered_upset_list), sep="", remove = FALSE) %>% 
         group_by(union_contrast_string) %>% 
         summarize(nbr=n()) %>% 
         dplyr::mutate(grade=union_contrast_string %>% gsub("0", "", .) %>% str_length()) %>%
-        dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(union_contrast_string)) %>%
+        dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(union_contrast_string, name_order)) %>%
         dplyr::mutate(string_entries=map(included_entries, ~paste(., collapse=",")) %>% unlist())
     
     # Generate name order here?

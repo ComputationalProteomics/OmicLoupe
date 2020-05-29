@@ -1,3 +1,7 @@
+# Version 0.2.3
+
+* Fix so that Upset selection matches correctly for rank ties with split dataset
+
 # Version 0.2.2
 
 * Fix issue where correlation crashed when total combined NA went below required for statistical test

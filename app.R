@@ -11,6 +11,7 @@ quiet(library(shiny))
 quiet(library(shinyjs))
 quiet(library(shinyalert))
 quiet(library(stringr))
+quiet(library(stringi))
 quiet(library(tidyverse))
 
 options(shiny.maxRequestSize=100*1024^2)

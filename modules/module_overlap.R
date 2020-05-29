@@ -484,7 +484,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             target_metadata <- NULL
         }
         
-        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by())
+        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by(), name_order=name_order)
         crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, name_order))]
         bar_coloring <- (set_ordering$string_entries == paste(crosssection_target_ordered, collapse=",")) %>% ifelse("#298ff5", "gray23")
         
