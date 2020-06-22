@@ -644,6 +644,20 @@ module_setup_server <- function(input, output, session, module_name) {
                 sample_col_2 <- input$design_sample_col_2
             }
             
+            if (length(sample_col_2) == 0) {
+                shinyalert(
+                    "Input error", 
+                    "No column in design matrix matches column names in the second data matrix. 
+                
+                Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
+                what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
+                on input format.
+                
+                If neither helps, please send a message to the developer.", 
+                    type="error")
+                return()
+            }
+            
             status_data2 <- assign_sample_cols(
                 rv,
                 data_nbr=2,
