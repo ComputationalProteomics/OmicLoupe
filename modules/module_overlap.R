@@ -450,7 +450,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         }
         
         name_order <- upset_table[, -ncol(upset_table)] %>% colnames()
-        set_ordering <- get_ordered_sets(upset_table[, -ncol(upset_table)], order_on = upset_order_by())
+        set_ordering <- get_ordered_sets(upset_table[, -ncol(upset_table)], order_on = upset_order_by(), name_order=name_order)
         bar_coloring <- (set_ordering$string_entries == paste(input$upset_crosssec_display_presence, collapse=",")) %>% ifelse("#298ff5", "gray23")
         
         UpSetR::upset(
