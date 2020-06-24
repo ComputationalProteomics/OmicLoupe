@@ -442,34 +442,40 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         selected_data$event_data <- NULL
     })
     
+    get_contrast_figure_settings <- function(rv, show_full_table, event_data, color_type, is_ref, table_rows_selected) {
+        
+        settings_list <- list()
+        settings_list$manual_scale <- TRUE
+        settings_list$cont_scale <- NULL
+        if (show_full_table) {
+            settings_list$selected <- rv$mapping_obj()$get_combined_dataset()[table_rows_selected, ] %>% pull(comb_id)
+            settings_list$color_col <- "selected"
+        }
+        else if (!is.null(event_data) == TRUE) {
+            settings_list$selected <- parse_event_key(event_data)
+            settings_list$color_col <- "selected"
+        } 
+        else {
+            settings_list$color_col <- retrieve_color_col(color_type, ifelse(is_ref, "ref", "comp"))
+            if (color_type %in% c("PCA", "Column")) {
+                settings_list$manual_scale <- FALSE
+            }
+            if (color_type == "PCA") {
+                settings_list$cont_scale <- TRUE
+            }
+        }
+        settings_list
+    }
+    
     output$plotly_volc1 <- renderPlotly({
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        
+        settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
-        manual_scale <- TRUE
-        cont_scale <- NULL
-        if (input$show_full_table) {
-            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
-            plot_df$selected <- plot_df$key %in% selected_keys
-            color_col <- "selected"
-        }
-        else if (!is.null(selected_data$event_data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- retrieve_color_col(input$color_type, "ref")
-            if (input$color_type %in% c("PCA", "Column")) {
-                manual_scale <- FALSE
-            }
-            if (input$color_type == "PCA") {
-                cont_scale <- TRUE
-            }
-        }
+        plot_df$selected <- plot_df$key %in% settings$selected
         
         validate(
-            need(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS, 
+            need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
@@ -479,11 +485,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             y_col="sig", 
             x_lab="Fold change (log2)",
             y_lab="P-value (-log10)",
-            color_col=color_col, 
+            color_col=settings$color_col, 
             hover_text="descr", 
             alpha=input$alpha,
-            cont_scale = cont_scale,
-            manual_scale = manual_scale,
+            cont_scale = settings$cont_scale,
+            manual_scale = settings$manual_scale,
             dot_size=input$dot_size,
             text_size=input$text_size,
             legend_text=input$legend_text)
@@ -499,30 +505,12 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
+        settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_comp_df()
-        manual_scale <- TRUE
-        cont_scale <- NULL
-        if (input$show_full_table) {
-            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
-            plot_df$selected <- plot_df$key %in% selected_keys
-            color_col <- "selected"
-        }
-        else if (!is.null(selected_data$event_data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- retrieve_color_col(input$color_type, "comp")
-            if (input$color_type %in% c("PCA", "Column")) {
-                manual_scale <- FALSE
-            }
-            if (input$color_type == "PCA") {
-                cont_scale <- TRUE
-            }        
-        }
+        plot_df$selected <- plot_df$key %in% settings$selected
         
         validate(
-            need(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS, 
+            need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
@@ -532,11 +520,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             y_col="sig", 
             x_lab="Fold change (log2)",
             y_lab="Significance (-log10)",
-            color_col=color_col, 
+            color_col=settings$color_col, 
             hover_text="descr", 
             alpha=input$alpha,
-            cont_scale = cont_scale,
-            manual_scale = manual_scale,
+            cont_scale = settings$cont_scale,
+            manual_scale = settings$manual_scale,
             dot_size=input$dot_size,
             text_size=input$text_size,
             legend_text=input$legend_text) 
@@ -552,29 +540,14 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
+        settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
-        manual_scale <- TRUE
-        cont_scale <- NULL
-        if (input$show_full_table) {
-            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
-            plot_df$selected <- plot_df$key %in% selected_keys
-            color_col <- "selected"
-        }
-        else if (!is.null(selected_data$event_data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- retrieve_color_col(input$color_type, "ref")
-            if (input$color_type %in% c("PCA", "Column")) {
-                manual_scale <- FALSE
-            }
-            if (input$color_type == "PCA") {
-                cont_scale <- TRUE
-            }
-        }        
+        plot_df$selected <- plot_df$key %in% settings$selected
         
-        req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
+        validate(
+            need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
+                 sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
+        )
         
         base_plt <- make_scatter(
             plot_df, 
@@ -582,11 +555,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             y_col="fold", 
             x_lab="Average expression",
             y_lab="Fold change (log2)",
-            color_col=color_col, 
+            color_col=settings$color_col, 
             alpha=input$alpha,
             hover_text="descr", 
-            cont_scale = cont_scale,
-            manual_scale = manual_scale,
+            cont_scale=settings$cont_scale,
+            manual_scale=settings$manual_scale,
             dot_size=input$dot_size,
             text_size=input$text_size,
             legend_text=input$legend_text)
@@ -601,43 +574,25 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     output$plotly_ma2 <- renderPlotly({
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        
+        settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_comp_df()
-        manual_scale <- TRUE
-        cont_scale <- NULL
-        if (input$show_full_table) {
-            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
-            plot_df$selected <- plot_df$key %in% selected_keys
-            color_col <- "selected"
-        }
-        else if (!is.null(selected_data$event_data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- retrieve_color_col(input$color_type, "comp")
-            if (input$color_type %in% c("PCA", "Column")) {
-                manual_scale <- FALSE
-            }
-            if (input$color_type == "PCA") {
-                cont_scale <- TRUE
-            }
-        }
+        plot_df$selected <- plot_df$key %in% settings$selected
         
-        validate(need(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS, 
+        validate(need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                       sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
-        # req(is.numeric(plot_df[[color_col]]) || length(unique(plot_df[[color_col]])) < MAX_DISCRETE_LEVELS)
-        
+
         base_plt <- make_scatter(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
             x_lab="Average expression",
             y_lab="Fold change (log2)",
-            color_col=color_col, 
+            color_col=settings$color_col, 
             alpha=input$alpha,
             hover_text="descr", 
-            cont_scale = cont_scale,
-            manual_scale = manual_scale,
+            cont_scale=settings$cont_scale,
+            manual_scale=settings$manual_scale,
             dot_size=input$dot_size,
             text_size=input$text_size,
             legend_text=input$legend_text)
@@ -652,19 +607,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     output$plotly_hist1 <- renderPlotly({
         
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+
+        settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
-        if (input$show_full_table) {
-            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
-            plot_df$selected <- plot_df$key %in% selected_keys
-            color_col <- "selected"
-        }
-        else if (!is.null(selected_data$event_data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- "pass_thres"
-        }
+        plot_df$selected <- plot_df$key %in% settings$selected
         
         if (input$ref_custom_header == "") title <- sprintf("Dataset: %s", input$dataset1)
         else title <- input$ref_custom_header
@@ -672,7 +618,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         make_histogram(
             plot_df, 
             x_col="pval", 
-            fill_col=color_col, 
+            fill_col=settings$color_col, 
             key_vals=plot_df$key,
             title=title) %>% 
             plotly::layout(dragmode="none", barmode="stack") %>% 
@@ -684,18 +630,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         plot_df <- plot_comp_df()
 
-        if (input$show_full_table) {
-            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
-            plot_df$selected <- plot_df$key %in% selected_keys
-            color_col <- "selected"
-        }
-        else if (!is.null(selected_data$event_data) == TRUE) {
-            plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
-            color_col <- "selected"
-        } 
-        else {
-            color_col <- "pass_thres"
-        }
+        settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
+        plot_df <- plot_comp_df()
+        plot_df$selected <- plot_df$key %in% settings$selected
         
         if (input$comp_custom_header == "") title <- sprintf("Dataset: %s", input$dataset2)
         else title <- input$comp_custom_header
@@ -703,7 +640,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         make_histogram(
             plot_df, 
             x_col="pval", 
-            fill_col=color_col, 
+            fill_col=settings$color_col, 
             key_vals=plot_df$key, 
             title=title) %>% 
             plotly::layout(dragmode="none", barmode="stack") %>% 
