@@ -626,11 +626,6 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     
     set_if_new <- function(prev_val, new_values, new_val_selected) {
         
-        message("prev_val")
-        message(prev_val)
-        message("new_values")
-        message(new_values)
-        
         if (is.null(prev_val)) new_val_selected
         else if (all(prev_val %in% new_values)) prev_val
         else new_val_selected
