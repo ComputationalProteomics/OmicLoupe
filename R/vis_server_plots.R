@@ -10,7 +10,7 @@ calculate_correlation_vals_string <- function(target_data, ref_stat_cols, comp_s
         pvalue_cutoff, 
         fold_cutoff,
         pvalue_adjusted
-    ) %>% filter(pass_threshold_data)
+    ) %>% dplyr::filter(pass_threshold_data)
     
     # Fold changes
     pval_spearman <- cor.test(plot_df[[ref_stat_cols$P.Value]], plot_df[[comp_stat_cols$P.Value]], method="spearman")
@@ -109,7 +109,7 @@ custom_comp_plot <- function(rdf, stat_cols1, stat_cols2, pvalue_type, pvalue_cu
 exact_fold_comp_plot <- function(rdf, group1_cols, group2_cols, stat_target, stat_base1, stat_base2, pvalue_type, pvalue_cutoff) {
 
     long <- rdf %>% 
-        filter(UQ(as.name(group1_cols[[pvalue_type]])) < pvalue_cutoff) %>%
+        dplyr::filter(UQ(as.name(group1_cols[[pvalue_type]])) < pvalue_cutoff) %>%
         mutate(id = paste("ID", row_number(), sep="")) %>% 
         dplyr::select(
             id, 

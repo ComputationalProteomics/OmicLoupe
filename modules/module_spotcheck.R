@@ -155,7 +155,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         
         
         plt_df_ref <- map_df %>% 
-            filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+            dplyr::filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
             dplyr::select(comb_id, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
@@ -181,7 +181,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         else parsed_cond <- ddf_comp[[cond_comp]]
 
         plt_df_comp <- map_df %>% 
-            filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+            dplyr::filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
             dplyr::select(comb_id, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
@@ -238,10 +238,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         ) %>% ggplotly()
         
         if (input$multiselect == "multiple") {
-            plt <- plt %>% layout(boxmode="group")
+            plt <- plt %>% plotly::layout(boxmode="group")
         }
         
-        plt <- plt %>% layout(xaxis=list(tickangle=input$text_angle))
+        plt <- plt %>% plotly::layout(xaxis=list(tickangle=input$text_angle))
         plt
     })
     
@@ -262,10 +262,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         ) %>% ggplotly()
         
         if (input$multiselect == "multiple") {
-            plt <- plt %>% layout(boxmode="group")
+            plt <- plt %>% plotly::layout(boxmode="group")
         }
         
-        plt <- plt %>% layout(xaxis=list(tickangle=input$text_angle))
+        plt <- plt %>% plotly::layout(xaxis=list(tickangle=input$text_angle))
         plt
     })
 }

@@ -388,7 +388,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             nbinsx = input$bin_count,
             source = "subset",
             key = key_vals
-        ) %>% layout(title = title, font=t, xaxis=list(title="P-value"), yaxis=list(title="Count"))
+        ) %>% plotly::layout(title = title, font=t, xaxis=list(title="P-value"), yaxis=list(title="Count"))
     }
     
     retrieve_color_col <- function(color_type, data_pattern) {
@@ -427,7 +427,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         else title <- custom_header
         plt %>% 
             ggplotly(source="subset") %>%
-            layout(title=title, dragmode="select", font=t) %>%
+            plotly::layout(title=title, dragmode="select", font=t) %>%
             toWebGL()
     }
     
@@ -680,7 +680,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             fill_col=color_col, 
             key_vals=plot_df$key,
             title=title) %>% 
-            layout(dragmode="none", barmode="stack") %>% 
+            plotly::layout(dragmode="none", barmode="stack") %>% 
             toWebGL()
     })
     
@@ -713,7 +713,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             fill_col=color_col, 
             key_vals=plot_df$key, 
             title=title) %>% 
-            layout(dragmode="none", barmode="stack") %>% 
+            plotly::layout(dragmode="none", barmode="stack") %>% 
             toWebGL()
     })
     
@@ -733,7 +733,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             out_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
         }
         else {
-            out_df <- target_df %>% filter(pass_thres != "None")
+            out_df <- target_df %>% dplyr::filter(pass_thres != "None")
         }
         out_df
     }

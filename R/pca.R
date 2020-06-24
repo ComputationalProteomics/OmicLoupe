@@ -21,8 +21,8 @@ calculate_pca_obj <- function(rdf, samples, do_scale, do_center, var_cut, return
     }
     else {
         rdf_target <- rdf %>% 
-            filter(valid_pca_rows) %>%
-            filter(var_filter_contrast)
+            dplyr::filter(valid_pca_rows) %>%
+            dplyr::filter(var_filter_contrast)
         rot_df <- pca_obj$rotation
         if (!is.null(col_prefix)) {
             colnames(rot_df) <- paste0(col_prefix, colnames(rot_df))

@@ -21,9 +21,9 @@ get_ordered_sets <- function(upset_list, order_on, name_order, omit_empty=TRUE) 
     # Generate name order here?
     #name_order
     
-    if (omit_empty && unordered %>% filter(grade != 0) %>% nrow() > 0) {
-        message(sprintf("Omitting %s entries of grade 0", unordered %>% filter(grade != 0) %>% nrow()))
-        unordered <- unordered %>% filter(grade != 0)
+    if (omit_empty && unordered %>% dplyr::filter(grade != 0) %>% nrow() > 0) {
+        message(sprintf("Omitting %s entries of grade 0", unordered %>% dplyr::filter(grade != 0) %>% nrow()))
+        unordered <- unordered %>% dplyr::filter(grade != 0)
     }
     
     if (order_on == "freq") {
@@ -57,7 +57,7 @@ parse_contrast_pass_list <- function(rv, input, target_data, target_contrast, co
     pass_all_contrast <- pass_stat_contrast & pass_fold_contrast
     
     pass_tbl <- combined_dataset %>%
-        filter(pass_all_contrast) %>%
+        dplyr::filter(pass_all_contrast) %>%
         dplyr::select(all_of(c("comb_id", fold_field))) %>%
         dplyr::rename(fold=fold_field) %>%
         mutate(comb_id=as.character(comb_id))

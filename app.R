@@ -14,9 +14,6 @@ quiet(library(stringr))
 quiet(library(stringi))
 quiet(library(tidyverse))
 
-layout <- plotly::layout
-filter <- dplyr::filter
-
 options(shiny.maxRequestSize=100*1024^2)
 
 source("modules/module_setup.R")

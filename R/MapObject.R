@@ -71,10 +71,10 @@ MapObject <- R6Class("MapObject", list(
                 joint_ids <- ref_id_col[ref_id_col %in% comp_id_col]
                 
                 ref_rdf_joint <- ref_rdf %>% 
-                    filter(UQ(as.name(self$target_col1)) %in% joint_ids) %>% 
+                    dplyr::filter(UQ(as.name(self$target_col1)) %in% joint_ids) %>% 
                     arrange(UQ(as.name(self$target_col1)))
                 comp_rdf_joint <- comp_rdf %>% 
-                    filter(UQ(as.name(self$target_col2)) %in% joint_ids) %>% 
+                    dplyr::filter(UQ(as.name(self$target_col2)) %in% joint_ids) %>% 
                     arrange(UQ(as.name(self$target_col2)))
                 
                 ref_sdf_joint <- ref_rdf_joint %>% dplyr::select(self$samples1)

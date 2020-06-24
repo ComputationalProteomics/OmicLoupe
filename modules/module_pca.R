@@ -125,7 +125,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         }
         else {
             filtered_samples <- rv$ddf_ref(rv, input$dataset1) %>% 
-                filter(UQ(as.name(input$filter_cond_data1)) %in% input$display_levels_data1) %>% 
+                dplyr::filter(UQ(as.name(input$filter_cond_data1)) %in% input$display_levels_data1) %>% 
                 dplyr::select(UQ(as.name(rv$ddf_samplecol_ref(rv, input$dataset1)))) %>% 
                 unlist()
             filtered_samples
@@ -144,7 +144,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         }
         else {
             filtered_samples <- rv$ddf_comp(rv, input$dataset2) %>% 
-                filter(UQ(as.name(input$filter_cond_data2)) %in% input$display_levels_data2) %>% 
+                dplyr::filter(UQ(as.name(input$filter_cond_data2)) %in% input$display_levels_data2) %>% 
                 dplyr::select(UQ(as.name(rv$ddf_samplecol_comp(rv, input$dataset2)))) %>% 
                 unlist()
             filtered_samples
@@ -157,7 +157,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         
         target_samples <- filtered_samples_ref()
         rv$ddf_ref(rv, input$dataset1) %>% 
-            filter(UQ(as.name(rv$ddf_samplecol_ref(rv, input$dataset1))) %in% target_samples)
+            dplyr::filter(UQ(as.name(rv$ddf_samplecol_ref(rv, input$dataset1))) %in% target_samples)
     })
     
     pca_ddf2 <- reactive({
@@ -166,7 +166,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         
         target_samples <- filtered_samples_comp()
         rv$ddf_comp(rv, input$dataset2) %>% 
-            filter(UQ(as.name(rv$ddf_samplecol_comp(rv, input$dataset2))) %in% target_samples)
+            dplyr::filter(UQ(as.name(rv$ddf_samplecol_comp(rv, input$dataset2))) %in% target_samples)
     })
     
     pca_obj1 <- reactive({
@@ -389,7 +389,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt <- plt + ggtitle(input$custom_title1)
         }
         
-        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
+        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% plotly::layout(dragmode="select")
     })
     
     output$pca_plot2 <- renderPlotly({
@@ -425,6 +425,6 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt <- plt + ggtitle(input$custom_title2)
         }
         
-        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% layout(dragmode="select")
+        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% plotly::layout(dragmode="select")
     })
 }
