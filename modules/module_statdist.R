@@ -95,8 +95,13 @@ setup_plotly_ui <- function(id) {
                        )
                 )
             ),
-            actionButton(ns("spotcheck"), "Visualize selected features"),
-            downloadButton(ns("download_table"), "Download table"),
+            fluidRow(
+                actionButton(ns("spotcheck"), "Visualize selected features"),
+                downloadButton(ns("download_table"), "Download table")
+            ),
+            fluidRow(
+                checkboxInput(ns("show_full_table"), "Show full table")
+            ),
             DT::DTOutput(ns("table_display"))
         )
     )
@@ -243,8 +248,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         )
         
         plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
-        
-        
         if (input$color_type == "PCA") {
             plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
             plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
@@ -446,7 +449,12 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         plot_df <- plot_ref_df()
         manual_scale <- TRUE
         cont_scale <- NULL
-        if (!is.null(selected_data$event_data) == TRUE) {
+        if (input$show_full_table) {
+            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
+            plot_df$selected <- plot_df$key %in% selected_keys
+            color_col <- "selected"
+        }
+        else if (!is.null(selected_data$event_data) == TRUE) {
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
@@ -489,20 +497,17 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_volc2 <- renderPlotly({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_comp_df()
-        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        # if (!is.null(event.data) == TRUE) {
-        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
-        #     color_col <- "selected"
-        # } 
-        if (!is.null(selected_data$event_data) == TRUE) {
-            # if (!is.null(event.data) == TRUE) {
-            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        if (input$show_full_table) {
+            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
+            plot_df$selected <- plot_df$key %in% selected_keys
+            color_col <- "selected"
+        }
+        else if (!is.null(selected_data$event_data) == TRUE) {
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
@@ -545,20 +550,17 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_ma1 <- renderPlotly({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         plot_df <- plot_ref_df()
-        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        # if (!is.null(event.data) == TRUE) {
-        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
-        #     color_col <- "selected"
-        # } 
-        if (!is.null(selected_data$event_data) == TRUE) {
-            # if (!is.null(event.data) == TRUE) {
-            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        if (input$show_full_table) {
+            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
+            plot_df$selected <- plot_df$key %in% selected_keys
+            color_col <- "selected"
+        }
+        else if (!is.null(selected_data$event_data) == TRUE) {
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
@@ -598,20 +600,16 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_ma2 <- renderPlotly({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        
         plot_df <- plot_comp_df()
-        # event.data <- event_data("plotly_selected", source = "subset")
         manual_scale <- TRUE
         cont_scale <- NULL
-        # if (!is.null(event.data) == TRUE) {
-        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
-        #     color_col <- "selected"
-        # } 
-        if (!is.null(selected_data$event_data) == TRUE) {
-            # if (!is.null(event.data) == TRUE) {
-            # plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
+        if (input$show_full_table) {
+            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
+            plot_df$selected <- plot_df$key %in% selected_keys
+            color_col <- "selected"
+        }
+        else if (!is.null(selected_data$event_data) == TRUE) {
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
@@ -653,17 +651,14 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_hist1 <- renderPlotly({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        
         plot_df <- plot_ref_df()
-        # event.data <- event_data("plotly_selected", source = "subset")
-        
-        # if (!is.null(event.data) == TRUE) {
-        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
-        #     color_col <- "selected"
-        # }
-        if (!is.null(selected_data$event_data) == TRUE) {
+        if (input$show_full_table) {
+            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
+            plot_df$selected <- plot_df$key %in% selected_keys
+            color_col <- "selected"
+        }
+        else if (!is.null(selected_data$event_data) == TRUE) {
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
@@ -686,17 +681,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_hist2 <- renderPlotly({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        
         plot_df <- plot_comp_df()
-        # event.data <- event_data("plotly_selected", source = "subset")
-        
-        # if (!is.null(event.data) == TRUE) {
-        #     plot_df$selected <- plot_df$key %in% parse_event_key(event.data)
-        #     color_col <- "selected"
-        # }
-        if (!is.null(selected_data$event_data) == TRUE) {
+
+        if (input$show_full_table) {
+            selected_keys <- rv$mapping_obj()$get_combined_dataset()[input$table_display_rows_selected, ] %>% pull(comb_id)
+            plot_df$selected <- plot_df$key %in% selected_keys
+            color_col <- "selected"
+        }
+        else if (!is.null(selected_data$event_data) == TRUE) {
             plot_df$selected <- plot_df$key %in% parse_event_key(selected_data$event_data)
             color_col <- "selected"
         } 
@@ -738,24 +731,18 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         out_df
     }
     
-    # selected_id_reactive <- reactive({
-    #     get_target_df(rv)[input$table_display_rows_selected, ]$comb_id %>% as.character()
-    # })
-    
-    # observeEvent(input$table_display_rows_selected, {
-    #     rv$set_selected_feature(selected_id_reactive(), module_name)
-    # })
-    
     output$table_display = DT::renderDataTable({
         
-        # req(rv$mapping_obj())
         validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
-        # req(rv$mapping_obj()$get_combined_dataset())
-        
         target_df <- get_target_df(rv)
-        rv$dt_parsed_data(rv, target_df, add_show_cols_first="pass_thres")
+        if (!input$show_full_table) {
+            rv$dt_parsed_data(rv, target_df, add_show_cols_first="pass_thres")
+        }
+        else {
+            rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset(), selection_mode='multiple')
+        }
     })
 }
 
