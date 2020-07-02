@@ -10,6 +10,7 @@ MY_COLORS_COMPARISON <- c("grey50", "blue", "red", "orange")
 MY_COLORS_SELECTED <- c("grey50", "green")
 
 MAX_DISCRETE_LEVELS <- 20
+MAX_COLORS <- 10
 
 setup_plotly_ui <- function(id) {
     
@@ -223,6 +224,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             pca_df
         }
         else if (input$color_type == "Column") {
+            ref_color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
+            comp_color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
+            
+            
+            ref_color_count <- ref_color_col %>% unique() %>% length()
+            comp_color_count <- comp_color_col %>% unique() %>% length()
+            validate(need(ref_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Ref. column", MAX_COLORS, ref_color_count)))
+            validate(need(comp_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Comp. column", MAX_COLORS, comp_color_count)))
+            
             base_df$ref.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
             base_df$comp.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
             base_df %>% arrange(ref.color_col)
