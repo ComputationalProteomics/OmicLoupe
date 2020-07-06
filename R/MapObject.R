@@ -165,18 +165,19 @@ MapObject <- R6Class("MapObject", list(
     get_combined_dataset = function(full_entries = FALSE) {
     
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
-            
             if (!self$has_combined() || !self$has_same_number_entries()) {
                 return(NULL)
             }
-                
+
             out_df1 <- self$dataset1[self$joint_indices1, ]
             out_df2 <- self$dataset2[self$joint_indices2, ]
 
+            corr_df <- NULL
             if (!is.null(self$correlations)) {
+                out_df1 <- cbind(out_df1, do.call("cbind", self$correlations))
                 out_df2 <- cbind(out_df2, do.call("cbind", self$correlations))
             }
-                        
+
             if (full_entries) {
                 out_df1_full_entries <- out_df1 %>% self$get_full_entries(self$samples1)
                 out_df2_full_entries <- out_df2 %>% self$get_full_entries(self$samples2)
@@ -188,6 +189,7 @@ MapObject <- R6Class("MapObject", list(
             colnames(out_df1) <- paste0("d1.", colnames(out_df1))
             colnames(out_df2) <- paste0("d2.", colnames(out_df2))
             out_df <- cbind(out_df1, out_df2)
+            out_df
         }
         else if (!is.null(self$dataset1)) {
             out_df <- self$dataset1

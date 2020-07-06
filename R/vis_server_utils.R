@@ -61,6 +61,25 @@ di_new <- function(rv, input_field, dummy=NULL) {
 
 di <- di_new
 
+factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_split_count) {
+    
+    target_col <- rdf[[adf_color_col_ref]]
+    if (is.character(target_col) || (is.numeric(target_col) && length(unique(target_col)) <= retain_count)) {
+        rdf[[adf_color_col_ref]] <- as.factor(target_col)
+    }
+    else if (is.numeric(target_col)) {
+        rdf[[adf_color_col_ref]] <- as.factor(cut(target_col, numeric_split_count))
+    }
+    else if (!is.factor(target_col)) {
+        stop(sprintf("Unknown value type for col: %s", adf_color_col_ref))
+    }
+    
+    color_freq_table <- table(rdf[[adf_color_col_ref]])
+    combine_names <- names(color_freq_table)[!names(color_freq_table) %in% names(sort(color_freq_table, decreasing = TRUE))[1:retain_count]]
+    rdf[[adf_color_col_ref]] <- rdf[[adf_color_col_ref]] %>% fct_collapse(other=combine_names)
+    rdf
+}
+
 # di <- function(rv, input, field) {
 #     
 #     if (is.null(rv$filename_1()) || rv$filename_1() == "") {

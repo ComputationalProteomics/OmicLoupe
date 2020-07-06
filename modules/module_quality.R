@@ -389,24 +389,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         )
     })
     
-    factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_split_count) {
-        
-        target_col <- rdf[[adf_color_col_ref]]
-        if (is.character(target_col) || (is.numeric(target_col) && length(unique(target_col)) <= retain_count)) {
-            rdf[[adf_color_col_ref]] <- as.factor(target_col)
-        }
-        else if (is.numeric(target_col)) {
-            rdf[[adf_color_col_ref]] <- as.factor(cut(target_col, numeric_split_count))
-        }
-        else if (!is.factor(target_col)) {
-            stop(sprintf("Unknown value type for col: %s", adf_color_col_ref))
-        }
-        
-        color_freq_table <- table(rdf[[adf_color_col_ref]])
-        combine_names <- names(color_freq_table)[!names(color_freq_table) %in% names(sort(color_freq_table, decreasing = TRUE))[1:retain_count]]
-        rdf[[adf_color_col_ref]] <- rdf[[adf_color_col_ref]] %>% fct_collapse(other=combine_names)
-        rdf
-    }
+
     
     output$dendrogram_ref <- renderPlot({
         # req(rv$ddf_ref(rv, input$dataset1))
@@ -451,8 +434,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     output$histograms_ref <- renderPlot({ 
         
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(reactive_long_sdf_ref())
         validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
@@ -479,8 +460,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$histograms_comp <- renderPlot({ 
         
-        # req(rv$ddf_ref(rv, input$dataset2))
-        # req(reactive_long_sdf_comp())
         validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         

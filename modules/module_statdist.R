@@ -42,8 +42,14 @@ setup_plotly_ui <- function(id) {
                            conditionalPanel(
                                sprintf("input['%s'] == 'Column'", ns("color_type")),
                                fluidRow(
-                                   column(6, selectInput(ns("color_col_1"), "Ref. column", choices = c(""))),
-                                   column(6, selectInput(ns("color_col_2"), "Comp. column", choices = c("")))
+                                   fluidRow(
+                                       column(6, checkboxInput(ns("binned_numeric"), "Bin numeric vals", value=FALSE)),
+                                       column(6, numericInput(ns("number_bins"), "Number bins", min=1, step=1, value=5))
+                                   ),
+                                   fluidRow(
+                                       column(6, selectInput(ns("color_col_1"), "Ref. column", choices = c(""))),
+                                       column(6, selectInput(ns("color_col_2"), "Comp. column", choices = c("")))
+                                   )
                                )
                            ),
                            column(6, fluidRow(
@@ -224,17 +230,24 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             pca_df
         }
         else if (input$color_type == "Column") {
+
             ref_color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
             comp_color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
             
-            
             ref_color_count <- ref_color_col %>% unique() %>% length()
             comp_color_count <- comp_color_col %>% unique() %>% length()
-            validate(need(ref_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Ref. column", MAX_COLORS, ref_color_count)))
-            validate(need(comp_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Comp. column", MAX_COLORS, comp_color_count)))
+            
+            validate(need(typeof(ref_color_col) == "double" || ref_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Ref. column", MAX_COLORS, ref_color_count)))
+            validate(need(typeof(comp_color_col) == "double" || comp_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Comp. column", MAX_COLORS, comp_color_count)))
             
             base_df$ref.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
             base_df$comp.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
+            
+            if (input$binned_numeric) {
+                base_df <- factor_prep_color_col(base_df, "ref.color_col", input$number_bins, input$number_bins)
+                base_df <- factor_prep_color_col(base_df, "comp.color_col", input$number_bins, input$number_bins)
+            }
+            
             base_df %>% arrange(ref.color_col)
         }
         else {
@@ -317,9 +330,25 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     observeEvent({
         input$dataset1
-        input$dataset2}, {
+        input$dataset2
+        rv$mapping_obj()}, {
             ref_data_cols <- rv$rdf_cols_ref(rv, input$dataset1)
             comp_data_cols <- rv$rdf_cols_comp(rv, input$dataset2)
+            
+            comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
+            corr_cols <- comb_data_cols[grepl("^d\\d.(pearson|spearman|kendall)", comb_data_cols)]
+            
+            if (length(corr_cols) > 0) {
+                ref_data_cols <- c(
+                    ref_data_cols, 
+                    corr_cols[grepl("^d1.(pearson|spearman|kendall)", corr_cols)] %>% gsub("^d1.", "", .)
+                )
+                comp_data_cols <- c(
+                    comp_data_cols, 
+                    corr_cols[grepl("^d2.(pearson|spearman|kendall)", corr_cols)] %>% gsub("^d2.", "", .)
+                )
+            }
+
             updateSelectInput(session, "color_col_1", choices=ref_data_cols, selected=ref_data_cols[1])
             updateSelectInput(session, "color_col_2", choices=comp_data_cols, selected=comp_data_cols[1])
         })
