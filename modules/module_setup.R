@@ -97,11 +97,11 @@ setup_panel_ui <- function(id) {
                                                    conditionalPanel(
                                                        sprintf("input['%s'] == 1", ns("two_datasets")),
                                                        checkboxInput(ns("matched_samples"), label = "Matched samples", value = FALSE),
-                                                       checkboxInput(ns("two_datasets_random_discard"), label = "Discard dups.", value = FALSE)
-                                                   ),
-                                                   conditionalPanel(
-                                                       sprintf("input['%s'] == 1", ns("matched_samples")),
-                                                       checkboxInput(ns("skip_correlation"), label = "Skip correlation", value=FALSE)
+                                                       checkboxInput(ns("two_datasets_random_discard"), label = "Discard dups.", value = FALSE),
+                                                       conditionalPanel(
+                                                           sprintf("input['%s'] == 1", ns("matched_samples")),
+                                                           checkboxInput(ns("skip_correlation"), label = "Skip correlation", value=FALSE)
+                                                       )
                                                    )
                                             )
                                         )
@@ -683,7 +683,7 @@ module_setup_server <- function(input, output, session, module_name) {
         rv$selected_cols_obj(
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_1()))
         )
-    })
+    }, ignoreInit=TRUE, ignoreNULL=FALSE)
     
     # Clear/reset filedata 2 related fields
     observeEvent(rv$filedata_2(), {
@@ -692,7 +692,7 @@ module_setup_server <- function(input, output, session, module_name) {
         rv$selected_cols_obj(
             c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_2()))
         )
-    })
+    }, ignoreInit=TRUE, ignoreNULL=FALSE)
     
     observeEvent(rv$design_1(), {
         updateSelectInput(session, "design_sample_col_1", choices=colnames(rv$design_1()))

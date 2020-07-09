@@ -88,18 +88,19 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         )
     })
     
-    observeEvent(rv$filedata_1(), {
+    observeEvent({
+        rv$filedata_1()
+        rv$filedata_2()}, {
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-
-    })
+    }, ignoreInit=TRUE, ignoreNULL=FALSE)
     
-    observeEvent(rv$filedata_2(), {
-        choices <- get_dataset_choices(rv)
-        updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-        updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    })
+    # observeEvent(rv$filedata_2(), {
+    #     choices <- get_dataset_choices(rv)
+    #     updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
+    #     updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+    # })
     
     sync_param_choices <- function() {
         

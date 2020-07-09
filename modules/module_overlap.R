@@ -600,17 +600,21 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             highlight = input$select_target)
     })
     
-    observeEvent(rv$filedata_1(), {
+    observeEvent({
+        rv$filedata_1()
+        rv$filedata_2()}, {
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    })
-    
-    observeEvent(rv$filedata_2(), {
-        choices <- get_dataset_choices(rv)
-        updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-        updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    })
+    }, ignoreInit=TRUE, ignoreNULL=FALSE)
+
+    # observeEvent(rv$filedata_2(), {
+    #     print("Triggered filedata_2 change")
+    #     # browser()
+    #     choices <- get_dataset_choices(rv)
+    #     updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
+    #     updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
+    # }, ignoreInit=TRUE, ignoreNULL=FALSE)
     
     observeEvent(input$upset_pres_cond_ref, {
         req(rv$ddf_ref(rv, input$dataset1))

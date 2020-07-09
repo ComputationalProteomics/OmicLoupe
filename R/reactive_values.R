@@ -8,9 +8,9 @@ setup_reactive_values_obj <- function(input) {
         stringi::stri_extract_first(str = infile$name, regex = ".*")
     }
     
-    load_data <- function(in_file) {
+    load_data <- function(in_file, two_datasets=NULL) {
         infile <- in_file
-        if (is.null(infile)) {
+        if (is.null(infile) || (is.logical(two_datasets) && two_datasets==FALSE)) {
             return(NULL)
         }
         raw_df <- read_tsv(infile$datapath, col_types = cols())
@@ -20,7 +20,7 @@ setup_reactive_values_obj <- function(input) {
     
     rv <- list()
     rv$filedata_1 <- reactive(load_data(input$data_file_1))
-    rv$filedata_2 <- reactive(load_data(input$data_file_2))
+    rv$filedata_2 <- reactive(load_data(input$data_file_2, input$two_datasets))
     rv$design_1 <- reactive(load_data(input$design_file_1))
     rv$design_2 <- reactive({
         if (!input$matched_samples) {
@@ -58,14 +58,6 @@ setup_reactive_values_obj <- function(input) {
         else NULL
     }
     
-    # rv$rdf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, "filedata")
-    # rv$rdf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, "filedata")
-    # rv$ddf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, "design")
-    # rv$ddf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, "design")
-    # rv$rdf_cols_ref <-          function(rv, input_field) colnames(retrieve_data(rv, input_field, "filedata"))
-    # rv$rdf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, "filedata"))
-    # rv$ddf_cols_ref <-          function(rv, input_field) colnames(retrieve_data(rv, input_field, "design"))
-    # rv$ddf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, "design"))
     rv$rdf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, 1, "filedata")
     rv$rdf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, 2, "filedata")
     rv$ddf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, 1, "design")
@@ -76,32 +68,6 @@ setup_reactive_values_obj <- function(input) {
     rv$ddf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, 2, "design"))
     
     rv$table_settings <- reactiveVal(NULL)
-    
-    # rv$ddf_condcol_ref <- function(rv, input_field) { 
-    #     req(input_field != "")
-    #     rv[[sprintf("design_condcol_%s", di_new(rv, input_field))]]()
-    # } 
-    # rv$ddf_condcol_comp <- function(rv, input_field) { 
-    #     req(input_field != "")
-    #     rv[[sprintf("design_condcol_%s", di_new(rv, input_field))]]() 
-    # } 
-    # 
-    # rv$ddf_samplecol_ref <- function(rv, input_field) {
-    #     rv[[sprintf("design_samplecol_%s", di_new(rv, input_field))]]()
-    # }
-    # rv$ddf_samplecol_comp <- function(rv, input_field) {
-    #     rv[[sprintf("design_samplecol_%s", di_new(rv, input_field))]]()
-    # }
-    # 
-    # rv$rdf_featurecol_ref <- function(rv, input_field) 
-    #     rv[[sprintf("data_featurecol_%s", di_new(rv, input_field))]]()
-    # rv$rdf_featurecol_comp <- function(rv, input_field) 
-    #     rv[[sprintf("data_featurecol_%s", di_new(rv, input_field))]]()
-    # rv$rdf_annotcol_ref <- function(rv, input_field) 
-    #     rv[[sprintf("data_annotcol_%s", di_new(rv, input_field))]]()
-    # rv$rdf_annotcol_comp <- function(rv, input_field) 
-    #     rv[[sprintf("data_annotcol_%s", di_new(rv, input_field))]]()
-    
     rv$ddf_condcol_ref <- function(rv, input_field) {
         # req(input_field != "")
         validate(need(input_field != "", "No condition column found for reference data"))
