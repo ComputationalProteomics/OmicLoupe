@@ -242,6 +242,17 @@ setup_panel_ui <- function(id) {
                          downloadButton(ns("download_table"), "Download table"),
                          DT::DTOutput(ns("table_output"))
                 ),
+                tabPanel("OutputSettings",
+                         h3("Output Settings"),
+                         wellPanel(
+                             fluidRow(
+                                 selectInput(ns("figure_save_format"), "Figure save format", choices = c("png", "svg"), selected = "png"),
+                                 numericInput(ns("figure_save_width"), "Figure save width", min = 1, value = 700, step = 1),
+                                 numericInput(ns("figure_save_height"), "Figure save height", min = 1, value = 450, step = 1),
+                                 numericInput(ns("figure_save_dpi"), "Figure save dpi (only static)", min = 1, value = 72, step = 1)
+                             )
+                         )
+                ),
                 tabPanel("InputHelp",
                          h3("Input help"),
                          htmlOutput(ns("input_help_text_design")),

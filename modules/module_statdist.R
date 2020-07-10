@@ -430,7 +430,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             nbinsx = input$bin_count,
             source = "subset",
             key = key_vals
-        ) %>% plotly::layout(title = title, font=t, xaxis=list(title="P-value"), yaxis=list(title="Count"))
+        ) %>% 
+            plotly::layout(title = title, font=t, xaxis=list(title="P-value"), yaxis=list(title="Count")) %>% 
+            assign_fig_settings(rv)
     }
     
     retrieve_color_col <- function(color_type, data_pattern) {
@@ -469,7 +471,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         else title <- custom_header
         plt %>% 
             ggplotly(source="subset") %>%
-            plotly::layout(title=title, dragmode="select", font=t) %>%
+            plotly::layout(title=title, dragmode="select", font=t) %>% 
+            assign_fig_settings(rv) %>%
             toWebGL()
     }
     

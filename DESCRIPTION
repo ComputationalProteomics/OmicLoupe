@@ -25,7 +25,8 @@ Imports:
     ggdendro,
     GGally,
     ggforce,
-    UpSetR
+    UpSetR,
+    ggplotify
 Suggests:
     knitr,
     testthat

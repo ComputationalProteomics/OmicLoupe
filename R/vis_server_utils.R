@@ -80,6 +80,14 @@ factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_
     rdf
 }
 
+assign_fig_settings <- function(plt, rv) {
+    plt %>% config(toImageButtonOptions=list(
+        format=rv$figure_save_format(),
+        width=rv$figure_save_width(), 
+        height=rv$figure_save_height()
+    ))
+}
+
 # di <- function(rv, input, field) {
 #     
 #     if (is.null(rv$filename_1()) || rv$filename_1() == "") {

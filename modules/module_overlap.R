@@ -73,6 +73,13 @@ setup_overlap_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 'FoldComparison'", ns("plot_tabs")),
                             numericInput(ns("max_fold_comps"), "Max fold comps", min=1, value=10)
+                        ),
+                        checkboxInput(ns("advanced_settings"), "Show advanced settings"),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 1", ns("advanced_settings")),
+                            fluidRow(
+                                downloadButton(ns("ggplot_download"), "Download static")
+                            )
                         )
                     ),
                     # htmlOutput(ns("warnings")),
@@ -125,21 +132,6 @@ setup_overlap_ui <- function(id) {
     )
 }
 
-parse_vector_to_bullets <- function(vect, number=TRUE) {
-    html_string <- paste0(
-        "<li>",
-        paste(vect, collapse="</li><li>"),
-        "</li>"
-    )
-    if (!number) {
-        list_style <- "ul"
-    }
-    else {
-        list_style <- "ol"
-    }
-    sprintf("<%s>%s</%s>", list_style, html_string, list_style)
-}
-
 module_overlap_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
     output$download_table <- output$download_table_upset <- output$download_table_upset_presence <- downloadHandler(
@@ -148,6 +140,38 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         },
         content = function(file) {
             write_tsv(rv$dt_parsed_data_raw(rv, output_table_reactive()), file)
+        }
+    )
+    
+    output$ggplot_download <- downloadHandler(
+        filename = function() {
+            sprintf('%s-%s.%s', tolower(input$plot_tabs), Sys.Date(), rv$figure_save_format())
+        },
+        content = function(file) {
+            dpi <- rv$figure_save_dpi()
+            if (input$plot_tabs == "Venn") {
+                plot_func <- plot_functions[["venn"]]
+            }
+            else if (input$plot_tabs == "Upset") {
+                plot_func <- plot_functions[["upset"]]
+            }
+            else if (input$plot_tabs == "FoldComparison") {
+                plot_func <- plot_functions[["fold_comp"]]
+            }
+            else if (input$plot_tabs == "UpsetPresence") {
+                plot_func <- plot_functions[["upset_qual"]]
+            }
+            else {
+                stop(sprintf("Unknown state for input$plot_tabs: %s", input$plot_tabs))
+            }
+            
+            ggsave(
+                file, 
+                plot = plot_func(),
+                width = rv$figure_save_width() / dpi, 
+                height = rv$figure_save_height() / dpi, 
+                units = "in", 
+                dpi = dpi)
         }
     )
     
@@ -415,8 +439,115 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         }
     })
     
-    output$upset_presence <- renderPlot({
-
+    plot_functions <- list()
+    plot_functions$venn <- function() {
+        venn$do_paired_expression_venn(
+            ref_pass_reactive(), 
+            comp_pass_reactive(), 
+            title="", 
+            highlight = input$select_target)
+    }
+    plot_functions$upset <- function() {
+        plot_list <- upset_plot_list()
+        name_order <- upset_name_order()
+        upset_metadata_obj <- upset_metadata()
+        
+        validate(need(
+            length(plot_list) > 1, 
+            sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))
+        ))
+        
+        if ("plots" %in% names(upset_metadata_obj)) {
+            target_metadata <- upset_metadata_obj
+        }
+        else {
+            target_metadata <- NULL
+        }
+        
+        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by(), name_order=name_order)
+        crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, name_order))]
+        bar_coloring <- (set_ordering$string_entries == paste(crosssection_target_ordered, collapse=",")) %>% ifelse("#298ff5", "gray23")
+        
+        UpSetR::upset(
+            UpSetR::fromList(plot_list), 
+            set.metadata=target_metadata,
+            order.by=upset_order_by(), 
+            sets=name_order,
+            keep.order=TRUE,
+            text.scale=2, 
+            nsets=input$upset_max_comps,
+            nintersects=input$upset_max_intersects,
+            main.bar.color=bar_coloring
+        ) %>% ggplotify::as.ggplot()
+    }
+    plot_functions$fold_comp <- function() {
+        ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
+            parse_contrast_pass_list(rv, input, dataset, stat_pattern, contrast_type) %>% names()
+        }, dataset=input$dataset1, contrast_type=input$stat_contrast_type)
+        
+        if (input$dataset1 != input$dataset2) {
+            comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
+                parse_contrast_pass_list(rv, input, dataset, stat_pattern, contrast_type) %>% names()
+            }, dataset=input$dataset2, contrast_type=input$stat_contrast_type)
+            
+            plot_list <- c(ref_names_list, comp_names_list)
+            names(plot_list) <- c(
+                paste("d1", input$upset_ref_comparisons, sep="."),
+                paste("d2", input$upset_comp_comparisons, sep=".")
+            )
+        }
+        else {
+            plot_list <- ref_names_list
+            names(plot_list) <- input$upset_ref_comparisons
+        }
+        
+        present_in_all <- Reduce(intersect, plot_list)
+        
+        contrast_pval_cols_ref <- map(input$upset_ref_comparisons, ~rv$statcols_ref(rv, input$dataset1, contrast_field = .)$P.Value) %>% unlist()
+        contrast_fold_cols_ref <- map(input$upset_ref_comparisons, ~rv$statcols_ref(rv, input$dataset1, contrast_field = .)$logFC) %>% unlist()
+        contrast_pval_cols_comp <- map(input$upset_comp_comparisons, ~rv$statcols_comp(rv, input$dataset2, contrast_field = .)$P.Value) %>% unlist()
+        contrast_fold_cols_comp <- map(input$upset_comp_comparisons, ~rv$statcols_comp(rv, input$dataset2, contrast_field = .)$logFC) %>% unlist()
+        
+        if (input$dataset1 == input$dataset2) {
+            
+            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
+                dplyr::filter(comb_id %in% present_in_all) %>%
+                mutate(
+                    p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
+                    p_prod=rowSums(.[, contrast_pval_cols_ref, drop=FALSE])
+                ) %>%
+                arrange(p_sum) %>%
+                head(input$max_fold_comps) %>%
+                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref
+                ) %>%
+                tidyr::gather("Comparison", "Fold", -ID, -p_sum)
+        }
+        else {
+            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
+                dplyr::filter(comb_id %in% present_in_all) %>%
+                mutate(
+                    p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
+                    p_prod=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE])
+                ) %>%
+                arrange(p_sum) %>%
+                head(input$max_fold_comps) %>%
+                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
+                ) %>%
+                tidyr::gather("Comparison", "Fold", -ID, -p_sum)
+        }
+        
+        plt <- ggplot(long_df, aes(x=reorder(ID, p_sum), y=Fold)) + theme_classic() +
+            theme(axis.text.x = element_text(angle=90, vjust=0.5)) +
+            geom_boxplot() +
+            geom_point(aes(color=Comparison)) + 
+            xlab("") +
+            ggtitle(sprintf("%s out of %s features present in all shown", 
+                            min(input$max_fold_comps, length(present_in_all)), 
+                            length(present_in_all)
+            ))
+        plt
+    }
+    plot_functions$upset_qual <- function() {
         upset_table <- upset_presence_dataframe()
         metadata <- NULL
         
@@ -456,111 +587,19 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             nsets=input$upset_max_comps,
             nintersects=input$upset_max_intersects,
             main.bar.color=bar_coloring
-        )
+        ) %>% ggplotify::as.ggplot()
+    }
+    
+    output$upset_presence <- renderPlot({
+        plot_functions$upset_qual()
     })
     
     output$upset <- renderPlot({
-        
-        plot_list <- upset_plot_list()
-        name_order <- upset_name_order()
-        upset_metadata_obj <- upset_metadata()
-        
-        validate(need(
-            length(plot_list) > 1, 
-            sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))
-        ))
-        
-        if ("plots" %in% names(upset_metadata_obj)) {
-            target_metadata <- upset_metadata_obj
-        }
-        else {
-            target_metadata <- NULL
-        }
-        
-        set_ordering <- get_ordered_sets(UpSetR::fromList(plot_list), order_on = upset_order_by(), name_order=name_order)
-        crosssection_target_ordered <- input$upset_crosssec_display[order(match(input$upset_crosssec_display, name_order))]
-        bar_coloring <- (set_ordering$string_entries == paste(crosssection_target_ordered, collapse=",")) %>% ifelse("#298ff5", "gray23")
-        
-        UpSetR::upset(
-            UpSetR::fromList(plot_list), 
-            set.metadata=target_metadata,
-            order.by=upset_order_by(), 
-            sets=name_order,
-            keep.order=TRUE,
-            text.scale=2, 
-            nsets=input$upset_max_comps,
-            nintersects=input$upset_max_intersects,
-            main.bar.color=bar_coloring
-        )
+        plot_functions$upset()
     }, height = 800)
     
     output$fold_comp <- renderPlot({
-        
-        ref_names_list <- lapply(input$upset_ref_comparisons, function(stat_pattern, dataset, contrast_type) {
-            parse_contrast_pass_list(rv, input, dataset, stat_pattern, contrast_type) %>% names()
-        }, dataset=input$dataset1, contrast_type=input$stat_contrast_type)
-        
-        if (input$dataset1 != input$dataset2) {
-            comp_names_list <- lapply(input$upset_comp_comparisons, function(stat_pattern, dataset, contrast_type) {
-                parse_contrast_pass_list(rv, input, dataset, stat_pattern, contrast_type) %>% names()
-            }, dataset=input$dataset2, contrast_type=input$stat_contrast_type)
-            
-            plot_list <- c(ref_names_list, comp_names_list)
-            names(plot_list) <- c(
-                paste("d1", input$upset_ref_comparisons, sep="."),
-                paste("d2", input$upset_comp_comparisons, sep=".")
-            )
-        }
-        else {
-            plot_list <- ref_names_list
-            names(plot_list) <- input$upset_ref_comparisons
-        }
-        
-        present_in_all <- Reduce(intersect, plot_list)
-
-        contrast_pval_cols_ref <- map(input$upset_ref_comparisons, ~rv$statcols_ref(rv, input$dataset1, contrast_field = .)$P.Value) %>% unlist()
-        contrast_fold_cols_ref <- map(input$upset_ref_comparisons, ~rv$statcols_ref(rv, input$dataset1, contrast_field = .)$logFC) %>% unlist()
-        contrast_pval_cols_comp <- map(input$upset_comp_comparisons, ~rv$statcols_comp(rv, input$dataset2, contrast_field = .)$P.Value) %>% unlist()
-        contrast_fold_cols_comp <- map(input$upset_comp_comparisons, ~rv$statcols_comp(rv, input$dataset2, contrast_field = .)$logFC) %>% unlist()
-        
-        if (input$dataset1 == input$dataset2) {
-            
-            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
-                dplyr::filter(comb_id %in% present_in_all) %>%
-                mutate(
-                    p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
-                    p_prod=rowSums(.[, contrast_pval_cols_ref, drop=FALSE])
-                ) %>%
-                    arrange(p_sum) %>%
-                    head(input$max_fold_comps) %>%
-                    dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref
-                ) %>%
-                tidyr::gather("Comparison", "Fold", -ID, -p_sum)
-        }
-        else {
-            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
-                dplyr::filter(comb_id %in% present_in_all) %>%
-                mutate(
-                    p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
-                    p_prod=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE])
-                ) %>%
-                    arrange(p_sum) %>%
-                    head(input$max_fold_comps) %>%
-                    dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
-                ) %>%
-                tidyr::gather("Comparison", "Fold", -ID, -p_sum)
-        }
-        
-        plt <- ggplot(long_df, aes(x=reorder(ID, p_sum), y=Fold)) + theme_classic() +
-            theme(axis.text.x = element_text(angle=90, vjust=0.5)) +
-            geom_boxplot() +
-            geom_point(aes(color=Comparison)) + 
-            xlab("") +
-            ggtitle(sprintf("%s out of %s features present in all shown", 
-                            min(input$max_fold_comps, length(present_in_all)), 
-                            length(present_in_all)
-            ))
-        plt
+        plot_functions$fold_comp()
     })
     
     output$fold_fractions_among_sig <- renderPlot({
@@ -593,11 +632,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     })
     
     output$venn <- renderPlot({
-        venn$do_paired_expression_venn(
-            ref_pass_reactive(), 
-            comp_pass_reactive(), 
-            title="", 
-            highlight = input$select_target)
+        plot_functions$venn()
     })
     
     observeEvent(rv$filedata_1(), {

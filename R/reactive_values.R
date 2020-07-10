@@ -39,6 +39,11 @@ setup_reactive_values_obj <- function(input) {
     rv$data_annotcol_1 <- reactive(input$annot_col_1)
     rv$data_annotcol_2 <- reactive(input$annot_col_2)
     
+    rv$figure_save_format <- reactive(input$figure_save_format)
+    rv$figure_save_width <- reactive(input$figure_save_width)
+    rv$figure_save_height <- reactive(input$figure_save_height)
+    rv$figure_save_dpi <- reactive(input$figure_save_dpi)
+    
     rv$selected_cols_obj <- reactiveVal(list())
     rv$filename_1 <- reactive(get_filename(input$data_file_1))
     rv$filename_2 <- reactive(get_filename(input$data_file_2))

@@ -68,15 +68,17 @@ setup_quality_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 1", ns("show_more_settings")),
                             fluidRow(
-                                textInput(ns("custom_title1"), "Custom title 1", value = ""),
-                                textInput(ns("custom_title2"), "Custom title 2", value = "")
+                                column(6, textInput(ns("custom_title1"), "Custom title 1", value = "")),
+                                column(6, textInput(ns("custom_title2"), "Custom title 2", value = ""))
                             ),
                             fluidRow(
-                                numericInput(ns("text_size"), "Text size", value=10)
+                                column(6, numericInput(ns("text_size"), "Text size", value=10)),
+                                column(3, downloadButton(ns("ggplot_download_ref"), "Download static (ref)"), p("(Download interactive by hover option)")),
+                                column(3, downloadButton(ns("ggplot_download_comp"), "Download static (comp)"))
                             )
                         )
                     ),
-                    htmlOutput(ns("warnings")),
+                    # htmlOutput(ns("warnings")),
                     tabsetPanel(
                         id = ns("plot_tabs"),
                         type = "tabs",
@@ -99,8 +101,8 @@ setup_quality_ui <- function(id) {
                                  )
                         ),
                         tabPanel("Histograms", 
-                                 plotOutput(ns("histograms_ref")) %>% withSpinner(),
-                                 plotOutput(ns("histograms_comp")) %>% withSpinner()
+                                 plotOutput(ns("histogram_ref")) %>% withSpinner(),
+                                 plotOutput(ns("histogram_comp")) %>% withSpinner()
                         )
                     )
                 )
@@ -134,10 +136,51 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     })
     
+    ggplot_download <- function(file, target) {
+        
+        dpi <- rv$figure_save_dpi()
+        if (input$plot_tabs == "Boxplots") {
+            plot_func <- plot_functions[[sprintf("boxplot_%s", target)]]
+        }
+        else if (input$plot_tabs == "Dendrograms") {
+            plot_func <- plot_functions[[sprintf("dendrogram_%s", target)]]
+        }
+        else if (input$plot_tabs == "Histograms") {
+            plot_func <- plot_functions[[sprintf("histogram_%s", target)]]
+        }
+        else {
+            stop(sprintf("Unknown state for input$plot_tabs: %s", input$plot_tabs))
+        }
+        
+        ggsave(
+            file, 
+            plot = plot_func(),
+            width = rv$figure_save_width() / dpi, 
+            height = rv$figure_save_height() / dpi, 
+            units = "in", 
+            dpi = dpi)
+    }
+    
+    output$ggplot_download_ref <- downloadHandler(
+        filename = function() {
+            sprintf('ref-%s-%s.%s', tolower(input$plot_tabs), Sys.Date(), rv$figure_save_format())
+        },
+        content = function(file) {
+            ggplot_download(file, "ref")
+        }
+    )
+    
+    output$ggplot_download_comp <- downloadHandler(
+        filename = function() {
+            sprintf('comp-%s-%s.%s', tolower(input$plot_tabs), Sys.Date(), rv$figure_save_format())
+        },
+        content = function(file) {
+            ggplot_download(file, "comp")
+        }
+    )
+    
     sync_param_choices <- function() {
         
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(rv$ddf_comp(rv, input$dataset2))
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "Didn't find any design for dataset 1 while syncing input choices"))
         validate(need(!is.null(rv$ddf_comp(rv, input$dataset2)), "Didn't find any design for dataset 2 while syncing input choices"))
         
@@ -182,14 +225,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         validate(need(
             !is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]]), 
             "Did not find sample columns, have you mapped your samples at the Setup page?"))
-        
-        # if (is.null(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]])) {
-        #     stop("Datasets not properly mapped, stopping")
-        # }
-        # 
-        # if (is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]])) {
-        #     stop("Samples not properly mapped, stopping")
-        # }
         
         dataset <- rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]
         sample_cols <- rv$mapping_obj()[[sprintf("samples%s", data_ind)]]
@@ -250,26 +285,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         else { NULL }
     })
     
-    # output$warnings <- renderUI({
-    #     
-    #     error_vect <- c()
-    #     if (is.null(rv$filename_1())) {
-    #         error_vect <- c(error_vect, "No filename_1 found, upload dataset at Setup page")
-    #     }
-    #     
-    #     if (is.null(rv$design_1())) {
-    #         error_vect <- c(error_vect, "No design_1 found, upload dataset at Setup page")
-    #     }
-    #     
-    #     total_text <- paste(error_vect, collapse="<br>")
-    #     HTML(sprintf("<b><font size='5' color='red'>%s</font></b>", total_text))
-    # })
-    
-    # long_sdf, value_col, ddf, join_by_ref, dataset, color, show_missing=FALSE, rotate_labels=FALSE
     output$bars_ref <- renderPlotly({ 
         
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(reactive_long_sdf_ref())
         validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
@@ -284,7 +301,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$rotate_label_barplot,
             title=input$custom_title1,
             text_size=input$text_size) %>%
-                plotly::ggplotly()
+                plotly::ggplotly() %>% 
+                assign_fig_settings(rv)
     })
     
     output$bars_comp <- renderPlotly({
@@ -305,21 +323,19 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$rotate_label_barplot,
             title=input$custom_title2,
             text_size=input$text_size) %>%
-                plotly::ggplotly()
+                plotly::ggplotly() %>% 
+                assign_fig_settings(rv)
     })
 
-    output$boxplots_ref <- renderPlot({ 
-        
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
-        
+    plot_functions <- list()
+    plot_functions$boxplot_ref <- reactive({
         plt_ref <- ggplot(
             reactive_long_sdf_ref(), 
             aes_string(x="name", y="value", color=ref_color()))
-
+        
         if (input$custom_title1 == "") plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
         else plt_ref <- plt_ref + ggtitle(input$custom_title1)
-
+        
         adjust_boxplot(
             plt_ref, 
             input$do_violin, 
@@ -330,18 +346,13 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$color_data_ref,
             text_size=input$text_size
         )
-    # ) %>% plotly::ggplotly() %>% toWebGL()
     })
-
-    output$boxplots_comp <- renderPlot({ 
-        
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
-        
+    
+    plot_functions$boxplot_comp <- reactive({
         plt_comp <- ggplot(
             reactive_long_sdf_comp(), 
             aes_string(x="name", y="value", color=comp_color()))
-
+        
         if (input$custom_title2 == "") plt_comp <- plt_comp + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
         else plt_comp <- plt_comp + ggtitle(input$custom_title2)
         
@@ -355,13 +366,25 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$color_data_comp,
             text_size=input$text_size
         )
-    # ) %>% plotly::ggplotly() %>% toWebGL()
+    })
+    
+    output$boxplots_ref <- renderPlot({ 
+        
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        
+        plot_functions$boxplot_ref()
+    })
+
+    output$boxplots_comp <- renderPlot({ 
+        
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        plot_functions$boxplot_comp()
     })
     
     output$density_ref_plotly <- renderPlotly({
         
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(reactive_long_sdf_ref())
         validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
@@ -371,12 +394,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             curr_dataset=input$dataset1,
             title=input$custom_title1,
             text_size=input$text_size
-        )
+        ) %>% assign_fig_settings(rv)
     })
     
     output$density_comp_plotly <- renderPlotly({
-        # req(rv$ddf_comp(rv, input$dataset2))
-        # req(reactive_long_sdf_comp())
+
         validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
@@ -386,17 +408,14 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             curr_dataset=input$dataset2,
             title=input$custom_title2,
             text_size=input$text_size
-        )
+        ) %>% config(toImageButtonOptions=list(
+                format=rv$figure_save_format(),
+                width=rv$figure_save_width(), 
+                height=rv$figure_save_height()
+            ))
     })
     
-
-    
-    output$dendrogram_ref <- renderPlot({
-        # req(rv$ddf_ref(rv, input$dataset1))
-        # req(rv$rdf_ref(rv, input$dataset1))
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
-        
+    plot_functions$dendrogram_ref <- function() {
         plt <- do_dendrogram(
             ref_sdf(),
             rv$ddf_ref(rv, input$dataset1)[[ref_color()]],
@@ -404,20 +423,15 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             legend_title = ref_color(), 
             text_size=input$dendrogram_textsize
         ) + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
-
+        
         if (input$custom_title1 != "") {
             plt <- plt + ggtitle(input$custom_title1)
         }
-
-        plt
-    })
-    
-    output$dendrogram_comp <- renderPlot({
-        # req(rv$ddf_ref(rv, input$dataset2))
-        # req(rv$rdf_ref(rv, input$dataset2))
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
+        plt
+    }
+    
+    plot_functions$dendrogram_comp <- function() {
         plt <- do_dendrogram(
             comp_sdf(),
             rv$ddf_comp(rv, input$dataset2)[[comp_color()]],
@@ -430,13 +444,24 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         }
         
         plt
-    })
+    }
+    
+    
+    output$dendrogram_ref <- renderPlot({
 
-    output$histograms_ref <- renderPlot({ 
-        
         validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
         validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
-        
+        plot_functions$dendrogram_ref()
+    })
+    
+    output$dendrogram_comp <- renderPlot({
+
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        plot_functions$dendrogram_comp()
+    })
+
+    plot_functions$histogram_ref <- function() {
         if (input$data_num_col_ref != "None") {
             rdf_ref <- rv$rdf_ref(rv, input$dataset1)
             target_color <- NULL
@@ -454,14 +479,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         else {
             plt_ref <- ggplot() + ggtitle("Empty histogram")
         }
-
-        plt_ref + ylab("Count") + xlab(input$data_num_col_ref) + theme(text=element_text(size=input$text_size))
-    })
-    
-    output$histograms_comp <- renderPlot({ 
         
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        plt_ref + ylab("Count") + xlab(input$data_num_col_ref) + theme(text=element_text(size=input$text_size))
+    }
+    
+    plot_functions$histogram_comp <- function() {
         
         if (input$data_num_col_comp != "None") {
             rdf_comp <- rv$rdf_comp(rv, input$dataset2)
@@ -482,5 +504,19 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         }
         
         plt_comp + ylab("Count") + xlab(input$data_num_col_comp) + theme(text=element_text(size=input$text_size))
+    }
+    
+    output$histogram_ref <- renderPlot({ 
+        
+        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        plot_functions$histogram_ref()
+    })
+    
+    output$histogram_comp <- renderPlot({ 
+        
+        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        plot_functions$histogram_comp()
     })
 }

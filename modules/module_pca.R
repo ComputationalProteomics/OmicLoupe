@@ -389,7 +389,10 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt <- plt + ggtitle(input$custom_title1)
         }
         
-        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% plotly::layout(dragmode="select")
+        plt %>% 
+            ggplotly(tooltip=c("label", "colour", "x", "y")) %>% 
+            plotly::layout(dragmode="select") %>% 
+            assign_fig_settings(rv)
     })
     
     output$pca_plot2 <- renderPlotly({
@@ -425,6 +428,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             plt <- plt + ggtitle(input$custom_title2)
         }
         
-        plt %>% ggplotly(tooltip=c("label", "colour", "x", "y")) %>% plotly::layout(dragmode="select")
+        plt %>% 
+            ggplotly(tooltip=c("label", "colour", "x", "y")) %>% 
+            plotly::layout(dragmode="select") %>% 
+            assign_fig_settings(rv)
     })
 }
