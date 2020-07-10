@@ -16,6 +16,7 @@
 # }
 
 get_dataset_choices <- function(reactive_vals) {
+    
     choices <- c()
     if (!is.null(reactive_vals$filedata_1())) {
         choices <- c(choices, reactive_vals$filename_1())
