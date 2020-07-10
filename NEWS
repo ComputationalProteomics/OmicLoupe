@@ -1,3 +1,7 @@
+# Version 0.9.1
+
+* Include ability to download both Plotly and ggplot-based figures in SVG or PNG with controllable dimensions
+
 # Version 0.9.0
 
 * Preparations for release
