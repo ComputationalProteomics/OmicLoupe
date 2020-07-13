@@ -18,8 +18,6 @@ get_na_nbrs_uppres <- function(rv, input, comb_data, selected_cond, selected_lev
     
     d_prefix <- sprintf("d%s", dataset_nbr)
     
-    # map_obj <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
-    
     non_missing_per_cond_df <- map(
         samples_per_cond,
         ~comb_data %>%

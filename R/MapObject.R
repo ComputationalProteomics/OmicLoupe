@@ -164,8 +164,13 @@ MapObject <- R6Class("MapObject", list(
     },
     # full_entries: Include only entries with no missing values
     # include_non_matching: Include entries only present in one dataset by including a row of NA-values in the other
-    get_combined_dataset = function(full_entries = FALSE, include_non_matching=FALSE) {
+    get_combined_dataset = function(full_entries = FALSE, include_non_matching = TRUE) {
     
+        if (full_entries && include_non_matching) {
+            warning("Full entries set to TRUE, assigning include_non_matching FALSE")
+            include_non_matching <- FALSE
+        }
+        
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
             if (!self$has_combined() || !self$has_same_number_entries()) {
                 return(NULL)
@@ -193,9 +198,11 @@ MapObject <- R6Class("MapObject", list(
                 out_df <- cbind(out_df1, out_df2)
             }
             else {
-                out_df1 <- self$dataset1 %>% rename_at(vars(!matches(self$target_col1)), ~paste0("d1.", .))
-                out_df2 <- self$dataset2 %>% rename_at(vars(!matches(self$target_col2)), ~paste0("d2.", .))
-                out_df <- full_join(out_df1, out_df2, by=setNames(self$target_col2, self$target_col1))
+                out_df1 <- self$dataset1 %>% rename_all(~paste0("d1.", .))
+                out_df2 <- self$dataset2 %>% rename_all(~paste0("d2.", .))
+                # out_df1 <- self$dataset1 %>% rename_all(vars(!matches(self$target_col1)), ~paste0("d1.", .))
+                # out_df2 <- self$dataset2 %>% rename_at(vars(!matches(self$target_col2)), ~paste0("d2.", .))
+                out_df <- full_join(out_df1, out_df2, by=setNames(paste0("d2.", self$target_col2), paste0("d1.", self$target_col1)), keep=TRUE)
             }
             
             out_df

@@ -51,7 +51,7 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     })
     
     correlation_histograms <- function() {
-        comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+        comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
         make_corr_hist <- function(target_df, corr_base, title, has_sig=FALSE, bins=100) {
             
             not_sig_string <- "Not sig."

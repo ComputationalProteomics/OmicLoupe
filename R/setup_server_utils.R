@@ -48,8 +48,8 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         valid_types <- c("Dataset1", "Dataset2", "Both")
         if (type %in% valid_types) {
             out_text <- sprintf(
-                "%s loaded, %s entries matched", 
-                type, nrow(mo$get_combined_dataset())
+                "%s loaded, %s entries matched, %s total entries", 
+                type, nrow(mo$get_combined_dataset(include_non_matching=FALSE)), nrow(mo$get_combined_dataset(include_non_matching=TRUE))
             )
             
             if (type == "Both") {

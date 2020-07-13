@@ -611,7 +611,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         
         validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
         
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
         plot_df <- data.frame(
             ref_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value]],
             ref_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC]],
@@ -648,14 +648,6 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     }, ignoreInit=TRUE, ignoreNULL=FALSE)
 
-    # observeEvent(rv$filedata_2(), {
-    #     print("Triggered filedata_2 change")
-    #     # browser()
-    #     choices <- get_dataset_choices(rv)
-    #     updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-    #     updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    # }, ignoreInit=TRUE, ignoreNULL=FALSE)
-    
     observeEvent(input$upset_pres_cond_ref, {
         req(rv$ddf_ref(rv, input$dataset1))
         choices <- rv$ddf_ref(rv, input$dataset1)[[input$upset_pres_cond_ref]] %>% unique() 

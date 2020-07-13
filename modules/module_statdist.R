@@ -181,7 +181,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
         }
         else {
-            combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE)
+            combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
         }
         
         pass_thres_col <- get_thres_pass_type_col(
@@ -495,7 +495,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         settings_list$manual_scale <- TRUE
         settings_list$cont_scale <- NULL
         if (show_full_table) {
-            settings_list$selected <- rv$mapping_obj()$get_combined_dataset()[table_rows_selected, ] %>% pull(comb_id)
+            settings_list$selected <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)[table_rows_selected, ] %>% pull(comb_id)
             settings_list$color_col <- "selected"
         }
         else if (!is.null(event_data) == TRUE) {
@@ -695,7 +695,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     })
     
     get_target_df <- function(rv) {
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset()
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
         pass_thres_col <- get_thres_pass_type_col(
             combined_dataset,
             rv$statcols_ref(rv, input$dataset1, input$stat_base1),
