@@ -2,6 +2,7 @@
 
 * Reformatted for R package format
 * Include Singularity recipe
+* Download settings as JSON format at all modules
 
 # Version 0.9.1
 
