@@ -1,10 +1,10 @@
-library(ggplot2)
-theme_set(theme_classic())
-library(ggpubr)
-library(shinycssloaders)
-
-source("R/vis_server_utils.R")
-source("R/vis_server_plots.R")
+# library(ggplot2)
+# theme_set(theme_classic())
+# library(ggpubr)
+# library(shinycssloaders)
+# 
+# source("R/vis_server_utils.R")
+# source("R/vis_server_plots.R")
 
 MY_COLORS_COMPARISON <- c("grey50", "blue", "red", "orange")
 MY_COLORS_SELECTED <- c("grey50", "green")
@@ -170,10 +170,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     reactive_plot_df <- reactive({
         
-        validate(need(
+        shiny::validate(need(
             !is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
             "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
-        validate(need(
+        shiny::validate(need(
             !is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
             "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
         
@@ -206,8 +206,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         else if (input$color_type == "PCA") {
             
-            validate(need(rv$samples(rv, input$dataset1), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
-            validate(need(rv$samples(rv, input$dataset2), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
+            shiny::validate(need(rv$samples(rv, input$dataset1), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
+            shiny::validate(need(rv$samples(rv, input$dataset2), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
@@ -240,8 +240,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             ref_color_count <- ref_color_col %>% unique() %>% length()
             comp_color_count <- comp_color_col %>% unique() %>% length()
             
-            validate(need(typeof(ref_color_col) == "double" || ref_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Ref. column", MAX_COLORS, ref_color_count)))
-            validate(need(typeof(comp_color_col) == "double" || comp_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Comp. column", MAX_COLORS, comp_color_count)))
+            shiny::validate(need(typeof(ref_color_col) == "double" || ref_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Ref. column", MAX_COLORS, ref_color_count)))
+            shiny::validate(need(typeof(comp_color_col) == "double" || comp_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Comp. column", MAX_COLORS, comp_color_count)))
             
             base_df$ref.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
             base_df$comp.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
@@ -290,14 +290,14 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     plot_ref_df <- reactive({
         # req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
-        validate(need(!is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
+        shiny::validate(need(!is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
                       "Did not find statistics columns for dataset 1, are they properly assigned at the Setup page?"))
         parse_plot_df(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
     })
     
     plot_comp_df <- reactive({
         # req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
-        validate(need(!is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
+        shiny::validate(need(!is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
                       "Did not find statistics columns for dataset 2, are they properly assigned at the Setup page?"))
         parse_plot_df(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
     })
@@ -475,7 +475,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         if (custom_header == "") title <- sprintf("Data: %s<br>Contrast: %s", dataset, stat_base)
         else title <- custom_header
         plt %>% 
-            ggplotly(source="subset") %>%
+            ggplotly() %>%
             plotly::layout(title=title, dragmode="select", font=t) %>% 
             assign_fig_settings(rv) %>%
             toWebGL()
@@ -483,7 +483,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     selected_data <- reactiveValues(event_data=NULL)
     observe({
-        selected_data$event_data <- event_data("plotly_selected", source="subset")
+        selected_data$event_data <- event_data("plotly_selected")
     })
     observeEvent(input$clear_selection, {
         selected_data$event_data <- NULL
@@ -516,12 +516,12 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_volc1 <- renderPlotly({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
-        validate(
+        shiny::validate(
             need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
@@ -550,13 +550,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_volc2 <- renderPlotly({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_comp_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
-        validate(
+        shiny::validate(
             need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
@@ -585,13 +585,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_ma1 <- renderPlotly({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
-        validate(
+        shiny::validate(
             need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
@@ -620,13 +620,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_ma2 <- renderPlotly({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_comp_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
-        validate(need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
+        shiny::validate(need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                       sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
 
         base_plt <- make_scatter(
@@ -653,7 +653,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_hist1 <- renderPlotly({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
 
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
@@ -674,7 +674,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$plotly_hist2 <- renderPlotly({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         plot_df <- plot_comp_df()
 
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
@@ -705,7 +705,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             input$pvalue_type_select
         )
         target_df <- cbind(pass_thres=pass_thres_col, combined_dataset)
-        event.data <- event_data("plotly_selected", source = "subset")
+        event.data <- event_data("plotly_selected")
         if (!is.null(event.data) == TRUE) {
             out_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
         }
@@ -717,8 +717,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$table_display = DT::renderDataTable({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
         target_df <- get_target_df(rv)
         if (!input$show_full_table) {

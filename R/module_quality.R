@@ -178,8 +178,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     sync_param_choices <- function() {
         
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "Didn't find any design for dataset 1 while syncing input choices"))
-        validate(need(!is.null(rv$ddf_comp(rv, input$dataset2)), "Didn't find any design for dataset 2 while syncing input choices"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "Didn't find any design for dataset 1 while syncing input choices"))
+        shiny::validate(need(!is.null(rv$ddf_comp(rv, input$dataset2)), "Didn't find any design for dataset 2 while syncing input choices"))
         
         set_if_new <- function(prev_val, new_values, new_val_selected) {
             if (is.null(prev_val)) new_val_selected
@@ -192,10 +192,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         
         updateSelectInput(session, "color_data_ref", choices = ref_choices, selected=set_if_new(input$color_data1, ref_choices, rv$ddf_condcol_ref(rv, input$dataset1)))
         updateSelectInput(session, "color_data_comp", choices = comp_choices, selected=set_if_new(input$color_data2, comp_choices, rv$ddf_condcol_comp(rv, input$dataset2)))
-        
+
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=set_if_new(input$sample_data1, ref_choices, ref_choices[1]))
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=set_if_new(input$sample_data2, comp_choices, comp_choices[1]))
-        
+
         ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
         comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
         updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=set_if_new(input$data_num_col_ref, ref_data_choices, ref_data_choices[1]))
@@ -216,10 +216,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     get_long <- function(data_ind, rv, ddf_samplecol) {
         
-        validate(need(
+        shiny::validate(need(
             !is.null(rv$mapping_obj()[[sprintf("dataset%s", data_ind)]]), 
             "Did not find dataset mapping, have you loaded the data at the Setup page?"))
-        validate(need(
+        shiny::validate(need(
             !is.null(rv$mapping_obj()[[sprintf("samples%s", data_ind)]]), 
             "Did not find sample columns, have you mapped your samples at the Setup page?"))
         
@@ -284,8 +284,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$bars_ref <- renderPlotly({ 
         
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         make_barplot(
             reactive_long_sdf_ref(), 
@@ -306,8 +306,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         
         # req(rv$ddf_comp(rv, input$dataset2))
         # req(reactive_long_sdf_comp())
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         make_barplot(
             reactive_long_sdf_comp(), 
@@ -367,23 +367,23 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$boxplots_ref <- renderPlot({ 
         
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         plot_functions$boxplot_ref()
     })
 
     output$boxplots_comp <- renderPlot({ 
         
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         plot_functions$boxplot_comp()
     })
     
     output$density_ref_plotly <- renderPlotly({
         
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         
         make_density_plot(
             reactive_long_sdf_ref(),
@@ -396,8 +396,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$density_comp_plotly <- renderPlotly({
 
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         
         make_density_plot(
             reactive_long_sdf_comp(),
@@ -446,15 +446,15 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$dendrogram_ref <- renderPlot({
 
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         plot_functions$dendrogram_ref()
     })
     
     output$dendrogram_comp <- renderPlot({
 
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         plot_functions$dendrogram_comp()
     })
 
@@ -505,15 +505,15 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$histogram_ref <- renderPlot({ 
         
-        validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         plot_functions$histogram_ref()
     })
     
     output$histogram_comp <- renderPlot({ 
         
-        validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
         plot_functions$histogram_comp()
     })
 }

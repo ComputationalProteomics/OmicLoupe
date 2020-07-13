@@ -198,6 +198,8 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
                 warning("Unknown situation, cannot spotcheck for tab: ", input$plot_tabs)
             }
             
+            req(length(selected_rows) > 0)
+            
             selected_ids <- output_table_reactive()[selected_rows, ]$comb_id %>% as.character()
             rv$set_selected_feature(selected_ids, module_name)
             updateTabsetPanel(session=parent_session, inputId="navbar", selected="Spotcheck")
@@ -273,8 +275,8 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     
     output_table_reactive <- reactive({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
         get_target_ids_from_presence <- function(presence_df, all_conditions, selected_conditions) {
             non_selected_conditions <- all_conditions %>% discard(~. %in% selected_conditions)
@@ -457,7 +459,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         name_order <- upset_name_order()
         upset_metadata_obj <- upset_metadata()
         
-        validate(need(
+        shiny::validate(need(
             length(plot_list) > 1, 
             sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))
         ))
@@ -609,7 +611,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     
     output$fold_fractions_among_sig <- renderPlot({
         
-        validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
         
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
         plot_df <- data.frame(

@@ -1,4 +1,4 @@
-library(R6)
+# library(R6)
 
 MapObject <- R6Class("MapObject", list(
     

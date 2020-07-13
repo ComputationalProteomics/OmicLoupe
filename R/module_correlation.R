@@ -95,8 +95,8 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     
     output$correlation_histograms <- renderPlot({
         
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, is data loaded and samples mapped under the Setup page?"))
-        validate(need(rv$mapping_obj()$has_correlations(), "No correlation object found! At the Setup page, do you have two matched datasets and the checkbox 'Skip correlation' unchecked?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, is data loaded and samples mapped under the Setup page?"))
+        shiny::validate(need(rv$mapping_obj()$has_correlations(), "No correlation object found! At the Setup page, do you have two matched datasets and the checkbox 'Skip correlation' unchecked?"))
         correlation_histograms()
 
     }, height = 800)

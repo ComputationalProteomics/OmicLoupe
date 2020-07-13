@@ -74,26 +74,24 @@ setup_reactive_values_obj <- function(input) {
     
     rv$table_settings <- reactiveVal(NULL)
     rv$ddf_condcol_ref <- function(rv, input_field) {
-        # req(input_field != "")
-        validate(need(input_field != "", "No condition column found for reference data"))
+        shiny::validate(need(input_field != "", "No condition column found for reference data"))
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 1))]]()
     }
     rv$ddf_condcol_comp <- function(rv, input_field) {
-        #req(input_field != "")
-        validate(need(input_field != "", "No condition column found for comparison data"))
+        shiny::validate(need(input_field != "", "No condition column found for comparison data"))
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]()
     }
     
     rv$ddf_samplecol_ref <- function(rv, input_field) {
         sample_col_string <- sprintf("design_samplecol_%s", di_new(rv, input_field, 1))
-        validate(need(
+        shiny::validate(need(
             !is.null(di_new(rv, input_field, 1)) && sample_col_string %in% names(rv),
             "Reference samples not found, have you loaded a dataset and mapped sample columns?"))
         rv[[sample_col_string]]()
     }
     rv$ddf_samplecol_comp <- function(rv, input_field) {
         sample_col_string <- sprintf("design_samplecol_%s", di_new(rv, input_field, 2))
-        validate(need(
+        shiny::validate(need(
             !is.null(di_new(rv, input_field, 1)) && sample_col_string %in% names(rv),
             "Comparison samples not found, have you loaded a dataset and mapped sample columns?"))
         rv[[sample_col_string]]()

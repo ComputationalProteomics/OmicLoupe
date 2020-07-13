@@ -1,6 +1,6 @@
-library(ggplot2)
-# library(PCAtools)
-library(ggthemes)
+# library(ggplot2)
+# # library(PCAtools)
+# library(ggthemes)
 
 setup_pca_ui <- function(id) {
     ns <- NS(id)
@@ -117,8 +117,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     output$download_settings <- settings_download_handler("pca", input)
     
     filtered_samples_ref <- reactive({
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found for reference dataset"))
-        validate(need(input$filter_cond_data1 != "", "Expecting the filtering option to be used here, but no filtering condition found"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found for reference dataset"))
+        shiny::validate(need(input$filter_cond_data1 != "", "Expecting the filtering option to be used here, but no filtering condition found"))
         
         if (input$filter_cond_data1 == "None") {
             rv$ddf_ref(rv, input$dataset1) %>%
@@ -135,8 +135,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     filtered_samples_comp <- reactive({
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found for reference dataset"))
-        validate(need(input$filter_cond_data2 != "", "Expecting the filtering option to be used here, but no filtering condition found"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found for reference dataset"))
+        shiny::validate(need(input$filter_cond_data2 != "", "Expecting the filtering option to be used here, but no filtering condition found"))
         
         
         if (input$filter_cond_data2 == "None") {
@@ -154,8 +154,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     pca_ddf1 <- reactive({
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design found for dataset 1 while generating design 1 for PCA"))
-        validate(need(!is.null(rv$samples(rv, input$dataset1)), "No samples found for dataset 1 while generating design 1 for PCA"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design found for dataset 1 while generating design 1 for PCA"))
+        shiny::validate(need(!is.null(rv$samples(rv, input$dataset1)), "No samples found for dataset 1 while generating design 1 for PCA"))
         
         target_samples <- filtered_samples_ref()
         rv$ddf_ref(rv, input$dataset1) %>% 
@@ -163,8 +163,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     pca_ddf2 <- reactive({
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design found for dataset 1 while generating design 2 for PCA"))
-        validate(need(!is.null(rv$samples(rv, input$dataset2)), "No samples found for dataset 1 while generating design 2 for PCA"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design found for dataset 1 while generating design 2 for PCA"))
+        shiny::validate(need(!is.null(rv$samples(rv, input$dataset2)), "No samples found for dataset 1 while generating design 2 for PCA"))
         
         target_samples <- filtered_samples_comp()
         rv$ddf_comp(rv, input$dataset2) %>% 
@@ -173,9 +173,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     pca_obj1 <- reactive({
         
-        validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No reference dataset found while building PCA 1"))
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No reference design found while building PCA 1"))
-        validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found for reference while building PCA 1"))
+        shiny::validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No reference dataset found while building PCA 1"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No reference design found while building PCA 1"))
+        shiny::validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found for reference while building PCA 1"))
 
         filtered_samples <- filtered_samples_ref()
         calculate_pca_obj(
@@ -189,9 +189,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     pca_obj2 <- reactive({
         
-        validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No reference dataset found while building PCA 2"))
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No reference design found while building PCA 2"))
-        validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found for reference while building PCA 2"))
+        shiny::validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No reference dataset found while building PCA 2"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No reference design found while building PCA 2"))
+        shiny::validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found for reference while building PCA 2"))
         
         filtered_samples <- filtered_samples_comp()
         calculate_pca_obj(
@@ -360,7 +360,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     
     output$pca_plot1 <- renderPlotly({
         
-        # validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
+        # shiny::validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
         
         if (has_value(input$color_data1)) color_col <- input$color_data1
         else color_col <- NULL

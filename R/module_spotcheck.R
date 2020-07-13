@@ -130,17 +130,17 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
     
     output$table_display <- DT::renderDataTable({
-        validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-        validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
+        shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
         rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE), selection_mode=input$multiselect)
     })
     
     plot_df_ref <- reactive({
-        validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No data matrix found, is it loaded at the Setup page?"))
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found, is it loaded at the Setup page?"))
-        validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
-        validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
+        shiny::validate(need(!is.null(rv$rdf_ref(rv, input$dataset1)), "No data matrix found, is it loaded at the Setup page?"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found, is it loaded at the Setup page?"))
+        shiny::validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
+        shiny::validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
 
         map_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
@@ -165,10 +165,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
     
     plot_df_comp <- reactive({
-        validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No data matrix found, is it loaded at the Setup page?"))
-        validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
-        validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
-        validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
+        shiny::validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No data matrix found, is it loaded at the Setup page?"))
+        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
+        shiny::validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
+        shiny::validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
 
         map_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
@@ -224,7 +224,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         
     output$spot_display_ref <- renderPlotly({
 
-        validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
+        shiny::validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
 
         target_rows <- input$table_display_rows_selected
         plt <- make_spotcheck_plot(
@@ -248,7 +248,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
     output$spot_display_comp <- renderPlotly({
         
-        validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
+        shiny::validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
         
         target_row <- input$table_display_rows_selected
         plt <- make_spotcheck_plot(
