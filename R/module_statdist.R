@@ -14,7 +14,7 @@ MAX_COLORS <- 10
 
 setup_plotly_ui <- function(id) {
     
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     tabPanel(
         id,
         fluidPage(
@@ -251,7 +251,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                 base_df <- factor_prep_color_col(base_df, "comp.color_col", input$number_bins, input$number_bins)
             }
             
-            base_df %>% arrange(ref.color_col)
+            base_df %>% arrange(.data$ref.color_col)
         }
         else {
             warning("Unknown color_type !")
@@ -495,7 +495,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         settings_list$manual_scale <- TRUE
         settings_list$cont_scale <- NULL
         if (show_full_table) {
-            settings_list$selected <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)[table_rows_selected, ] %>% pull(comb_id)
+            settings_list$selected <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)[table_rows_selected, ] %>% pull(.data$comb_id)
             settings_list$color_col <- "selected"
         }
         else if (!is.null(event_data) == TRUE) {
@@ -710,7 +710,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             out_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
         }
         else {
-            out_df <- target_df %>% dplyr::filter(pass_thres != "None")
+            out_df <- target_df %>% dplyr::filter(.data$pass_thres != "None")
         }
         out_df
     }

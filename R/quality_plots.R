@@ -106,8 +106,8 @@ make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, s
     
     summed_data <- long_sdf %>%
         dplyr::filter(!is.infinite(long_sdf$value)) %>% 
-        mutate(is_na=is.na(value)) %>%
-        group_by(name) %>%
+        mutate(is_na=is.na(.data$value)) %>%
+        group_by(.data$name) %>%
         summarize_at(c("value", "is_na"), sum, na.rm=TRUE) %>%
         inner_join(ddf, by=join_by_ref)
     

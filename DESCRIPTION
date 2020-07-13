@@ -1,38 +1,41 @@
 Package: OmicLoupe
-Title: Taking a closer look at omics
+Title: OmicLoupe: Taking a closer look at omics
 Version: 0.9.1
-Maintainer: Jakob Willforss <jakob.willforss@immun.lth.se>
+Maintainer: Jakob Willforss <jakob.willforss@hotmail.com>
 Author: Jakob Willforss
 Authors@R: c(person("Jakob", "Willforss", email="jakob.willforss@hotmail.com", role=c("aut", "cre")))
 Description: 
-    OmicLoupe inspects your Omics data
+    OmicLoupe inspects your Omics data.
 Imports:
-    tidyverse,
-    ggpubr,
-    shiny,
-    shinyjs,
-    shinyalert,
-    plotly,
-    shinycssloaders,
+    dplyr,
     DT,
-    R6,
-    rlang,
-    stringr,
-    ggthemes,
-    shinythemes,
-    stringr,
-    ggrepel,
-    ggdendro,
+    forcats,
     GGally,
-    ggforce,
-    UpSetR,
-    ggplotify
+    ggdendro,
+    ggplotify,
+    ggpubr,
+    ggplot2,
+    jsonlite,
+    plotly,
+    purrr,
+    R6,
+    readr,
+    rlang,
+    shinythemes,
+    shiny,
+    shinyalert,
+    shinyjs,
+    shinycssloaders,
+    stringi,
+    stringr,
+    tidyr,
+    UpSetR
 Suggests:
     knitr,
     testthat
 VignetteBuilder: knitr
-License: Artistic-2.0
+License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.1
 URL: ""
 Depends: R (>= 3.6)

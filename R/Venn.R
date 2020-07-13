@@ -1,4 +1,4 @@
-Venn <- R6Class(
+Venn <- R6::R6Class(
     
     public = list(
         

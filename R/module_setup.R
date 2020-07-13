@@ -1,16 +1,20 @@
 # source("R/setup_server_utils.R")
 # source("R/setup_ui_utils.R")
 
+#' UI for setup module
+#' 
+#' @param id Identifier used internally
+#' @export
 setup_panel_ui <- function(id) {
     
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     
     tabPanel(
         id,
         fluidPage(
             id = "outer_area",
-            useShinyjs(),
-            useShinyalert(),
+            shinyjs::useShinyjs(),
+            shinyalert::useShinyalert(),
             tags$head(
                 tags$link(rel = "stylesheet", type = "text/css", href = "bootstrap")
             ),
@@ -264,11 +268,13 @@ setup_panel_ui <- function(id) {
     )
 }
 
-# How to access navbar element (from outside module)
-# document.querySelectorAll("#navbar li a[data-value=Correlation]")
-# Issue: download all data in displayed DT table buttom
-# https://github.com/rstudio/DT/issues/267
-
+#' Server for setup module
+#' 
+#' @param input Internally used
+#' @param output Internally used
+#' @param session Internally used
+#' @param module_name Name of the module
+#' @export
 module_setup_server <- function(input, output, session, module_name) {
     
     output$download_table <- downloadHandler(

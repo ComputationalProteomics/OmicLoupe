@@ -1,6 +1,6 @@
 # library(R6)
 
-MapObject <- R6Class("MapObject", list(
+MapObject <- R6::R6Class("MapObject", list(
     
     dual_datasets = FALSE,
     dataset1 = NULL,

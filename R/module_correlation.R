@@ -1,5 +1,5 @@
 setup_correlation_ui <- function(id) {
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     tabPanel(
         id,
         fluidPage(

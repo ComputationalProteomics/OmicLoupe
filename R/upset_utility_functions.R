@@ -3,34 +3,28 @@ get_ordered_sets <- function(upset_list, order_on, name_order, omit_empty=TRUE) 
     # Translates "1010" to retrieving contrast names 1 and 3 in a list
     retrieve_contrasts_from_union_string <- function(union_string_list, name_order) {
         str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% name_order[.])
-        # str_split(union_string_list, "") %>% map(~ifelse(.=="1", T, F) %>% names(upset_list)[.])
     }
 
     ordered_upset_list <- upset_list[name_order]
     
-    # name_order
-    
     unordered <- ordered_upset_list %>% 
         unite("union_contrast_string", names(ordered_upset_list), sep="", remove = FALSE) %>% 
-        group_by(union_contrast_string) %>% 
+        group_by(.data$union_contrast_string) %>% 
         summarize(nbr=n()) %>% 
-        dplyr::mutate(grade=union_contrast_string %>% gsub("0", "", .) %>% str_length()) %>%
-        dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(union_contrast_string, name_order)) %>%
-        dplyr::mutate(string_entries=map(included_entries, ~paste(., collapse=",")) %>% unlist())
+        dplyr::mutate(grade=.data$union_contrast_string %>% gsub("0", "", .) %>% str_length()) %>%
+        dplyr::mutate(included_entries=retrieve_contrasts_from_union_string(.data$union_contrast_string, name_order)) %>%
+        dplyr::mutate(string_entries=map(.data$included_entries, ~paste(., collapse=",")) %>% unlist())
     
-    # Generate name order here?
-    #name_order
-    
-    if (omit_empty && unordered %>% dplyr::filter(grade != 0) %>% nrow() > 0) {
-        message(sprintf("Omitting %s entries of grade 0", unordered %>% dplyr::filter(grade != 0) %>% nrow()))
-        unordered <- unordered %>% dplyr::filter(grade != 0)
+    if (omit_empty && unordered %>% dplyr::filter(.data$grade != 0) %>% nrow() > 0) {
+        message(sprintf("Omitting %s entries of grade 0", unordered %>% dplyr::filter(.data$grade != 0) %>% nrow()))
+        unordered <- unordered %>% dplyr::filter(.data$grade != 0)
     }
     
     if (order_on == "freq") {
-        unordered %>% arrange(desc(nbr), union_contrast_string)
+        unordered %>% arrange(desc(.data$nbr), .data$union_contrast_string)
     }
     else if (order_on == "degree") {
-        unordered %>% arrange(desc(grade), union_contrast_string)
+        unordered %>% arrange(desc(.data$grade), .data$union_contrast_string)
     }
     else {
         stop("Unknown ordering condition: ", order_on)
@@ -60,7 +54,7 @@ parse_contrast_pass_list <- function(rv, input, target_data, target_contrast, co
         dplyr::filter(pass_all_contrast) %>%
         dplyr::select(all_of(c("comb_id", fold_field))) %>%
         dplyr::rename(fold=fold_field) %>%
-        mutate(comb_id=as.character(comb_id))
+        mutate(comb_id=as.character(.data$comb_id))
     
     pass_list <- setNames(as.list(pass_tbl$fold), pass_tbl$comb_id)
     pass_list

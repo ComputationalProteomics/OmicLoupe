@@ -3,7 +3,7 @@
 # library(ggthemes)
 
 setup_pca_ui <- function(id) {
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     tabPanel(
         id,
         fluidPage(
@@ -317,7 +317,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         pcs <- paste0("PC", seq_len(length(perc_vars)))
         plot_df <- data.frame(PC=pcs, perc_var=perc_vars) %>% head(display_count)
         plot_df$PC <- factor(plot_df$PC, levels = head(pcs, display_count))
-        ggplot(plot_df, aes(x=PC, y=perc_var)) + geom_col(fill="#000077") + ggtitle(title)
+        ggplot(plot_df, aes(x=.data$PC, y=.data$perc_var)) + geom_col(fill="#000077") + ggtitle(title)
     }
     
     ########### OUTPUTS ############

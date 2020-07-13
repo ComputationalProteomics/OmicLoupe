@@ -1,5 +1,5 @@
 setup_overlap_ui <- function(id) {
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     tabPanel(
         id,
         fluidPage(
@@ -286,10 +286,10 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             if (length(non_selected_conditions) > 0) {
                 presence_inintersect_notinothers_df <- presence_inintersect_df %>% 
                     dplyr::filter_at(vars(all_of(non_selected_conditions)), ~.==0)
-                target_ids <- presence_inintersect_notinothers_df %>% pull(id_col)
+                target_ids <- presence_inintersect_notinothers_df %>% pull(.data$id_col)
             }
             else {
-                target_ids <- presence_inintersect_df %>% pull(id_col)
+                target_ids <- presence_inintersect_df %>% pull(.data$id_col)
             }
             target_ids
         }
@@ -336,7 +336,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             
             presence_df <- upset_presence_dataframe() %>% 
                 dplyr::filter_at(vars(!matches("^comb_id$")), any_vars(. != "0")) %>%
-                dplyr::rename(id_col=comb_id)
+                dplyr::rename(id_col=.data$comb_id)
             all_condition_levels <- UpSetR::fromList(presence_df) %>% colnames() %>% discard(~.=="id_col")
             
             if (!all(input$upset_crosssec_display_presence %in% colnames(presence_df))) {
@@ -351,7 +351,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         }
         
         rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>%
-            dplyr::filter(comb_id %in% target_ids)
+            dplyr::filter(.data$comb_id %in% target_ids)
     })
     
     upset_plot_list <- reactive({
@@ -518,35 +518,35 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         if (input$dataset1 == input$dataset2) {
             
             long_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>% 
-                dplyr::filter(comb_id %in% present_in_all) %>%
+                dplyr::filter(.data$comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
                     p_prod=rowSums(.[, contrast_pval_cols_ref, drop=FALSE])
                 ) %>%
-                arrange(p_sum) %>%
+                arrange(.data$p_sum) %>%
                 head(input$max_fold_comps) %>%
-                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref
+                dplyr::select(ID=.data$comb_id, p_sum=.data$p_sum, contrast_fold_cols_ref
                 ) %>%
-                tidyr::gather("Comparison", "Fold", -ID, -p_sum)
+                tidyr::gather("Comparison", "Fold", -.data$ID, -.data$p_sum)
         }
         else {
             long_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>% 
-                dplyr::filter(comb_id %in% present_in_all) %>%
+                dplyr::filter(.data$comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
                     p_prod=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE])
                 ) %>%
-                arrange(p_sum) %>%
+                arrange(.data$p_sum) %>%
                 head(input$max_fold_comps) %>%
-                dplyr::select(ID=comb_id, p_sum=p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
+                dplyr::select(ID=.data$comb_id, p_sum=.data$p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
                 ) %>%
-                tidyr::gather("Comparison", "Fold", -ID, -p_sum)
+                tidyr::gather("Comparison", "Fold", -.data$ID, -.data$p_sum)
         }
         
-        plt <- ggplot(long_df, aes(x=reorder(ID, p_sum), y=Fold)) + theme_classic() +
+        plt <- ggplot(long_df, aes(x=reorder(.data$ID, .data$p_sum), y=.data$Fold)) + 
             theme(axis.text.x = element_text(angle=90, vjust=0.5)) +
             geom_boxplot() +
-            geom_point(aes(color=Comparison)) + 
+            geom_point(aes(color=.data$Comparison)) + 
             xlab("") +
             ggtitle(sprintf("%s out of %s features present in all shown", 
                             min(input$max_fold_comps, length(present_in_all)), 
@@ -620,14 +620,14 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             comp_sig = combined_dataset[[rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$P.Value]],
             comp_fold = combined_dataset[[rv$statcols_comp(rv, input$dataset2, input$comp_contrast)$logFC]]
         ) %>% 
-            mutate(highest_p=pmax(ref_sig, comp_sig)) %>% 
-            arrange(highest_p) %>%
-            mutate(is_contra=sign(ref_fold) != sign(comp_fold)) %>%
-            mutate(tot_contra=cumsum(is_contra), tot_same=cumsum(!is_contra)) %>%
-            mutate(cum_frac_contra=tot_same/(tot_same+tot_contra))
+            mutate(highest_p=pmax(.data$ref_sig, .data$comp_sig)) %>% 
+            arrange(.data$highest_p) %>%
+            mutate(is_contra=sign(.data$ref_fold) != sign(.data$comp_fold)) %>%
+            mutate(tot_contra=cumsum(.data$is_contra), tot_same=cumsum(!.data$is_contra)) %>%
+            mutate(cum_frac_contra=.data$tot_same/(.data$tot_same+.data$tot_contra))
         
-        plt_cumfrac_over_logp <- ggplot(plot_df, aes(x=log10(highest_p), y=cum_frac_contra)) + geom_line()
-        plt_cumfrac_over_p <- ggplot(plot_df, aes(x=highest_p, y=cum_frac_contra)) + geom_line()
+        plt_cumfrac_over_logp <- ggplot(plot_df, aes(x=log10(.data$highest_p), y=.data$cum_frac_contra)) + geom_line()
+        plt_cumfrac_over_p <- ggplot(plot_df, aes(x=.data$highest_p, y=.data$cum_frac_contra)) + geom_line()
         
         ggarrange(plt_cumfrac_over_p, plt_cumfrac_over_logp, ncol=1, nrow=2) %>% 
             ggpubr::annotate_figure(., top="Fraction same fold for different p-value thresholds")

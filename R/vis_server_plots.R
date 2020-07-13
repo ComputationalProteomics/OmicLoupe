@@ -2,31 +2,31 @@ two_level_colors <- c("#CCCCCC", "#CC0000", "#0000CC")
 two_level_colors_other <- c("#CCCCCC", "#0000CC")
 
 # Generating correlation based informative text
-calculate_correlation_vals_string <- function(target_data, ref_stat_cols, comp_stat_cols, pvalue_cutoff=0.05, fold_cutoff=1, pvalue_adjusted=FALSE) {
-    
-    plot_df <- get_pass_thres_annot_data(
-        target_data,
-        ref_stat_cols,
-        pvalue_cutoff, 
-        fold_cutoff,
-        pvalue_adjusted
-    ) %>% dplyr::filter(pass_threshold_data)
-    
-    # Fold changes
-    pval_spearman <- cor.test(plot_df[[ref_stat_cols$P.Value]], plot_df[[comp_stat_cols$P.Value]], method="spearman")
-    fold_spearman <- cor.test(plot_df[[ref_stat_cols$logFC]], plot_df[[comp_stat_cols$logFC]], method="spearman")
-    fold_pearson <- cor.test(plot_df[[ref_stat_cols$logFC]], plot_df[[comp_stat_cols$logFC]], method="pearson")
-    
-    out_string <- sprintf(
-        "P-value ranked correlation: %s (p-val: %s)\nFold-ranked correlation: %s (p-val: %s)\nFold-Spearman correlation: %s (p-val: %s)\nNumber of features considered: %s out of %s",
-        round(pval_spearman$estimate, 3), round(pval_spearman$p.value, 3),
-        round(fold_spearman$estimate, 3), round(fold_spearman$p.value, 3),
-        round(fold_pearson$estimate, 3), round(fold_pearson$p.value, 3),
-        nrow(plot_df), nrow(target_data)
-    )
-    
-    out_string
-}
+# calculate_correlation_vals_string <- function(target_data, ref_stat_cols, comp_stat_cols, pvalue_cutoff=0.05, fold_cutoff=1, pvalue_adjusted=FALSE) {
+#     
+#     plot_df <- get_pass_thres_annot_data(
+#         target_data,
+#         ref_stat_cols,
+#         pvalue_cutoff, 
+#         fold_cutoff,
+#         pvalue_adjusted
+#     ) %>% dplyr::filter(pass_threshold_data)
+#     
+#     # Fold changes
+#     pval_spearman <- cor.test(plot_df[[ref_stat_cols$P.Value]], plot_df[[comp_stat_cols$P.Value]], method="spearman")
+#     fold_spearman <- cor.test(plot_df[[ref_stat_cols$logFC]], plot_df[[comp_stat_cols$logFC]], method="spearman")
+#     fold_pearson <- cor.test(plot_df[[ref_stat_cols$logFC]], plot_df[[comp_stat_cols$logFC]], method="pearson")
+#     
+#     out_string <- sprintf(
+#         "P-value ranked correlation: %s (p-val: %s)\nFold-ranked correlation: %s (p-val: %s)\nFold-Spearman correlation: %s (p-val: %s)\nNumber of features considered: %s out of %s",
+#         round(pval_spearman$estimate, 3), round(pval_spearman$p.value, 3),
+#         round(fold_spearman$estimate, 3), round(fold_spearman$p.value, 3),
+#         round(fold_pearson$estimate, 3), round(fold_pearson$p.value, 3),
+#         nrow(plot_df), nrow(target_data)
+#     )
+#     
+#     out_string
+# }
 
 # correlation_curve <- function(target_data, stat_cols1, stat_cols2, ref_stat_cols, ) {
 #     
@@ -112,15 +112,15 @@ exact_fold_comp_plot <- function(rdf, group1_cols, group2_cols, stat_target, sta
         dplyr::filter(UQ(as.name(group1_cols[[pvalue_type]])) < pvalue_cutoff) %>%
         mutate(id = paste("ID", row_number(), sep="")) %>% 
         dplyr::select(
-            id, 
+            .data$id, 
             fold1=UQ(as.name(group1_cols$logFC)), 
             fold2=UQ(as.name(group2_cols$logFC)), 
             sig_val=UQ(as.name(group1_cols[[pvalue_type]])), 
             expr=UQ(as.name(group1_cols$AveExpr))
         ) %>% 
-        gather("fold", "value", -id, -sig_val, -expr)
+        gather("fold", "value", -.data$id, -.data$sig_val, -.data$expr)
     
-    plt <- ggplot(long, aes(x=sig_val, y=value+expr, color=fold, group=id)) + 
+    plt <- ggplot(long, aes(x=.data$sig_val, y=.data$value+.data$expr, color=.data$fold, group=.data$id)) + 
         geom_line(color="gray", na.rm=TRUE) + 
         geom_point(na.rm=TRUE) + 
         scale_color_manual(values=two_level_colors_other) +

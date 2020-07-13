@@ -1,5 +1,5 @@
 setup_quality_ui <- function(id) {
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     tabPanel(
         id,
         fluidPage(
@@ -405,7 +405,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             curr_dataset=input$dataset2,
             title=input$custom_title2,
             text_size=input$text_size
-        ) %>% config(toImageButtonOptions=list(
+        ) %>% plotly::config(toImageButtonOptions=list(
                 format=rv$figure_save_format(),
                 width=rv$figure_save_width(), 
                 height=rv$figure_save_height()

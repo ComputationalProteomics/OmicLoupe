@@ -1,5 +1,5 @@
 setup_spotcheck_ui <- function(id) {
-    ns <- NS(id)
+    ns <- shiny::NS(id)
     tabPanel(
         id,
         fluidPage(
@@ -156,8 +156,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         
         
         plt_df_ref <- map_df %>% 
-            dplyr::filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
-            dplyr::select(comb_id, all_of(samples_names)) %>%
+            dplyr::filter(.data$comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+            dplyr::select(.data$comb_id, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
@@ -182,8 +182,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         else parsed_cond <- ddf_comp[[cond_comp]]
 
         plt_df_comp <- map_df %>% 
-            dplyr::filter(comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
-            dplyr::select(comb_id, all_of(samples_names)) %>%
+            dplyr::filter(.data$comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
+            dplyr::select(.data$comb_id, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
@@ -192,7 +192,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
 
     
     make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, text_size=10, text_angle=90, text_vjust=0.5) {
-        add_geoms <- function(plt, show_box, show_scatter, show_violin, show_labels) {
+        add_geoms <- function(plt, show_box, show_scatter, show_violin) {
             if (show_violin) {
                 plt <- plt + geom_violin(na.rm = TRUE)
             }
@@ -206,10 +206,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         }
         
         if (length(unique(plot_df$comb_id)) == 1) {
-            plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=cond, label=sample))
+            plt_ref_base <- ggplot(plot_df, aes(x=.data$cond, y=.data$value, color=.data$cond, label=.data$sample))
         }
         else {
-            plt_ref_base <- ggplot(plot_df, aes(x=cond, y=value, color=comb_id, group=comb_id, label=sample))
+            plt_ref_base <- ggplot(plot_df, aes(x=.data$cond, y=.data$value, color=.data$comb_id, group=.data$comb_id, label=.data$sample))
         }
         
         plt_ref_base <- plt_ref_base +
@@ -218,7 +218,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             ylab("Abundance") +
             theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle))
         
-        plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin, show_labels)
+        plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin)
         plt_ref + theme_bw()
     }
         

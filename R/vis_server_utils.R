@@ -55,7 +55,7 @@ get_curr_selected_cols_pattern <- function(chosen_dataset, filenames, pattern1="
         pattern2
     }
     else {
-        stop("Unknown situation for input$dataset1: ", dataset)
+        stop("Unknown situation for input$dataset1: ", chosen_dataset)
     }
 }
 
@@ -98,32 +98,12 @@ factor_prep_color_col <- function(rdf, adf_color_col_ref, retain_count, numeric_
 }
 
 assign_fig_settings <- function(plt, rv) {
-    plt %>% config(toImageButtonOptions=list(
+    plt %>% plotly::config(toImageButtonOptions=list(
         format=rv$figure_save_format(),
         width=rv$figure_save_width(), 
         height=rv$figure_save_height()
     ))
 }
-
-# di <- function(rv, input, field) {
-#     
-#     if (is.null(rv$filename_1()) || rv$filename_1() == "") {
-#         NULL
-#     }
-#     else if (input[[sprintf("dataset%s", field)]] == rv$filename_1()) {
-#         1
-#     }
-#     else if (!is.null(rv$filename_2()) && input[[sprintf("dataset%s", field)]] == rv$filename_2()) {
-#         2
-#     }
-#     else {
-#         NULL
-#     }
-# }
-
-
-
-
 
 
 
