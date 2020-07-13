@@ -3,7 +3,8 @@ setup_correlation_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help("Correlation", ns("help")),
+            # bar_w_help("Correlation", ns("help")),
+            bar_w_help_and_download("Correlation", ns("help"), ns("download_settings")),
             fluidRow(
                 column(
                     12,
@@ -25,7 +26,7 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     
     output$ggplot_download <- downloadHandler(
         filename = function() {
-            sprintf("%s-%s.%s", "corr", Sys.Date(), rv$figure_save_format())
+            sprintf("%s-%s.%s", "corr", format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
         },
         content = function(file) {
             dpi <- rv$figure_save_dpi()
@@ -38,6 +39,8 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
                 dpi = dpi)
         }
     )
+    
+    output$download_settings <- settings_download_handler("corr", input)
     
     observeEvent(input$help, {
         shinyalert(

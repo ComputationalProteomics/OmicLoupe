@@ -1,3 +1,20 @@
+settings_download_handler <- function(base_name, input) {
+    downloadHandler(
+        filename = function() {
+            sprintf("%s_settings_%s.json", base_name, format(Sys.time(), "%Y%M%d_%H%m%S"))
+        },
+        content = function(file) {
+            
+            settings <- list()
+            settings[[sprintf("%s_settings", base_name)]] <- as.list(input)
+            settings$date_retrieved <- as.list(input)
+            settings$version <- packageVersion("OmicLoupe")
+            
+            write(jsonlite::toJSON(settings, auto_unbox=TRUE, pretty=FALSE), file = file)
+        }
+    )
+}
+
 # Parses out the set of four statistical columns from the total set of
 # statistical columns given a specific base
 # For example: condA.P.Value, condA.adj.P.Val, condA.logFC, condA.AveExpr

@@ -3,7 +3,8 @@ setup_overlap_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help("Overlap study", ns("help")),
+            # bar_w_help("Overlap study", ns("help")),
+            bar_w_help_and_download("Overlap study", ns("help"), ns("download_settings")),
             fluidRow(
                 column(
                     12,
@@ -136,16 +137,18 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     
     output$download_table <- output$download_table_upset <- output$download_table_upset_presence <- downloadHandler(
         filename = function() {
-            paste("overlap-", Sys.Date(), ".tsv", sep="")
+            paste("overlap-", format(Sys.time(), "%Y%M%d_%H%m%S"), ".tsv", sep="")
         },
         content = function(file) {
             write_tsv(rv$dt_parsed_data_raw(rv, output_table_reactive()), file)
         }
     )
     
+    output$download_settings <- settings_download_handler("overlap", input)
+    
     output$ggplot_download <- downloadHandler(
         filename = function() {
-            sprintf('%s-%s.%s', tolower(input$plot_tabs), Sys.Date(), rv$figure_save_format())
+            sprintf('%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
         },
         content = function(file) {
             dpi <- rv$figure_save_dpi()

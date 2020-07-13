@@ -7,7 +7,7 @@ setup_pca_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help("Principal Component Analysis", ns("help")),
+            bar_w_help_and_download("Principal Component Analysis", ns("help"), ns("download_settings")),
             fluidRow(
                 column(4,
                        wellPanel(
@@ -113,6 +113,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             html = TRUE
         )
     })
+    
+    output$download_settings <- settings_download_handler("pca", input)
     
     filtered_samples_ref <- reactive({
         validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found for reference dataset"))

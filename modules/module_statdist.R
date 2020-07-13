@@ -18,16 +18,17 @@ setup_plotly_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            fluidRow(
-                span(
-                    style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
-                    h3("Statistical investigations")
-                ),
-                span(
-                    style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
-                    actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
-                )
-            ),
+            # fluidRow(
+            #     span(
+            #         style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
+            #         h3("Statistical investigations")
+            #     ),
+            #     span(
+            #         style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+            #         actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
+            #     )
+            # ),
+            bar_w_help_and_download("Statistical investigations", ns("help"), ns("download_settings")),
             fluidRow(
                 column(4,
                        wellPanel(
@@ -119,7 +120,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$download_table <- downloadHandler(
         filename = function() {
-            paste("comp_scatter-", Sys.Date(), ".tsv", sep="")
+            paste("comp_scatter-", format(Sys.time(), "%Y%M%d_%H%m%S"), ".tsv", sep="")
         },
         content = function(file) {
             target_df <- get_target_df(rv)
@@ -127,6 +128,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             write_tsv(rv$dt_parsed_data_raw(rv, dt_parsed_target), file)
         }
     )
+    
+    output$download_settings <- settings_download_handler("statdist", input)
     
     observeEvent(input$spotcheck, {
         if (!is.null(parent_session)) {

@@ -64,7 +64,7 @@ setup_panel_ui <- function(id) {
                 id = ns("setup_panels"),
                 type = "tabs",
                 tabPanel("LoadData",
-                         bar_w_help("Load data", ns("help")),
+                         bar_w_help_and_download("Load data", ns("help"), ns("download_settings")),
                          fluidRow(
                              column(6,
                                     wellPanel(
@@ -89,7 +89,6 @@ setup_panel_ui <- function(id) {
                                                            "Load data"
                                                        )
                                                    )
-                                                   
                                             ),
                                             column(6,
                                                    checkboxInput(ns("automatic_sample_detect"), label = "Detect sample col.", value = TRUE),
@@ -274,13 +273,15 @@ module_setup_server <- function(input, output, session, module_name) {
     
     output$download_table <- downloadHandler(
         filename = function() {
-            paste(input$data_table_tabs, "-", Sys.Date(), ".tsv", sep="")
+            paste(input$data_table_tabs, "-", format(Sys.time(), "%Y%M%d_%H%m%S"), ".tsv", sep="")
         },
         content = function(file) {
             write_tsv(get_target_data(input$data_table_tabs, get_raw=TRUE), file)
         }
     )
-    
+
+    output$download_settings <- settings_download_handler("setup", input)
+
     output$parse_err_data_1 <- renderUI({
         req(rv$filedata_1(), readr::problems(rv$filedata_1()) %>% nrow() > 1)
         downloadButton(sprintf("%s-%s", module_name, "parse_err_data_1_handler"), "Check parsing issues")

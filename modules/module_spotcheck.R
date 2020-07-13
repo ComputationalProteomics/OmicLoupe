@@ -73,7 +73,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     
     output$download_table <- downloadHandler(
         filename = function() {
-            paste("spotcheck-", Sys.Date(), ".tsv", sep="")
+            paste("spotcheck-", format(Sys.time(), "%Y%M%d_%H%m%S"), ".tsv", sep="")
         },
         content = function(file) {
             write_tsv(rv$dt_parsed_data_raw(rv, rv$mapping_obj()$get_combined_dataset()), file)

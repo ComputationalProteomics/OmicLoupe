@@ -8,8 +8,34 @@ bar_w_help <- function(title, button_id) {
             style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
             actionButton(button_id, "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
         )
+        # span(
+        #     style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;",
+        #     downloadButton(download_id, "Download", icon=icon("question"), , style="padding-top:2px; font-size:70%;", class="btn-xs help")
+        # )
     )
 }
+
+bar_w_help_and_download <- function(title, button_id, download_id) {
+    fluidRow(
+        span(
+            style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
+            h3(title)
+        ),
+        span(
+            style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+            actionButton(button_id, "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
+        ),
+        span(
+            style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+            downloadButton(download_id, "", style="padding-top:2px; font-size:70%;", class="btn-xs help")
+        )
+    )
+}
+
+# fluidRow(
+#     class = "button_row",
+#     downloadButton(ns("download_settings"), "Download settings")
+# )
 
 top_bar_w_help <- function(title, button_id) {
     warning("top_bar_w_help is replaced with bar_w_help")

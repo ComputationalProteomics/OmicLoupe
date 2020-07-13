@@ -3,7 +3,7 @@ setup_quality_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help("Quality", ns("help")),
+            bar_w_help_and_download("Quality", ns("help"), ns("download_settings")),
             fluidRow(
                 column(
                     12,
@@ -121,6 +121,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         )
     })
     
+    output$download_settings <- settings_download_handler("quality", input)
+    
     # Observers
     observeEvent({
         rv$filedata_1()
@@ -130,13 +132,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     }, ignoreInit=TRUE, ignoreNULL=FALSE)
-    
-    # observeEvent(rv$filedata_2(), {
-    #     message("observeEvent(rv$filedata_2()")
-    #     choices <- get_dataset_choices(rv)
-    #     updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-    #     updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    # })
     
     ggplot_download <- function(file, target) {
         
@@ -165,7 +160,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$ggplot_download_ref <- downloadHandler(
         filename = function() {
-            sprintf('ref-%s-%s.%s', tolower(input$plot_tabs), Sys.Date(), rv$figure_save_format())
+            sprintf('ref-%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
         },
         content = function(file) {
             ggplot_download(file, "ref")
@@ -174,7 +169,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$ggplot_download_comp <- downloadHandler(
         filename = function() {
-            sprintf('comp-%s-%s.%s', tolower(input$plot_tabs), Sys.Date(), rv$figure_save_format())
+            sprintf('comp-%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
         },
         content = function(file) {
             ggplot_download(file, "comp")
