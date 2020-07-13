@@ -7,10 +7,10 @@ settings_download_handler <- function(base_name, input) {
             
             settings <- list()
             settings[[sprintf("%s_settings", base_name)]] <- as.list(input)
-            settings$date_retrieved <- as.list(input)
+            settings$date_retrieved <- format(Sys.time(), "%Y%M%d_%H%m%S")
             settings$version <- packageVersion("OmicLoupe")
             
-            write(jsonlite::toJSON(settings, auto_unbox=TRUE, pretty=FALSE), file = file)
+            write(jsonlite::toJSON(settings, auto_unbox=TRUE, pretty=TRUE, force=TRUE), file = file)
         }
     )
 }

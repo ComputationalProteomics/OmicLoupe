@@ -1,6 +1,6 @@
 #' launches the shinyAppDemo app
 #'
-#' @export launchApp
+#' @export runApp
 #'
 #' @return shiny application object
 #'
@@ -10,6 +10,7 @@
 #' @importFrom forcats fct_collapse
 #' @import ggplot2
 #' @importFrom ggpubr ggarrange
+#' @importFrom jsonlite toJSON
 #' @importFrom plotly ggplotly plot_ly renderPlotly toWebGL plotlyOutput config event_data
 #' @importFrom purrr walk map discard keep
 #' @importFrom R6 R6Class
@@ -23,7 +24,7 @@
 #' @importFrom stringr str_length str_split str_length str_trunc
 #' @importFrom tidyr pivot_longer gather unite
 #' @importFrom utils head packageVersion
-launchApp <- function() {
+runApp <- function() {
     
     options(shiny.maxRequestSize=100*1024^2)
     ggplot2::theme_set(ggplot2::theme_classic())

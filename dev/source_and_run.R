@@ -19,7 +19,7 @@ quiet(library(jsonlite))
 quiet(library(conflicted))
 
 devtools::load_all()
-launchApp()
+runApp()
 
 
 # R.utils::sourceDirectory("R/")

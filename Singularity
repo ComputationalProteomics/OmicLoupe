@@ -60,7 +60,7 @@ From: ubuntu:18.04
     echo 'devtools::install_github("Jakob37/OmicLoupe")' >> install_omicloupe.R
     # Rscript install_omicloupe.R
 
-    echo 'OmicLoupe::launchApp()' > run.R
+    echo 'OmicLoupe::runApp()' > run.R
 
 %runscript
     exec Rscript /run.R
