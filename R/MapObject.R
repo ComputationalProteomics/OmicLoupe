@@ -162,33 +162,42 @@ MapObject <- R6Class("MapObject", list(
     has_same_number_entries = function() {
         length(self$joint_indices1) == length(self$joint_indices2)
     },
-    get_combined_dataset = function(full_entries = FALSE) {
+    # full_entries: Include only entries with no missing values
+    # include_non_matching: Include entries only present in one dataset by including a row of NA-values in the other
+    get_combined_dataset = function(full_entries = FALSE, include_non_matching=FALSE) {
     
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
             if (!self$has_combined() || !self$has_same_number_entries()) {
                 return(NULL)
             }
 
-            out_df1 <- self$dataset1[self$joint_indices1, ]
-            out_df2 <- self$dataset2[self$joint_indices2, ]
-
-            corr_df <- NULL
-            if (!is.null(self$correlations)) {
-                out_df1 <- cbind(out_df1, do.call("cbind", self$correlations))
-                out_df2 <- cbind(out_df2, do.call("cbind", self$correlations))
+            if (!include_non_matching) {
+                out_df1 <- self$dataset1[self$joint_indices1, ]
+                out_df2 <- self$dataset2[self$joint_indices2, ]
+                
+                corr_df <- NULL
+                if (!is.null(self$correlations)) {
+                    out_df1 <- cbind(out_df1, do.call("cbind", self$correlations))
+                    out_df2 <- cbind(out_df2, do.call("cbind", self$correlations))
+                }
+                
+                if (full_entries) {
+                    out_df1_full_entries <- out_df1 %>% self$get_full_entries(self$samples1)
+                    out_df2_full_entries <- out_df2 %>% self$get_full_entries(self$samples2)
+                    all_full_entries <- out_df1_full_entries & out_df2_full_entries
+                    out_df1 <- out_df1[all_full_entries, ]
+                    out_df2 <- out_df2[all_full_entries, ]
+                }
+                colnames(out_df1) <- paste0("d1.", colnames(out_df1))
+                colnames(out_df2) <- paste0("d2.", colnames(out_df2))
+                out_df <- cbind(out_df1, out_df2)
             }
-
-            if (full_entries) {
-                out_df1_full_entries <- out_df1 %>% self$get_full_entries(self$samples1)
-                out_df2_full_entries <- out_df2 %>% self$get_full_entries(self$samples2)
-                all_full_entries <- out_df1_full_entries & out_df2_full_entries
-                out_df1 <- out_df1[all_full_entries, ]
-                out_df2 <- out_df2[all_full_entries, ]
+            else {
+                out_df1 <- self$dataset1 %>% rename_at(vars(!matches(self$target_col1)), ~paste0("d1.", .))
+                out_df2 <- self$dataset2 %>% rename_at(vars(!matches(self$target_col2)), ~paste0("d2.", .))
+                out_df <- full_join(out_df1, out_df2, by=setNames(self$target_col2, self$target_col1))
             }
             
-            colnames(out_df1) <- paste0("d1.", colnames(out_df1))
-            colnames(out_df2) <- paste0("d2.", colnames(out_df2))
-            out_df <- cbind(out_df1, out_df2)
             out_df
         }
         else if (!is.null(self$dataset1)) {

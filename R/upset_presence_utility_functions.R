@@ -9,7 +9,7 @@ cond_cols_uppres <- function(rv, input, dataset, target, cond_col, cond_level) {
     match_cond_samples
 }
 
-get_na_nbrs_uppres <- function(rv, input, selected_cond, selected_levels, dataset_nbr, target) {
+get_na_nbrs_uppres <- function(rv, input, comb_data, selected_cond, selected_levels, dataset_nbr, target) {
     
     samples_per_cond <- map(
         selected_levels,
@@ -18,17 +18,19 @@ get_na_nbrs_uppres <- function(rv, input, selected_cond, selected_levels, datase
     
     d_prefix <- sprintf("d%s", dataset_nbr)
     
+    # map_obj <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
+    
     non_missing_per_cond_df <- map(
         samples_per_cond,
-        ~rv$mapping_obj()$get_combined_dataset() %>%
+        ~comb_data %>%
             dplyr::select(paste(d_prefix, .x, sep=".")) %>%
             mutate(nbr_na=(!is.na(.)) %>% rowSums()) %>%
-            mutate(comb_id=rv$mapping_obj()$get_combined_dataset()$comb_id)
+            mutate(comb_id=comb_data$comb_id)
     ) %>%
         map(~dplyr::select(.x, nbr_na)) %>% 
         do.call("cbind", .) %>%
         `colnames<-`(paste(selected_levels, "nbr_na", sep=".")) %>%
-        cbind(comb_id=rv$mapping_obj()$get_combined_dataset()$comb_id, .)
+        cbind(comb_id=comb_data$comb_id, .)
     
     non_missing_per_cond_df
 }

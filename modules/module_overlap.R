@@ -348,7 +348,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             stop("input$plot_tabs should be either Venn or Upset, found: ", input$plot_tabs)
         }
         
-        rv$mapping_obj()$get_combined_dataset() %>%
+        rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>%
             dplyr::filter(comb_id %in% target_ids)
     })
     
@@ -368,7 +368,9 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     })
     
     upset_presence_dataframe <- reactive({
-        nbr_nas <- get_na_nbrs_uppres(rv, input, input$upset_pres_cond_ref, input$upset_pres_levels_ref, dataset_nbr=1, target="ref")
+        comb_data <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
+        
+        nbr_nas <- get_na_nbrs_uppres(rv, input, comb_data, input$upset_pres_cond_ref, input$upset_pres_levels_ref, dataset_nbr=1, target="ref")
         upset_table <- parse_na_nbrs_to_upset_table(
             nbr_nas, 
             input$dataset1, 
@@ -378,7 +380,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             presence_fraction_thres=input$upset_pres_frac)
 
         if (input$dataset1 != input$dataset2) {
-            nbr_nas_comp <- get_na_nbrs_uppres(rv, input, input$upset_pres_cond_comp, input$upset_pres_levels_comp, dataset_nbr=2, target="comp")
+            nbr_nas_comp <- get_na_nbrs_uppres(rv, input, comb_data, input$upset_pres_cond_comp, input$upset_pres_levels_comp, dataset_nbr=2, target="comp")
             upset_table_comp <- parse_na_nbrs_to_upset_table(
                 nbr_nas_comp, 
                 input$dataset2, 
@@ -513,7 +515,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         
         if (input$dataset1 == input$dataset2) {
             
-            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
+            long_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>% 
                 dplyr::filter(comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
@@ -526,7 +528,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
                 tidyr::gather("Comparison", "Fold", -ID, -p_sum)
         }
         else {
-            long_df <- rv$mapping_obj()$get_combined_dataset() %>% 
+            long_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>% 
                 dplyr::filter(comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
