@@ -3,7 +3,7 @@ setup_spotcheck_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help("Spotcheck", ns("help")),
+            bar_w_help_and_download("Spotcheck", ns("help"), ns("download_settings")),
             fluidRow(
                 column(
                     12,
@@ -23,13 +23,21 @@ setup_spotcheck_ui <- function(id) {
                             column(4, checkboxInput(ns("show_scatter"), "Show scatter", value=TRUE)),
                             column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
                         ),
-                        fluidRow(
-                            column(4, numericInput(ns("text_size"), "Text size", value=10)),
-                            column(4, numericInput(ns("text_angle"), "Axis x text angle", value=0))
-                        ),
-                        fluidRow(
-                            column(4, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
-                            column(4, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
+                        checkboxInput(ns("more_settings"), "Show advanced settings", value=FALSE),
+                        conditionalPanel(
+                            sprintf("input['%s'] == 1", ns("more_settings")),
+                            fluidRow(
+                                column(6, numericInput(ns("text_size"), "Text size", value=10)),
+                                column(6, numericInput(ns("text_angle"), "Axis x text angle", value=0))
+                            ),
+                            fluidRow(
+                                column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
+                                column(6, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
+                            ),
+                            fluidRow(
+                                column(6, textInput(ns("ref_title"), "Ref. title")),
+                                column(6, textInput(ns("comp_title"), "Comp. title"))
+                            )
                         )
                     ),
                     fluidRow(
@@ -88,6 +96,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         )
     })
     
+    output$download_settings <- settings_download_handler("spotcheck", input)
+    
     observeEvent({
         rv$filedata_1()
         rv$filedata_2()}, {
@@ -95,12 +105,6 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
     }, ignoreInit=TRUE, ignoreNULL=FALSE)
-    
-    # observeEvent(rv$filedata_2(), {
-    #     choices <- get_dataset_choices(rv)
-    #     updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
-    #     updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    # })
     
     sync_param_choices <- function() {
         
@@ -149,15 +153,14 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         cond_ref <- input$ref_cond
         ref_ind <- di_new(rv, input$dataset1)
         samples_names <- paste0(sprintf("d%s.", ref_ind), samples_ref)
+        annot_col <- sprintf("d%s.%s", ref_ind, rv$rdf_annotcol_ref(rv, input$dataset1))
         
         if (input$assign_numeric_as_factor) parsed_cond <- ddf_ref[[cond_ref]] %>% as.factor()
         else parsed_cond <- ddf_ref[[cond_ref]]
-
-        
         
         plt_df_ref <- map_df %>% 
             dplyr::filter(.data$comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
-            dplyr::select(.data$comb_id, all_of(samples_names)) %>%
+            dplyr::select(.data$comb_id, map_id=annot_col, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
@@ -177,13 +180,14 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         cond_comp <- input$comp_cond
         comp_ind <- di_new(rv, input$dataset2)
         samples_names <- paste0(sprintf("d%s.", comp_ind), samples_comp)
+        annot_col <- sprintf("d%s.%s", comp_ind, rv$rdf_annotcol_comp(rv, input$dataset2))
         
         if (input$assign_numeric_as_factor) parsed_cond <- ddf_comp[[cond_comp]] %>% as.factor()
         else parsed_cond <- ddf_comp[[cond_comp]]
 
         plt_df_comp <- map_df %>% 
             dplyr::filter(.data$comb_id %in% sprintf("C%s", input$table_display_rows_selected)) %>%
-            dplyr::select(.data$comb_id, all_of(samples_names)) %>%
+            dplyr::select(.data$comb_id, map_id=annot_col, all_of(samples_names)) %>%
             tidyr::pivot_longer(all_of(samples_names), names_to="sample") %>%
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
@@ -191,7 +195,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
 
     
-    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, text_size=10, text_angle=90, text_vjust=0.5) {
+    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, title=NULL, text_size=10, text_angle=90, text_vjust=0.5) {
         add_geoms <- function(plt, show_box, show_scatter, show_violin) {
             if (show_violin) {
                 plt <- plt + geom_violin(na.rm = TRUE)
@@ -212,14 +216,20 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             plt_ref_base <- ggplot(plot_df, aes(x=.data$cond, y=.data$value, color=.data$comb_id, group=.data$comb_id, label=.data$sample))
         }
         
+        if (is.null(title) || title == "") {
+            if (length(unique(plot_df$map_id)) != 1) {
+                stop("Unknown state for map_id, expected one unique value, received: ", paste(unique(plot_df$map_id), collapse=","))
+            }
+            title <- sprintf("%s (C%s)", plot_df$map_id[1], paste(target_row, collapse=","))
+        }
+        
         plt_ref_base <- plt_ref_base +
-            ggtitle(sprintf("Spot check feature(s): %s", paste(target_row, collapse=","))) +
+            ggtitle(title) +
             xlab("Condition") +
-            ylab("Abundance") +
-            theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle))
+            ylab("Abundance")
         
         plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin)
-        plt_ref + theme_bw()
+        plt_ref + theme_bw() + theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle), legend.title = element_blank())
     }
         
     output$spot_display_ref <- renderPlotly({
@@ -233,6 +243,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             input$show_boxplot,
             input$show_scatter,
             input$show_violin,
+            title=input$ref_title,
             text_size=input$text_size,
             text_angle=input$text_angle,
             text_vjust=input$text_vjust
@@ -242,7 +253,9 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             plt <- plt %>% plotly::layout(boxmode="group")
         }
         
-        plt <- plt %>% plotly::layout(xaxis=list(tickangle=input$text_angle))
+        plt <- plt %>% 
+            plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
+            assign_fig_settings(rv)
         plt
     })
     
@@ -257,6 +270,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             input$show_boxplot,
             input$show_scatter,
             input$show_violin,
+            title=input$comp_title,
             text_size=input$text_size,
             text_angle=input$text_angle,
             text_vjust=input$text_vjust
@@ -266,7 +280,9 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             plt <- plt %>% plotly::layout(boxmode="group")
         }
         
-        plt <- plt %>% plotly::layout(xaxis=list(tickangle=input$text_angle))
+        plt <- plt %>% 
+            plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
+            assign_fig_settings(rv)
         plt
     })
 }

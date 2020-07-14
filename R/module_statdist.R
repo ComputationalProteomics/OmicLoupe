@@ -370,8 +370,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     # ---------------- FUNCTIONS ---------------- 
     
-    
-    
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
     make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
                              manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2) {
@@ -379,11 +377,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
             geom_point(alpha=alpha, size=dot_size) +
             theme(legend.title = element_blank())
-            # theme(text = element_text(size=text_size))
-
-        # if (!title != "") {
-        #     plt <- plt + ggtitle(title)
-        # }
 
         # plt <- plot_ly(
         #     plot_df,

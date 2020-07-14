@@ -75,10 +75,11 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
             }
             
             mean_corr <- mean(target_df[[cor_str]], na.rm=TRUE)
+            median_corr <- median(target_df[[cor_str]], na.rm=TRUE)
             ggplot(target_df, aes_string(x=cor_str, fill="sig_type")) +
                 geom_histogram(bins=bins, na.rm=TRUE) +
                 geom_vline(xintercept = mean_corr, na.rm=TRUE) +
-                ggtitle(sprintf("%s (mean %s)", title, round(mean_corr, 3))) +
+                ggtitle(sprintf("%s (median %s, mean %s)", title, round(median_corr, 3), round(mean_corr, 3))) +
                 xlim(-1, 1) + 
                 xlab("Correlation") + 
                 ylab("Count") + 

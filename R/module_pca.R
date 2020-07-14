@@ -298,7 +298,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             ggtitle(sprintf("Dataset: %s (dim: %s)", title_label, paste(dim(pca_obj$rotation), collapse=", "))) +
             xlab(sprintf("PC%s (%s %s)", pc1, round(pc1_var * 100, 2), "%")) +
             ylab(sprintf("PC%s (%s %s)", pc2, round(pc2_var * 100, 2), "%")) +
-            theme(text=element_text(size=text_size))
+            theme(text=element_text(size=text_size), legend.title = element_blank())
     }
     
     make_pair_pca_plot <- function(ddf, pca_obj, color, color_as_fact=FALSE, pcs) {
