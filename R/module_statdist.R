@@ -1,12 +1,4 @@
-# library(ggplot2)
-# theme_set(theme_classic())
-# library(ggpubr)
-# library(shinycssloaders)
-# 
-# source("R/vis_server_utils.R")
-# source("R/vis_server_plots.R")
-
-MY_COLORS_COMPARISON <- c("grey50", "blue", "red", "orange")
+MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "Ref"="red", "Comp"="orange", "Contra"="green")
 MY_COLORS_SELECTED <- c("grey50", "green")
 
 MAX_DISCRETE_LEVELS <- 20
@@ -18,16 +10,6 @@ setup_plotly_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            # fluidRow(
-            #     span(
-            #         style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
-            #         h3("Statistical investigations")
-            #     ),
-            #     span(
-            #         style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
-            #         actionButton(ns("help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
-            #     )
-            # ),
             bar_w_help_and_download("Statistical investigations", ns("help"), ns("download_settings")),
             fluidRow(
                 column(4,
@@ -157,13 +139,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         pass_threshold_data1 <- df[[stat_cols1[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols1$logFC]]) > fold_cut
         pass_threshold_data2 <- df[[stat_cols2[[stat_pattern]]]] < pvalue_cut & abs(df[[stat_cols2$logFC]]) > fold_cut
-        pass_both <- pass_threshold_data1 & pass_threshold_data2
+        pass_both_same <- (pass_threshold_data1 & pass_threshold_data2) & (sign(df[[stat_cols1$logFC]]) == sign(df[[stat_cols2$logFC]]))
+        pass_both_contra <- (pass_threshold_data1 & pass_threshold_data2) & (sign(df[[stat_cols1$logFC]]) != sign(df[[stat_cols2$logFC]]))
         
-        pass_type <- rep("None", length(pass_both))
+        pass_type <- rep("None", length(pass_both_same))
         pass_type[pass_threshold_data1] <- "Ref"
         pass_type[pass_threshold_data2] <- "Comp"
-        pass_type[pass_both] <- "Both"
-        pass_type_col <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp"))
+        pass_type[pass_both_same] <- "Both"
+        pass_type[pass_both_contra] <- "Contra"
+        pass_type_col <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp", "Contra"))
         
         pass_type_col
     }

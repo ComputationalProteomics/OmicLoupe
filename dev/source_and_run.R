@@ -20,35 +20,3 @@ quiet(library(conflicted))
 
 devtools::load_all()
 runApp()
-
-
-# R.utils::sourceDirectory("R/")
-
-# source("R/module_setup.R")
-# source("R/module_statdist.R")
-# source("R/module_pca.R")
-# source("R/module_help.R")
-# source("R/module_ideas.R")
-# source("R/module_quality.R")
-# source("R/module_overlap.R")
-# source("R/module_spotcheck.R")
-# source("R/module_correlation.R")
-# 
-# source("R/help_texts.R")
-# source("R/MapObject.R")
-# source("R/pca.R")
-# source("R/quality_plots.R")
-# source("R/reactive_values.R")
-# source("R/setup_server_utils.R")
-# source("R/setup_ui_utils.R")
-# source("R/shared_visualization_setup.R")
-# source("R/upset_presence_utility_functions.R")
-# source("R/upset_utility_functions.R")
-# source("R/Venn.R")
-# source("R/vis_server_plots.R")
-# source("R/vis_server_utils.R")
-# 
-# source("R/app.R")
-# source("R/launch_app.R")
-
-

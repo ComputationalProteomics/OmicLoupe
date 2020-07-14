@@ -681,7 +681,6 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     })
     
     observeEvent(parsed_presence_entries(), {
-        print("Crosssec display update triggered")
         updateSelectInput(session, "upset_crosssec_display_presence", choices=parsed_presence_entries(), 
                           selected = set_if_new(input$upset_crosssec_display_presence, parsed_presence_entries(), parsed_presence_entries()))
     })
