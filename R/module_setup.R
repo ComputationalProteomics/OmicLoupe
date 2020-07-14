@@ -279,7 +279,7 @@ module_setup_server <- function(input, output, session, module_name) {
     
     output$download_table <- downloadHandler(
         filename = function() {
-            paste(input$data_table_tabs, "-", format(Sys.time(), "%Y%M%d_%H%m%S"), ".tsv", sep="")
+            paste(input$data_table_tabs, "-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
         },
         content = function(file) {
             write_tsv(get_target_data(input$data_table_tabs, get_raw=TRUE), file)

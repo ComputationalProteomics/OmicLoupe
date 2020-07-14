@@ -26,7 +26,7 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     
     output$ggplot_download <- downloadHandler(
         filename = function() {
-            sprintf("%s-%s.%s", "corr", format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
+            sprintf("%s-%s.%s", "corr", format(Sys.time(), "%y%m%d_%H%M%S"), rv$figure_save_format())
         },
         content = function(file) {
             dpi <- rv$figure_save_dpi()

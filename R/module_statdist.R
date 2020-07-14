@@ -69,14 +69,13 @@ setup_plotly_ui <- function(id) {
                                sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
                                sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1),
                                fluidRow(
-                                   column(4, numericInput(ns("title_font_size"), "Title font size", value=8, min=0)),
-                                   column(4, numericInput(ns("legend_font_size"), "Legend font size", value=10, min=0)),
-                                   column(4, numericInput(ns("axis_font_size"), "Axis font size", value=10, min=0))
+                                   column(4, numericInput(ns("title_font_size"), "Title font", value=8, min=0)),
+                                   column(4, numericInput(ns("legend_font_size"), "Legend font", value=10, min=0)),
+                                   column(4, numericInput(ns("axis_font_size"), "Axis font", value=10, min=0))
                                ),
                                numericInput(ns("dot_size"), "Dot size", value=1.5, min=0),
                                textInput(ns("legend_text"), "Legend text", value=""),
-                               checkboxInput(ns("use_webgl"), "Use WebGL (faster / lower res.)", value=TRUE),
-                               checkboxInput(ns("horizontal_legend"), "Horizontal legend", value=FALSE)
+                               checkboxInput(ns("use_webgl"), "Use WebGL (faster / lower res.)", value=TRUE)
                            )
                        )
                 ),
@@ -112,7 +111,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     output$download_table <- downloadHandler(
         filename = function() {
-            paste("comp_scatter-", format(Sys.time(), "%Y%M%d_%H%m%S"), ".tsv", sep="")
+            paste("comp_scatter-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
         },
         content = function(file) {
             target_df <- get_target_df(rv)
@@ -374,7 +373,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
-    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", title="", 
+    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
                              manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2) {
         
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
@@ -382,9 +381,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             theme(legend.title = element_blank())
             # theme(text = element_text(size=text_size))
 
-        if (!title != "") {
-            plt <- plt + ggtitle(title)
-        }
+        # if (!title != "") {
+        #     plt <- plt + ggtitle(title)
+        # }
 
         # plt <- plot_ly(
         #     plot_df,
@@ -758,8 +757,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             title=title) %>% 
             plotly::layout(
                 dragmode="none", 
-                barmode="stack",
-                legend=list(orientation=ifelse(input$horizontal_legend, 'h', 'v'))
+                barmode="stack"
             )
         
         if (input$use_webgl) plt %>% toWebGL()

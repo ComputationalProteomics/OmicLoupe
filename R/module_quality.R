@@ -160,7 +160,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$ggplot_download_ref <- downloadHandler(
         filename = function() {
-            sprintf('ref-%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
+            sprintf('ref-%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%y%m%d_%H%M%S"), rv$figure_save_format())
         },
         content = function(file) {
             ggplot_download(file, "ref")
@@ -169,7 +169,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$ggplot_download_comp <- downloadHandler(
         filename = function() {
-            sprintf('comp-%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%Y%M%d_%H%m%S"), rv$figure_save_format())
+            sprintf('comp-%s-%s.%s', tolower(input$plot_tabs), format(Sys.time(), "%y%m%d_%H%M%S"), rv$figure_save_format())
         },
         content = function(file) {
             ggplot_download(file, "comp")
