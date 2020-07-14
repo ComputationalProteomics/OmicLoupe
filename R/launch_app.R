@@ -29,6 +29,8 @@ runApp <- function() {
     options(shiny.maxRequestSize=100*1024^2)
     ggplot2::theme_set(ggplot2::theme_classic())
     
+    message(sprintf("Running OmicLoupe version %s", packageVersion("OmicLoupe")))
+    
     shinyApp(ui = get_ui(), server = get_server())
 }
 

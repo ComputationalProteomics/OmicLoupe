@@ -1,4 +1,4 @@
-MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "Ref"="red", "Comp"="orange", "Contra"="green")
+MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "First"="red", "Second"="orange", "Contra"="green")
 MY_COLORS_SELECTED <- c("grey50", "green")
 
 MAX_DISCRETE_LEVELS <- 20
@@ -11,6 +11,7 @@ setup_plotly_ui <- function(id) {
         id,
         fluidPage(
             bar_w_help_and_download("Statistical investigations", ns("help"), ns("download_settings")),
+            # downloadButton(ns("plot_download"), "Test download"),
             fluidRow(
                 column(4,
                        wellPanel(
@@ -56,17 +57,26 @@ setup_plotly_ui <- function(id) {
                                )),
                            sliderInput(ns("fold_cutoff"), "Fold cutoff", value=1, step=0.1, min=0, max=10),
                            checkboxInput(ns("set_same_axis"), "Set same axis ranges", value = FALSE),
+                           checkboxInput(ns("show_only_joint"), "Show only shared features", value = FALSE),
                            checkboxInput(ns("more_settings"), "Show more settings", value = FALSE),
                            conditionalPanel(
                                sprintf("input['%s'] == 1", ns("more_settings")),
-                               textInput(ns("ref_custom_header"), "Custom ref. header", value=""),
-                               textInput(ns("comp_custom_header"), "Custom comp. header", value=""),
+                               fluidRow(
+                                   column(6, textInput(ns("ref_custom_header"), "Custom ref. header", value="")),
+                                   column(6, textInput(ns("comp_custom_header"), "Custom comp. header", value=""))
+                               ),
                                sliderInput(ns("pca_variance_cutoff"), "PCA var. cut.", value=0.4, step=0.05, min=0, max=1),
                                sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
                                sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1),
-                               numericInput(ns("text_size"), "Font size", value=10, min=0),
+                               fluidRow(
+                                   column(4, numericInput(ns("title_font_size"), "Title font size", value=8, min=0)),
+                                   column(4, numericInput(ns("legend_font_size"), "Legend font size", value=10, min=0)),
+                                   column(4, numericInput(ns("axis_font_size"), "Axis font size", value=10, min=0))
+                               ),
                                numericInput(ns("dot_size"), "Dot size", value=1.5, min=0),
-                               textInput(ns("legend_text"), "Legend text", value="")
+                               textInput(ns("legend_text"), "Legend text", value=""),
+                               checkboxInput(ns("use_webgl"), "Use WebGL (faster / lower res.)", value=TRUE),
+                               checkboxInput(ns("horizontal_legend"), "Horizontal legend", value=FALSE)
                            )
                        )
                 ),
@@ -110,7 +120,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             write_tsv(rv$dt_parsed_data_raw(rv, dt_parsed_target), file)
         }
     )
-    
+
     output$download_settings <- settings_download_handler("statdist", input)
     
     observeEvent(input$spotcheck, {
@@ -143,11 +153,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         pass_both_contra <- (pass_threshold_data1 & pass_threshold_data2) & (sign(df[[stat_cols1$logFC]]) != sign(df[[stat_cols2$logFC]]))
         
         pass_type <- rep("None", length(pass_both_same))
-        pass_type[pass_threshold_data1] <- "Ref"
-        pass_type[pass_threshold_data2] <- "Comp"
+        pass_type[pass_threshold_data1] <- "First"
+        pass_type[pass_threshold_data2] <- "Second"
         pass_type[pass_both_same] <- "Both"
         pass_type[pass_both_contra] <- "Contra"
-        pass_type_col <- factor(pass_type, levels = c("None", "Both", "Ref", "Comp", "Contra"))
+        pass_type_col <- factor(pass_type, levels = c("None", "Both", "First", "Second", "Contra"))
         
         pass_type_col
     }
@@ -161,23 +171,34 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             !is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
             "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
         
+        ref_stat_cols <- rv$statcols_ref(rv, input$dataset1, input$stat_base1)
+        comp_stat_cols <- rv$statcols_comp(rv, input$dataset2, input$stat_base2)
+        
         if (input$color_type == "PCA") {
             combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
         }
         else {
-            combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
+            if (input$show_only_joint && (input$dataset1 != input$dataset2 || input$stat_base1 != input$stat_base2)) {
+                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE) %>%
+                    dplyr::filter(!is.na(UQ(as.name(ref_stat_cols$logFC)))) %>%
+                    dplyr::filter(!is.na(UQ(as.name(comp_stat_cols$logFC))))
+            }
+            else {
+                
+                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
+            }
         }
         
         pass_thres_col <- get_thres_pass_type_col(
             combined_dataset,
-            rv$statcols_ref(rv, input$dataset1, input$stat_base1),
-            rv$statcols_comp(rv, input$dataset2, input$stat_base2),
+            ref_stat_cols,
+            comp_stat_cols,
             input$pvalue_cutoff,
             input$fold_cutoff,
             input$pvalue_type_select
         )
         
-        target_statcol <- rv$statcols_ref(rv, input$dataset1, input$stat_base1)[[input$pvalue_type_select]]
+        target_statcol <- ref_stat_cols[[input$pvalue_type_select]]
         base_df <- cbind(
             combined_dataset, 
             pass_threshold_data=pass_thres_col,
@@ -354,23 +375,17 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     # Inspired by: https://plot.ly/r/shiny-coupled-events/
     make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", title="", 
-                             manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, text_size=20, legend_text="") {
+                             manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2) {
         
         plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
-            geom_point(alpha=alpha, size=dot_size) + theme(text = element_text(size=text_size))
-        
+            geom_point(alpha=alpha, size=dot_size) +
+            theme(legend.title = element_blank())
+            # theme(text = element_text(size=text_size))
+
         if (!title != "") {
             plt <- plt + ggtitle(title)
         }
-        
-        if (!is.null(xlab)) {
-            plt <- plt + xlab(x_lab)
-        }
-        
-        if (!is.null(ylab)) {
-            plt <- plt + ylab(y_lab)
-        }
-        
+
         # plt <- plot_ly(
         #     plot_df,
         #     x = ~get(x_col),
@@ -391,16 +406,12 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         else if (!is.null(cont_scale)) {
             plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
         }
-        
-        if (legend_text != "") {
-            plt <- plt + labs(color=legend_text)
-        }
-        
+
         plt
     }
     
-    make_histogram <- function(plot_df, x_col, fill_col, key_vals, title="") {
-        t <- list(family = "sans serif", size = input$text_size)
+    make_histogram <- function(plot_df, x_col, fill_col, key_vals, title_font_size, bin_count, title="") {
+        t <- list(family = "sans serif", size = title_font_size)
         
         if (fill_col == "selected") {
             target_colors <- MY_COLORS_SELECTED
@@ -416,7 +427,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             type = "histogram", 
             colors = target_colors, 
             alpha = 0.6,
-            nbinsx = input$bin_count,
+            nbinsx = bin_count,
             source = "subset",
             key = key_vals
         ) %>% 
@@ -454,15 +465,45 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
     }
     
-    build_plotly <- function(plt, title, dataset, stat_base, custom_header) {
-        t <- list(family="sans serif", size=8)
-        if (custom_header == "") title <- sprintf("Data: %s<br>Contrast: %s", dataset, stat_base)
+    build_plotly <- function(plt, title, dataset, stat_base, custom_header, xlab, ylab, title_font_size, legend_font_size, axis_font_size, legend_text, webgl) {
+        t <- list(family="sans serif", size=title_font_size)
+
+        if (custom_header == "") title <- list(text=sprintf("Data: %s<br>Contrast: %s", dataset, stat_base), font=list(family="sans serif", size=title_font_size))
+        else if (custom_header == " ") title <- NULL
         else title <- custom_header
-        plt %>% 
+        
+        plt_plotly <- plt %>% 
             ggplotly() %>%
-            plotly::layout(title=title, dragmode="select", font=t) %>% 
-            assign_fig_settings(rv) %>%
-            toWebGL()
+            plotly::add_annotations(
+                text=legend_text, 
+                xref="paper", 
+                yref="paper", 
+                x=1.02, 
+                xanchor="left", 
+                y=0.8, 
+                yanchor="bottom", 
+                legendtitle=TRUE, 
+                showarrow=FALSE) %>%
+            plotly::layout(
+                title=title, 
+                autosize=TRUE,
+                dragmode="select", 
+                font=t,
+                xaxis = list(title=xlab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+                yaxis = list(title=ylab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+                legend=list(
+                    y=0.8, 
+                    yanchor="top",
+                    font=list(size=legend_font_size)
+                )
+            ) %>% 
+            assign_fig_settings(rv)
+        if (webgl) {
+            plt_plotly %>% toWebGL()
+        }
+        else {
+            plt_plotly
+        }
     }
     
     selected_data <- reactiveValues(event_data=NULL)
@@ -514,22 +555,30 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             plot_df, 
             x_col="fold", 
             y_col="sig", 
-            x_lab="Fold change (log2)",
-            y_lab="P-value (-log10)",
             color_col=settings$color_col, 
             hover_text="descr", 
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size,
-            text_size=input$text_size,
-            legend_text=input$legend_text)
+            dot_size=input$dot_size) # %>% toWebGL()
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
         }
         
-        build_plotly(base_plt, title, input$dataset1, input$stat_base1, input$ref_custom_header)
+        build_plotly(
+            base_plt, 
+            title, 
+            input$dataset1, 
+            input$stat_base1, 
+            input$ref_custom_header, 
+            xlab="Fold change (log2)",
+            ylab="P-value (-log10)",
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size, 
+            axis_font_size=input$axis_font_size,
+            legend_text=input$legend_text, 
+            webgl=input$use_webgl)
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -549,22 +598,30 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             plot_df, 
             x_col="fold", 
             y_col="sig", 
-            x_lab="Fold change (log2)",
-            y_lab="Significance (-log10)",
             color_col=settings$color_col, 
             hover_text="descr", 
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size,
-            text_size=input$text_size,
-            legend_text=input$legend_text) 
+            dot_size=input$dot_size)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
         }
-        
-        build_plotly(base_plt, title, input$dataset2, input$stat_base2, input$comp_custom_header)
+
+        build_plotly(
+            base_plt, 
+            title, 
+            input$dataset2, 
+            input$stat_base2, 
+            input$comp_custom_header, 
+            xlab="Fold change (log2)",
+            ylab="Significance (-log10)",
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size, 
+            axis_font_size=input$axis_font_size,
+            legend_text=input$legend_text, 
+            webgl=input$use_webgl)
     })
     
     output$plotly_ma1 <- renderPlotly({
@@ -584,22 +641,30 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             plot_df, 
             x_col="expr", 
             y_col="fold", 
-            x_lab="Average expression",
-            y_lab="Fold change (log2)",
             color_col=settings$color_col, 
             alpha=input$alpha,
             hover_text="descr", 
             cont_scale=settings$cont_scale,
             manual_scale=settings$manual_scale,
-            dot_size=input$dot_size,
-            text_size=input$text_size,
-            legend_text=input$legend_text)
+            dot_size=input$dot_size)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
         }
-        
-        build_plotly(base_plt, title, input$dataset1, input$stat_base1, input$ref_custom_header)
+
+        build_plotly(
+            base_plt, 
+            title, 
+            input$dataset1, 
+            input$stat_base1, 
+            input$ref_custom_header, 
+            xlab="Average expression",
+            ylab="Fold change (log2)",
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size, 
+            axis_font_size=input$axis_font_size,
+            legend_text=input$legend_text, 
+            webgl=input$use_webgl)
     })
     
     output$plotly_ma2 <- renderPlotly({
@@ -617,22 +682,30 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             plot_df, 
             x_col="expr", 
             y_col="fold", 
-            x_lab="Average expression",
-            y_lab="Fold change (log2)",
             color_col=settings$color_col, 
             alpha=input$alpha,
             hover_text="descr", 
             cont_scale=settings$cont_scale,
             manual_scale=settings$manual_scale,
-            dot_size=input$dot_size,
-            text_size=input$text_size,
-            legend_text=input$legend_text)
+            dot_size=input$dot_size)
         
         if (input$set_same_axis) {
             base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
         }
-        
-        build_plotly(base_plt, title, input$dataset2, input$stat_base2, input$comp_custom_header)
+
+        build_plotly(
+            base_plt, 
+            title, 
+            input$dataset2, 
+            input$stat_base2, 
+            input$comp_custom_header, 
+            xlab="Average expression",
+            ylab="Fold change (log2)",
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size, 
+            axis_font_size=input$axis_font_size,
+            legend_text=input$legend_text, 
+            webgl=input$use_webgl)
     })
     
     output$plotly_hist1 <- renderPlotly({
@@ -646,14 +719,21 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         if (input$ref_custom_header == "") title <- sprintf("Dataset: %s", input$dataset1)
         else title <- input$ref_custom_header
         
-        make_histogram(
+        plt <- make_histogram(
             plot_df, 
             x_col="pval", 
             fill_col=settings$color_col, 
             key_vals=plot_df$key,
+            title_font_size = input$title_font_size,
+            bin_count = input$bin_count,
             title=title) %>% 
-            plotly::layout(dragmode="none", barmode="stack") %>% 
-            toWebGL()
+            plotly::layout(
+                dragmode="none", 
+                barmode="stack"
+            )
+        
+        if (input$use_webgl) plt %>% toWebGL()
+        else plt
     })
     
     output$plotly_hist2 <- renderPlotly({
@@ -668,14 +748,22 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         if (input$comp_custom_header == "") title <- sprintf("Dataset: %s", input$dataset2)
         else title <- input$comp_custom_header
         
-        make_histogram(
+        plt <- make_histogram(
             plot_df, 
             x_col="pval", 
             fill_col=settings$color_col, 
+            title_font_size = input$title_font_size,
+            bin_count = input$bin_count,
             key_vals=plot_df$key, 
             title=title) %>% 
-            plotly::layout(dragmode="none", barmode="stack") %>% 
-            toWebGL()
+            plotly::layout(
+                dragmode="none", 
+                barmode="stack",
+                legend=list(orientation=ifelse(input$horizontal_legend, 'h', 'v'))
+            )
+        
+        if (input$use_webgl) plt %>% toWebGL()
+        else plt
     })
     
     get_target_df <- function(rv) {

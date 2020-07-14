@@ -3,7 +3,6 @@ setup_overlap_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            # bar_w_help("Overlap study", ns("help")),
             bar_w_help_and_download("Overlap study", ns("help"), ns("download_settings")),
             fluidRow(
                 column(
