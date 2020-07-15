@@ -106,6 +106,9 @@ setup_reactive_values_obj <- function(input) {
     rv$rdf_annotcol_comp <- function(rv, input_field)
         rv[[sprintf("data_annotcol_%s", di_new(rv, input_field, 2))]]()
     
+    rv$statsuffixes <- function(rv, input_field) 
+        rv$selected_cols_obj()[[input_field]]$statpatterns
+    
     rv$samples <- function(rv, input_field, prefix="") { 
         paste(prefix, rv$selected_cols_obj()[[input_field]]$samples, sep="") 
     }

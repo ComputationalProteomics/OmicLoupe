@@ -67,7 +67,7 @@ setup_plotly_ui <- function(id) {
                                ),
                                sliderInput(ns("pca_variance_cutoff"), "PCA var. cut.", value=0.4, step=0.05, min=0, max=1),
                                sliderInput(ns("bin_count"), "Bin count", value=50, step=10, min=10, max=200),
-                               sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.4, step=0.01, min=0, max=1),
+                               sliderInput(ns("alpha"), "Alpha (0 - 1)", value=0.6, step=0.01, min=0, max=1),
                                fluidRow(
                                    column(4, numericInput(ns("title_font_size"), "Title font", value=8, min=0)),
                                    column(4, numericInput(ns("legend_font_size"), "Legend font", value=10, min=0)),
@@ -109,6 +109,17 @@ setup_plotly_ui <- function(id) {
 
 module_statdist_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
+    in_dataset1_raw <- reactive(input$dataset1)
+    in_dataset2_raw <- reactive(input$dataset2)
+    in_dataset1 <- debounce(in_dataset1_raw, 1000)
+    in_dataset2 <- debounce(in_dataset2_raw, 1000)
+
+    in_stat_base1_raw <- reactive(input$stat_base1)
+    in_stat_base2_raw <- reactive(input$stat_base2)
+    in_stat_base1 <- debounce(in_stat_base1_raw, 1000)
+    in_stat_base2 <- debounce(in_stat_base2_raw, 1000)
+    
+        
     output$download_table <- downloadHandler(
         filename = function() {
             paste("comp_scatter-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
@@ -161,29 +172,35 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         pass_type_col
     }
     
+    rv_loc <- reactiveValues(
+        
+    )
+    
     reactive_plot_df <- reactive({
         
+        shiny::validate(need(in_stat_base1() %in% rv$statsuffixes(rv, in_dataset1()), "Need correct statsuffixes"))
         shiny::validate(need(
-            !is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
-            "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
-        shiny::validate(need(
-            !is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
+            !is.null(rv$statcols_ref(rv, in_dataset1(), in_stat_base1())), 
             "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
         
-        ref_stat_cols <- rv$statcols_ref(rv, input$dataset1, input$stat_base1)
-        comp_stat_cols <- rv$statcols_comp(rv, input$dataset2, input$stat_base2)
+        shiny::validate(need(in_stat_base2() %in% rv$statsuffixes(rv, in_dataset2()), "Need correct statsuffixes"))
+        shiny::validate(need(
+            !is.null(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())), 
+            "Did not find statistics columns for reference dataset, is it properly mapped at the Setup page?"))
+        
+        ref_stat_cols <- rv$statcols_ref(rv, in_dataset1(), in_stat_base1())
+        comp_stat_cols <- rv$statcols_comp(rv, in_dataset2(), in_stat_base2())
         
         if (input$color_type == "PCA") {
             combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
         }
         else {
-            if (input$show_only_joint && (input$dataset1 != input$dataset2 || input$stat_base1 != input$stat_base2)) {
+            if (input$show_only_joint && (in_dataset1() != in_dataset2() || in_stat_base1() != in_stat_base2())) {
                 combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE) %>%
                     dplyr::filter(!is.na(UQ(as.name(ref_stat_cols$logFC)))) %>%
                     dplyr::filter(!is.na(UQ(as.name(comp_stat_cols$logFC))))
             }
             else {
-                
                 combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
             }
         }
@@ -201,8 +218,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         base_df <- cbind(
             combined_dataset, 
             pass_threshold_data=pass_thres_col,
-            annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset1, 1)), rv$rdf_annotcol_ref(rv, input$dataset1))],
-            annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, input$dataset2, 2)), rv$rdf_annotcol_comp(rv, input$dataset2))]
+            annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, in_dataset1(), 1)), rv$rdf_annotcol_ref(rv, in_dataset1()))],
+            annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, in_dataset2(), 2)), rv$rdf_annotcol_comp(rv, in_dataset2()))]
         ) %>% arrange(desc(UQ(as.name(target_statcol))))
         
         if (input$color_type == "Threshold") {
@@ -210,12 +227,12 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         else if (input$color_type == "PCA") {
             
-            shiny::validate(need(rv$samples(rv, input$dataset1), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
-            shiny::validate(need(rv$samples(rv, input$dataset2), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
+            shiny::validate(need(rv$samples(rv, in_dataset1()), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
+            shiny::validate(need(rv$samples(rv, in_dataset2()), "Did not find samples for dataset 1, this is required for PCA loading visuals"))
             
             ref_pca_df <- calculate_pca_obj(
                 base_df,
-                paste(sprintf("d%s", di(rv, input$dataset1, 1)), rv$samples(rv, input$dataset1), sep="."),
+                paste(sprintf("d%s", di(rv, in_dataset1(), 1)), rv$samples(rv, in_dataset1()), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = input$pca_variance_cutoff,
@@ -225,7 +242,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             
             comp_pca_df <- calculate_pca_obj(
                 base_df,
-                paste(sprintf("d%s", di(rv, input$dataset2, 2)), rv$samples(rv, input$dataset2), sep="."),
+                paste(sprintf("d%s", di(rv, in_dataset2(), 2)), rv$samples(rv, in_dataset2()), sep="."),
                 do_scale = TRUE,
                 do_center = TRUE,
                 var_cut = input$pca_variance_cutoff,
@@ -238,8 +255,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         else if (input$color_type == "Column") {
 
-            ref_color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
-            comp_color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
+            ref_color_col <- base_df[[sprintf("d%s.%s", di(rv, in_dataset1(), 1), input$color_col_1)]]
+            comp_color_col <- base_df[[sprintf("d%s.%s", di(rv, in_dataset2(), 2), input$color_col_2)]]
             
             ref_color_count <- ref_color_col %>% unique() %>% length()
             comp_color_count <- comp_color_col %>% unique() %>% length()
@@ -247,8 +264,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             shiny::validate(need(typeof(ref_color_col) == "double" || ref_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Ref. column", MAX_COLORS, ref_color_count)))
             shiny::validate(need(typeof(comp_color_col) == "double" || comp_color_count <= MAX_COLORS, sprintf("Can only visualize max %s colors, found: %s for Comp. column", MAX_COLORS, comp_color_count)))
             
-            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset1, 1), input$color_col_1)]]
-            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", di(rv, input$dataset2, 2), input$color_col_2)]]
+            base_df$ref.color_col <- base_df[[sprintf("d%s.%s", di(rv, in_dataset1(), 1), input$color_col_1)]]
+            base_df$comp.color_col <- base_df[[sprintf("d%s.%s", di(rv, in_dataset2(), 2), input$color_col_2)]]
             
             if (input$binned_numeric) {
                 base_df <- factor_prep_color_col(base_df, "ref.color_col", input$number_bins, input$number_bins)
@@ -293,18 +310,20 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     }
     
     plot_ref_df <- reactive({
-        # req(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
-        shiny::validate(need(!is.null(rv$statcols_ref(rv, input$dataset1, input$stat_base1)), 
+        shiny::validate(need(in_stat_base1() %in% rv$statsuffixes(rv, in_dataset1()), "Need correct statsuffixes"))
+        shiny::validate(need(!is.null(rv$statcols_ref(rv, in_dataset1(), in_stat_base1())), 
                       "Did not find statistics columns for dataset 1, are they properly assigned at the Setup page?"))
-        parse_plot_df(rv$statcols_ref(rv, input$dataset1, input$stat_base1))
+        parse_plot_df(rv$statcols_ref(rv, in_dataset1(), in_stat_base1())) %>% dplyr::filter(!is.na(fold))
     })
     
     plot_comp_df <- reactive({
-        # req(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
-        shiny::validate(need(!is.null(rv$statcols_comp(rv, input$dataset2, input$stat_base2)), 
+        shiny::validate(need(in_stat_base2() %in% rv$statsuffixes(rv, in_dataset2()), "Need correct statsuffixes"))
+        shiny::validate(need(!is.null(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())), 
                       "Did not find statistics columns for dataset 2, are they properly assigned at the Setup page?"))
-        parse_plot_df(rv$statcols_comp(rv, input$dataset2, input$stat_base2))
+        parse_plot_df(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())) %>% dplyr::filter(!is.na(fold))
     })
+    
+    # plot_comp_df <- debounce(plot_comp_df_raw, 2000)
     
     # ---------------- OBSERVERS ---------------- 
     
@@ -314,20 +333,19 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     })
     
     observeEvent({
-        rv$selected_cols_obj() 
-        input$dataset1 
+        rv$selected_cols_obj()
+        input$dataset1
         input$dataset2}, {
-            # update_stat_inputs(session, rv, input$dataset1, input$dataset2)
             if (is.null(rv$filename_1()) && is.null(rv$filename_2())) {
                 return()
             }
-            
+
             choices_1 <- rv$selected_cols_obj()[[input$dataset1]]$statpatterns
             choices_2 <- rv$selected_cols_obj()[[input$dataset2]]$statpatterns
-            
+
             updateSelectInput(session, "stat_base1", choices=choices_1, selected=choices_1[1])
             updateSelectInput(session, "stat_base2", choices=choices_2, selected=choices_2[1])
-        })
+        }, priority=1000)
     
     observeEvent({
         rv$filedata_1()
@@ -335,14 +353,14 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         choices <- get_dataset_choices(rv)
         updateSelectInput(session, "dataset1", choices=choices, selected=choices[1])
         updateSelectInput(session, "dataset2", choices=choices, selected=choices[1])
-    }, ignoreInit=TRUE, ignoreNULL=FALSE)
+    }, ignoreInit=TRUE, ignoreNULL=FALSE, priority=1000)
     
     observeEvent({
-        input$dataset1
-        input$dataset2
+        in_dataset1()
+        in_dataset2()
         rv$mapping_obj()}, {
-            ref_data_cols <- rv$rdf_cols_ref(rv, input$dataset1)
-            comp_data_cols <- rv$rdf_cols_comp(rv, input$dataset2)
+            ref_data_cols <- rv$rdf_cols_ref(rv, in_dataset1())
+            comp_data_cols <- rv$rdf_cols_comp(rv, in_dataset2())
             
             comb_data_cols <- rv$mapping_obj()$get_combined_dataset() %>% colnames()
             corr_cols <- comb_data_cols[grepl("^d\\d.(pearson|spearman|kendall)", comb_data_cols)]
@@ -370,37 +388,28 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     # ---------------- FUNCTIONS ---------------- 
     
-    # Inspired by: https://plot.ly/r/shiny-coupled-events/
-    make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
-                             manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2) {
-        
-        plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
-            geom_point(alpha=alpha, size=dot_size) +
-            theme(legend.title = element_blank())
-
-        # plt <- plot_ly(
-        #     plot_df,
-        #     x = ~get(x_col),
-        #     y = ~get(y_col),
-        #     color = ~get(color_col),
-        #     source = "subset",
-        #     key = plot_df[[key]]
-        # )
-        
-        if (manual_scale) {
-            if (color_col == "selected") {
-                plt <- plt + scale_color_manual(values=MY_COLORS_SELECTED)
-            }
-            else {
-                plt <- plt + scale_color_manual(values=MY_COLORS_COMPARISON)
-            }
-        }
-        else if (!is.null(cont_scale)) {
-            plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
-        }
-
-        plt
-    }
+    # # Inspired by: https://plot.ly/r/shiny-coupled-events/
+    # make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
+    #                          manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2) {
+    #     
+    #     plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
+    #         geom_point(alpha=alpha, size=dot_size) +
+    #         theme(legend.title = element_blank(), plot.margin=margin(c(1,1,3,1), unit="lines"))
+    # 
+    #     if (manual_scale) {
+    #         if (color_col == "selected") {
+    #             plt <- plt + scale_color_manual(values=MY_COLORS_SELECTED)
+    #         }
+    #         else {
+    #             plt <- plt + scale_color_manual(values=MY_COLORS_COMPARISON)
+    #         }
+    #     }
+    #     else if (!is.null(cont_scale)) {
+    #         plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
+    #     }
+    # 
+    #     plt
+    # }
     
     make_histogram <- function(plot_df, x_col, fill_col, key_vals, title_font_size, bin_count, title="") {
         t <- list(family = "sans serif", size = title_font_size)
@@ -423,7 +432,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             source = "subset",
             key = key_vals
         ) %>% 
-            plotly::layout(title = title, font=t, xaxis=list(title="P-value"), yaxis=list(title="Count")) %>% 
+            plotly::layout(
+                title = title, 
+                font=t, 
+                xaxis=list(title="P-value"), 
+                yaxis=list(title="Count"),
+                margin=list(l=10, r=10, b=10, t=40, pad=4)
+            ) %>% 
             assign_fig_settings(rv)
     }
     
@@ -454,15 +469,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     }
     
     parse_event_key = function(event_data) {
+        
         event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
     }
     
     build_plotly <- function(plt, title, dataset, stat_base, custom_header, xlab, ylab, title_font_size, legend_font_size, axis_font_size, legend_text, webgl) {
-        t <- list(family="sans serif", size=title_font_size)
 
         if (custom_header == "") title <- list(text=sprintf("Data: %s<br>Contrast: %s", dataset, stat_base), font=list(family="sans serif", size=title_font_size))
         else if (custom_header == " ") title <- NULL
-        else title <- custom_header
+        else title <- list(text=custom_header, font=list(size=title_font_size))
         
         plt_plotly <- plt %>% 
             ggplotly() %>%
@@ -480,7 +495,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                 title=title, 
                 autosize=TRUE,
                 dragmode="select", 
-                font=t,
                 xaxis = list(title=xlab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
                 yaxis = list(title=ylab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
                 legend=list(
@@ -490,8 +504,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                 )
             ) %>% 
             assign_fig_settings(rv)
+        
         if (webgl) {
-            plt_plotly %>% toWebGL()
+
+            plt_plotly <- plt_plotly %>% toWebGL()
         }
         else {
             plt_plotly
@@ -531,6 +547,51 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         settings_list
     }
     
+    make_scatter_plotly <- function(plot_df, x_col, y_col, title, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
+                                    manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, 
+                                    title_font_size=10, axis_font_size=10, legend_font_size=10) {
+        
+        if (manual_scale) {
+            if (color_col == "selected") {
+                color_scale <- MY_COLORS_SELECTED
+            }
+            else {
+                color_scale <- MY_COLORS_COMPARISON
+            }
+        }
+        else {
+            color_scale <- NULL
+        }
+
+        plt <- plot_ly(
+            plot_df,
+            x = ~get(x_col),
+            y = ~get(y_col),
+            color = ~get(color_col),
+            colors = color_scale,
+            key = plot_df[["key"]],
+            alpha = alpha,
+            type = "scatter",
+            mode = "markers",
+            text = plot_df[[hover_text]]
+        ) %>% plotly::layout(
+            title=list(text=title, font=list(size=title_font_size)),
+            autosize=TRUE,
+            dragmode="select",
+            xaxis = list(title="xlab", titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+            yaxis = list(title="ylab", titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+            legend=list(font=list(size=legend_font_size))
+        ) %>% toWebGL()
+        plt
+    }
+    
+    parse_title <- function(custom_header, dataset, stat_base) {
+        if (custom_header == "") title <- sprintf("Data: %s<br>Contrast: %s", dataset, stat_base)
+        else if (custom_header == " ") title <- NULL
+        else title <- custom_header
+        title
+    }
+    
     output$plotly_volc1 <- renderPlotly({
         
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
@@ -543,34 +604,17 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
-        base_plt <- make_scatter(
+        make_scatter_plotly(
             plot_df, 
             x_col="fold", 
             y_col="sig", 
             color_col=settings$color_col, 
             hover_text="descr", 
+            title=parse_title(input$ref_custom_header, input$dataset1, input$stat_base1),
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size) # %>% toWebGL()
-        
-        if (input$set_same_axis) {
-            base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
-        }
-        
-        build_plotly(
-            base_plt, 
-            title, 
-            input$dataset1, 
-            input$stat_base1, 
-            input$ref_custom_header, 
-            xlab="Fold change (log2)",
-            ylab="P-value (-log10)",
-            title_font_size=input$title_font_size,
-            legend_font_size=input$legend_font_size, 
-            axis_font_size=input$axis_font_size,
-            legend_text=input$legend_text, 
-            webgl=input$use_webgl)
+            dot_size=input$dot_size)
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -585,35 +629,47 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
-        
-        base_plt <- make_scatter(
+
+        make_scatter_plotly(
             plot_df, 
             x_col="fold", 
             y_col="sig", 
             color_col=settings$color_col, 
             hover_text="descr", 
+            title=parse_title(input$comp_custom_header, input$dataset2, input$stat_base2),
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
             dot_size=input$dot_size)
-        
-        if (input$set_same_axis) {
-            base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
-        }
-
-        build_plotly(
-            base_plt, 
-            title, 
-            input$dataset2, 
-            input$stat_base2, 
-            input$comp_custom_header, 
-            xlab="Fold change (log2)",
-            ylab="Significance (-log10)",
-            title_font_size=input$title_font_size,
-            legend_font_size=input$legend_font_size, 
-            axis_font_size=input$axis_font_size,
-            legend_text=input$legend_text, 
-            webgl=input$use_webgl)
+                
+        # base_plt <- make_scatter(
+        #     plot_df, 
+        #     x_col="fold", 
+        #     y_col="sig", 
+        #     color_col=settings$color_col, 
+        #     hover_text="descr", 
+        #     alpha=input$alpha,
+        #     cont_scale = settings$cont_scale,
+        #     manual_scale = settings$manual_scale,
+        #     dot_size=input$dot_size)
+        # 
+        # if (input$set_same_axis) {
+        #     base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
+        # }
+        # 
+        # build_plotly(
+        #     base_plt, 
+        #     title, 
+        #     in_dataset2(), 
+        #     in_stat_base2(), 
+        #     input$comp_custom_header, 
+        #     xlab="Fold change (log2)",
+        #     ylab="Significance (-log10)",
+        #     title_font_size=input$title_font_size,
+        #     legend_font_size=input$legend_font_size, 
+        #     axis_font_size=input$axis_font_size,
+        #     legend_text=input$legend_text, 
+        #     webgl=input$use_webgl)
     })
     
     output$plotly_ma1 <- renderPlotly({
@@ -629,34 +685,17 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
-        base_plt <- make_scatter(
+        make_scatter_plotly(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
             color_col=settings$color_col, 
-            alpha=input$alpha,
             hover_text="descr", 
-            cont_scale=settings$cont_scale,
-            manual_scale=settings$manual_scale,
+            title=parse_title(input$ref_custom_header, input$dataset1, input$stat_base1),
+            alpha=input$alpha,
+            cont_scale = settings$cont_scale,
+            manual_scale = settings$manual_scale,
             dot_size=input$dot_size)
-        
-        if (input$set_same_axis) {
-            base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
-        }
-
-        build_plotly(
-            base_plt, 
-            title, 
-            input$dataset1, 
-            input$stat_base1, 
-            input$ref_custom_header, 
-            xlab="Average expression",
-            ylab="Fold change (log2)",
-            title_font_size=input$title_font_size,
-            legend_font_size=input$legend_font_size, 
-            axis_font_size=input$axis_font_size,
-            legend_text=input$legend_text, 
-            webgl=input$use_webgl)
     })
     
     output$plotly_ma2 <- renderPlotly({
@@ -670,34 +709,46 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         shiny::validate(need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                       sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
 
-        base_plt <- make_scatter(
+        make_scatter_plotly(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
             color_col=settings$color_col, 
-            alpha=input$alpha,
             hover_text="descr", 
-            cont_scale=settings$cont_scale,
-            manual_scale=settings$manual_scale,
+            title=parse_title(input$comp_custom_header, input$dataset2, input$stat_base2),
+            alpha=input$alpha,
+            cont_scale = settings$cont_scale,
+            manual_scale = settings$manual_scale,
             dot_size=input$dot_size)
         
-        if (input$set_same_axis) {
-            base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
-        }
-
-        build_plotly(
-            base_plt, 
-            title, 
-            input$dataset2, 
-            input$stat_base2, 
-            input$comp_custom_header, 
-            xlab="Average expression",
-            ylab="Fold change (log2)",
-            title_font_size=input$title_font_size,
-            legend_font_size=input$legend_font_size, 
-            axis_font_size=input$axis_font_size,
-            legend_text=input$legend_text, 
-            webgl=input$use_webgl)
+        # base_plt <- make_scatter(
+        #     plot_df, 
+        #     x_col="expr", 
+        #     y_col="fold", 
+        #     color_col=settings$color_col, 
+        #     alpha=input$alpha,
+        #     hover_text="descr", 
+        #     cont_scale=settings$cont_scale,
+        #     manual_scale=settings$manual_scale,
+        #     dot_size=input$dot_size)
+        # 
+        # if (input$set_same_axis) {
+        #     base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
+        # }
+        # 
+        # build_plotly(
+        #     base_plt, 
+        #     title, 
+        #     in_dataset2(), 
+        #     in_stat_base2(), 
+        #     input$comp_custom_header, 
+        #     xlab="Average expression",
+        #     ylab="Fold change (log2)",
+        #     title_font_size=input$title_font_size,
+        #     legend_font_size=input$legend_font_size, 
+        #     axis_font_size=input$axis_font_size,
+        #     legend_text=input$legend_text, 
+        #     webgl=input$use_webgl)
     })
     
     output$plotly_hist1 <- renderPlotly({
@@ -708,7 +759,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         plot_df <- plot_ref_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
-        if (input$ref_custom_header == "") title <- sprintf("Dataset: %s", input$dataset1)
+        if (input$ref_custom_header == "") title <- sprintf("Dataset: %s", in_dataset1())
         else title <- input$ref_custom_header
         
         plt <- make_histogram(
@@ -737,7 +788,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         plot_df <- plot_comp_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
-        if (input$comp_custom_header == "") title <- sprintf("Dataset: %s", input$dataset2)
+        if (input$comp_custom_header == "") title <- sprintf("Dataset: %s", in_dataset2())
         else title <- input$comp_custom_header
         
         plt <- make_histogram(
@@ -761,8 +812,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
         pass_thres_col <- get_thres_pass_type_col(
             combined_dataset,
-            rv$statcols_ref(rv, input$dataset1, input$stat_base1),
-            rv$statcols_comp(rv, input$dataset2, input$stat_base2),
+            rv$statcols_ref(rv, in_dataset1(), in_stat_base1()),
+            rv$statcols_comp(rv, in_dataset2(), in_stat_base2()),
             input$pvalue_cutoff,
             input$fold_cutoff,
             input$pvalue_type_select
@@ -782,6 +833,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
+        shiny::validate(need(in_stat_base1() %in% rv$statsuffixes(rv, in_dataset1()), "Need correct statsuffixes"))
+        shiny::validate(need(in_stat_base2() %in% rv$statsuffixes(rv, in_dataset2()), "Need correct statsuffixes"))
         
         target_df <- get_target_df(rv)
         if (!input$show_full_table) {
