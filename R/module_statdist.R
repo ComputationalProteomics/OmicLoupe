@@ -296,7 +296,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             annot_comp = reactive_plot_df()$annot_comp
         )
         
-        plot_df$descr <- lapply(lapply(paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), strwrap, width=30), paste, collapse="<br>")
+        plot_df$descr <- lapply(
+            lapply(
+                paste0(sprintf("%s: %s", plot_df$key, plot_df$annot_ref)), 
+                strwrap, width=30), 
+            paste, collapse="<br>") %>% unlist()
         if (input$color_type == "PCA") {
             plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
             plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
@@ -315,14 +319,14 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         shiny::validate(need(in_stat_base1() %in% rv$statsuffixes(rv, in_dataset1()), "Need correct statsuffixes"))
         shiny::validate(need(!is.null(rv$statcols_ref(rv, in_dataset1(), in_stat_base1())), 
                       "Did not find statistics columns for dataset 1, are they properly assigned at the Setup page?"))
-        parse_plot_df(rv$statcols_ref(rv, in_dataset1(), in_stat_base1())) %>% dplyr::filter(!is.na(fold))
+        parse_plot_df(rv$statcols_ref(rv, in_dataset1(), in_stat_base1())) #%>% dplyr::filter(!is.na(fold))
     })
     
     plot_comp_df <- reactive({
         shiny::validate(need(in_stat_base2() %in% rv$statsuffixes(rv, in_dataset2()), "Need correct statsuffixes"))
         shiny::validate(need(!is.null(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())), 
                       "Did not find statistics columns for dataset 2, are they properly assigned at the Setup page?"))
-        parse_plot_df(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())) %>% dplyr::filter(!is.na(fold))
+        parse_plot_df(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())) #%>% dplyr::filter(!is.na(fold))
     })
     
     # plot_comp_df <- debounce(plot_comp_df_raw, 2000)
@@ -389,30 +393,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     })
     
     # ---------------- FUNCTIONS ---------------- 
-    
-    # # Inspired by: https://plot.ly/r/shiny-coupled-events/
-    # make_scatter <- function(plot_df, x_col, y_col, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
-    #                          manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2) {
-    #     
-    #     plt <- ggplot(plot_df, aes_string(x=x_col, y=y_col, color=color_col, key=hover_text)) +
-    #         geom_point(alpha=alpha, size=dot_size) +
-    #         theme(legend.title = element_blank(), plot.margin=margin(c(1,1,3,1), unit="lines"))
-    # 
-    #     if (manual_scale) {
-    #         if (color_col == "selected") {
-    #             plt <- plt + scale_color_manual(values=MY_COLORS_SELECTED)
-    #         }
-    #         else {
-    #             plt <- plt + scale_color_manual(values=MY_COLORS_COMPARISON)
-    #         }
-    #     }
-    #     else if (!is.null(cont_scale)) {
-    #         plt <- plt + scale_color_gradient2(low="red", mid="grey", high="blue")
-    #     }
-    # 
-    #     plt
-    # }
-    
     make_histogram <- function(plot_df, x_col, fill_col, key_vals, title_font_size, bin_count, title="") {
         t <- list(family = "sans serif", size = title_font_size)
         
@@ -485,47 +465,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
     }
     
-    # build_plotly <- function(plt, title, dataset, stat_base, custom_header, xlab, ylab, title_font_size, legend_font_size, axis_font_size, legend_text, webgl) {
-    # 
-    #     if (custom_header == "") title <- list(text=sprintf("Data: %s<br>Contrast: %s", dataset, stat_base), font=list(family="sans serif", size=title_font_size))
-    #     else if (custom_header == " ") title <- NULL
-    #     else title <- list(text=custom_header, font=list(size=title_font_size))
-    #     
-    #     plt_plotly <- plt %>% 
-    #         ggplotly() %>%
-    #         plotly::add_annotations(
-    #             text=legend_text, 
-    #             xref="paper", 
-    #             yref="paper", 
-    #             x=1.02, 
-    #             xanchor="left", 
-    #             y=0.8, 
-    #             yanchor="bottom", 
-    #             legendtitle=TRUE, 
-    #             showarrow=FALSE) %>%
-    #         plotly::layout(
-    #             title=title, 
-    #             autosize=TRUE,
-    #             dragmode="select", 
-    #             xaxis = list(title=xlab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
-    #             yaxis = list(title=ylab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
-    #             legend=list(
-    #                 y=0.8, 
-    #                 yanchor="top",
-    #                 font=list(size=legend_font_size)
-    #             )
-    #         ) %>% 
-    #         assign_fig_settings(rv)
-    #     
-    #     if (webgl) {
-    # 
-    #         plt_plotly <- plt_plotly %>% toWebGL()
-    #     }
-    #     else {
-    #         plt_plotly
-    #     }
-    # }
-    
     selected_data <- reactiveValues(event_data=NULL)
     observe({
         selected_data$event_data <- event_data("plotly_selected")
@@ -564,7 +503,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                                     title_font_size=10, axis_font_size=10, legend_font_size=10, use_webgl=TRUE, xrange=NULL, yrange=NULL) {
         
         plot_df_no_na <- plot_df %>%
-            dplyr::filter(!is.na(UQ(as.name(x_col)))) %>% 
+            dplyr::filter(!is.na(UQ(as.name(x_col)))) %>%
             dplyr::filter(!is.na(UQ(as.name(y_col))))
         
         if (manual_scale) {
@@ -578,18 +517,20 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         else {
             color_scale <- NULL
         }
-                
+        
         plt <- plot_ly(
-            plot_df_no_na,
+            plot_df,
             x = ~get(x_col),
             y = ~get(y_col),
             color = ~get(color_col),
             colors = color_scale,
-            key = plot_df_no_na[["key"]],
+            key = plot_df[["key"]],
             alpha = alpha,
             type = "scatter",
             mode = "markers",
-            text = plot_df_no_na[[hover_text]]
+            # text = ~get(hover_text)
+            # text = plot_df %>% dplyr::select(hover_text) %>% unlist()
+            text = plot_df[[hover_text]]
         ) %>% plotly::layout(
             title=list(text=title, font=list(size=title_font_size)),
             autosize=TRUE,
