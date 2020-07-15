@@ -460,12 +460,22 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     
     # ---------------- OUTPUTS ---------------- 
     
-    set_shared_max_lims <- function(plt, xcol, ycol, ref_df, comp_df) {
-        min_fold <- min(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
-        max_fold <- max(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
-        min_sig <- min(c(ref_df[[ycol]], comp_df[[ycol]]), na.rm=TRUE)
-        max_sig <- max(c(ref_df[[ycol]], comp_df[[ycol]]), na.rm=TRUE)
-        plt + xlim(min_fold, max_fold) + ylim(min_sig, max_sig)
+    set_shared_max_lims <- function(xcol, ycol, ref_df, comp_df) {
+        xmin <- min(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
+        xmax <- max(c(ref_df[[xcol]], comp_df[[xcol]]), na.rm=TRUE)
+        ymin <- min(c(ref_df[[ycol]], comp_df[[ycol]]), na.rm=TRUE)
+        ymax <- max(c(ref_df[[ycol]], comp_df[[ycol]]), na.rm=TRUE)
+        list(
+            xrange=c(
+                xmin - 0.01 * (xmax - xmin), 
+                xmax + 0.01 * (xmax - xmin)
+            ), 
+            yrange=c(
+                ymin - 0.01 * (ymax - ymin), 
+                ymax + 0.01 * (ymax - ymin)
+            )
+        )
+        # plt + xlim(min_fold, max_fold) + ylim(min_sig, max_sig)
     }
     
     parse_event_key = function(event_data) {
@@ -473,46 +483,46 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
     }
     
-    build_plotly <- function(plt, title, dataset, stat_base, custom_header, xlab, ylab, title_font_size, legend_font_size, axis_font_size, legend_text, webgl) {
-
-        if (custom_header == "") title <- list(text=sprintf("Data: %s<br>Contrast: %s", dataset, stat_base), font=list(family="sans serif", size=title_font_size))
-        else if (custom_header == " ") title <- NULL
-        else title <- list(text=custom_header, font=list(size=title_font_size))
-        
-        plt_plotly <- plt %>% 
-            ggplotly() %>%
-            plotly::add_annotations(
-                text=legend_text, 
-                xref="paper", 
-                yref="paper", 
-                x=1.02, 
-                xanchor="left", 
-                y=0.8, 
-                yanchor="bottom", 
-                legendtitle=TRUE, 
-                showarrow=FALSE) %>%
-            plotly::layout(
-                title=title, 
-                autosize=TRUE,
-                dragmode="select", 
-                xaxis = list(title=xlab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
-                yaxis = list(title=ylab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
-                legend=list(
-                    y=0.8, 
-                    yanchor="top",
-                    font=list(size=legend_font_size)
-                )
-            ) %>% 
-            assign_fig_settings(rv)
-        
-        if (webgl) {
-
-            plt_plotly <- plt_plotly %>% toWebGL()
-        }
-        else {
-            plt_plotly
-        }
-    }
+    # build_plotly <- function(plt, title, dataset, stat_base, custom_header, xlab, ylab, title_font_size, legend_font_size, axis_font_size, legend_text, webgl) {
+    # 
+    #     if (custom_header == "") title <- list(text=sprintf("Data: %s<br>Contrast: %s", dataset, stat_base), font=list(family="sans serif", size=title_font_size))
+    #     else if (custom_header == " ") title <- NULL
+    #     else title <- list(text=custom_header, font=list(size=title_font_size))
+    #     
+    #     plt_plotly <- plt %>% 
+    #         ggplotly() %>%
+    #         plotly::add_annotations(
+    #             text=legend_text, 
+    #             xref="paper", 
+    #             yref="paper", 
+    #             x=1.02, 
+    #             xanchor="left", 
+    #             y=0.8, 
+    #             yanchor="bottom", 
+    #             legendtitle=TRUE, 
+    #             showarrow=FALSE) %>%
+    #         plotly::layout(
+    #             title=title, 
+    #             autosize=TRUE,
+    #             dragmode="select", 
+    #             xaxis = list(title=xlab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+    #             yaxis = list(title=ylab, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+    #             legend=list(
+    #                 y=0.8, 
+    #                 yanchor="top",
+    #                 font=list(size=legend_font_size)
+    #             )
+    #         ) %>% 
+    #         assign_fig_settings(rv)
+    #     
+    #     if (webgl) {
+    # 
+    #         plt_plotly <- plt_plotly %>% toWebGL()
+    #     }
+    #     else {
+    #         plt_plotly
+    #     }
+    # }
     
     selected_data <- reactiveValues(event_data=NULL)
     observe({
@@ -546,10 +556,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         settings_list
     }
-    
-    make_scatter_plotly <- function(plot_df, x_col, y_col, title, x_lab=NULL, y_lab=NULL, color_col, hover_text="hover_text", 
+
+    make_scatter_plotly <- function(plot_df, x_col, y_col, title, x_label=NULL, y_label=NULL, color_col, hover_text="hover_text", 
                                     manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, 
-                                    title_font_size=10, axis_font_size=10, legend_font_size=10) {
+                                    title_font_size=10, axis_font_size=10, legend_font_size=10, use_webgl=TRUE, xrange=NULL, yrange=NULL) {
         
         if (manual_scale) {
             if (color_col == "selected") {
@@ -563,6 +573,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             color_scale <- NULL
         }
 
+        
+                
         plt <- plot_ly(
             plot_df,
             x = ~get(x_col),
@@ -578,11 +590,17 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             title=list(text=title, font=list(size=title_font_size)),
             autosize=TRUE,
             dragmode="select",
-            xaxis = list(title="xlab", titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
-            yaxis = list(title="ylab", titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+            xaxis = list(title=x_label, range=xrange, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
+            yaxis = list(title=y_label, range=yrange, titlefont = list(size=axis_font_size), tickfont=list(size=axis_font_size)),
             legend=list(font=list(size=legend_font_size))
-        ) %>% toWebGL()
-        plt
+        )
+        
+        if (use_webgl) {
+            plt %>% toWebGL()
+        }
+        else {
+            plt
+        }
     }
     
     parse_title <- function(custom_header, dataset, stat_base) {
@@ -604,17 +622,37 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
-        make_scatter_plotly(
+        custom_range <- list(xrange=NULL, yrange=NULL)
+        if(input$set_same_axis) {
+            custom_range <- set_shared_max_lims("fold", "sig", plot_ref_df(), plot_comp_df())
+        }
+        
+        plt <- make_scatter_plotly(
             plot_df, 
             x_col="fold", 
             y_col="sig", 
+            x_label="Fold (log2)",
+            y_label="-log10(P-value)",
             color_col=settings$color_col, 
             hover_text="descr", 
             title=parse_title(input$ref_custom_header, input$dataset1, input$stat_base1),
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size)
+            dot_size=input$dot_size,
+            xrange=custom_range$xrange,
+            yrange=custom_range$yrange,
+            use_webgl=input$use_webgl, 
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size,
+            axis_font_size=input$axis_font_size)
+        
+        # if (input$set_same_axis) {
+        #     plt <- plt %>% set_shared_max_lims("fold", "sig", plot_ref_df(), plot_comp_df())
+        # }
+        
+        plt
+        
     })
     
     output$plotly_volc2 <- renderPlotly({
@@ -630,18 +668,33 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                  sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
 
-        make_scatter_plotly(
+        custom_range <- list(xrange=NULL, yrange=NULL)
+        if(input$set_same_axis) {
+            custom_range <- set_shared_max_lims("fold", "sig", plot_ref_df(), plot_comp_df())
+        }
+        
+        plt <- make_scatter_plotly(
             plot_df, 
             x_col="fold", 
             y_col="sig", 
+            x_label="Fold (log2)",
+            y_label="-log10(P-value)",
             color_col=settings$color_col, 
             hover_text="descr", 
+            xrange=custom_range$xrange,
+            yrange=custom_range$yrange,
             title=parse_title(input$comp_custom_header, input$dataset2, input$stat_base2),
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size)
-                
+            dot_size=input$dot_size,
+            use_webgl=input$use_webgl, 
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size,
+            axis_font_size=input$axis_font_size)
+        
+        plt
+        
         # base_plt <- make_scatter(
         #     plot_df, 
         #     x_col="fold", 
@@ -685,17 +738,30 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                  sprintf("The selected Ref. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
         
+        custom_range <- list(xrange=NULL, yrange=NULL)
+        if(input$set_same_axis) {
+            custom_range <- set_shared_max_lims("expr", "fold", plot_ref_df(), plot_comp_df())
+        }
+        
         make_scatter_plotly(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
+            x_label="Avg. Expression",
+            y_label="Fold (log2)",
             color_col=settings$color_col, 
             hover_text="descr", 
             title=parse_title(input$ref_custom_header, input$dataset1, input$stat_base1),
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size)
+            xrange=custom_range$xrange,
+            yrange=custom_range$yrange,
+            dot_size=input$dot_size,
+            use_webgl=input$use_webgl, 
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size,
+            axis_font_size=input$axis_font_size)
     })
     
     output$plotly_ma2 <- renderPlotly({
@@ -709,17 +775,30 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         shiny::validate(need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                       sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
 
+        custom_range <- list(xrange=NULL, yrange=NULL)
+        if(input$set_same_axis) {
+            custom_range <- set_shared_max_lims("expr", "fold", plot_ref_df(), plot_comp_df())
+        }
+        
         make_scatter_plotly(
             plot_df, 
             x_col="expr", 
             y_col="fold", 
+            x_label="Avg. Expression",
+            y_label="Fold (log2)",
             color_col=settings$color_col, 
             hover_text="descr", 
             title=parse_title(input$comp_custom_header, input$dataset2, input$stat_base2),
             alpha=input$alpha,
             cont_scale = settings$cont_scale,
+            xrange=custom_range$xrange,
+            yrange=custom_range$yrange,
             manual_scale = settings$manual_scale,
-            dot_size=input$dot_size)
+            dot_size=input$dot_size,
+            use_webgl=input$use_webgl, 
+            title_font_size=input$title_font_size,
+            legend_font_size=input$legend_font_size,
+            axis_font_size=input$axis_font_size)
         
         # base_plt <- make_scatter(
         #     plot_df, 
