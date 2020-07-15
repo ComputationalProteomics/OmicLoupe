@@ -1,3 +1,9 @@
+# Version 0.9.5
+
+* Rewrite StatDist plots to fully use Plotly (instead of converted ggplot to Plotly)
+* Additional customization functionality for spot-check panel
+* Additional customization fixing for StatDist panel
+
 # Version 0.9.4
 
 * Increased control over graphics

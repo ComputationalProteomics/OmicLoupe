@@ -109,16 +109,20 @@ setup_plotly_ui <- function(id) {
 
 module_statdist_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
-    in_dataset1_raw <- reactive(input$dataset1)
-    in_dataset2_raw <- reactive(input$dataset2)
-    in_dataset1 <- debounce(in_dataset1_raw, 1000)
-    in_dataset2 <- debounce(in_dataset2_raw, 1000)
-
-    in_stat_base1_raw <- reactive(input$stat_base1)
-    in_stat_base2_raw <- reactive(input$stat_base2)
-    in_stat_base1 <- debounce(in_stat_base1_raw, 1000)
-    in_stat_base2 <- debounce(in_stat_base2_raw, 1000)
+    # in_dataset1_raw <- reactive(input$dataset1)
+    # in_dataset2_raw <- reactive(input$dataset2)
+    # in_dataset1 <- debounce(in_dataset1_raw, 1000)
+    # in_dataset2 <- debounce(in_dataset2_raw, 1000)
+    # 
+    # in_stat_base1_raw <- reactive(input$stat_base1)
+    # in_stat_base2_raw <- reactive(input$stat_base2)
+    # in_stat_base1 <- debounce(in_stat_base1_raw, 1000)
+    # in_stat_base2 <- debounce(in_stat_base2_raw, 1000)
     
+    in_dataset1 <- reactive(input$dataset1)
+    in_dataset2 <- reactive(input$dataset2)
+    in_stat_base1 <- reactive(input$stat_base1)
+    in_stat_base2 <- reactive(input$stat_base2)
         
     output$download_table <- downloadHandler(
         filename = function() {
@@ -196,9 +200,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         else {
             if (input$show_only_joint && (in_dataset1() != in_dataset2() || in_stat_base1() != in_stat_base2())) {
-                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE) %>%
-                    dplyr::filter(!is.na(UQ(as.name(ref_stat_cols$logFC)))) %>%
-                    dplyr::filter(!is.na(UQ(as.name(comp_stat_cols$logFC))))
+                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
             }
             else {
                 combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
@@ -561,6 +563,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                                     manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, 
                                     title_font_size=10, axis_font_size=10, legend_font_size=10, use_webgl=TRUE, xrange=NULL, yrange=NULL) {
         
+        plot_df_no_na <- plot_df %>%
+            dplyr::filter(!is.na(UQ(as.name(x_col)))) %>% 
+            dplyr::filter(!is.na(UQ(as.name(y_col))))
+        
         if (manual_scale) {
             if (color_col == "selected") {
                 color_scale <- MY_COLORS_SELECTED
@@ -572,20 +578,18 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         else {
             color_scale <- NULL
         }
-
-        
                 
         plt <- plot_ly(
-            plot_df,
+            plot_df_no_na,
             x = ~get(x_col),
             y = ~get(y_col),
             color = ~get(color_col),
             colors = color_scale,
-            key = plot_df[["key"]],
+            key = plot_df_no_na[["key"]],
             alpha = alpha,
             type = "scatter",
             mode = "markers",
-            text = plot_df[[hover_text]]
+            text = plot_df_no_na[[hover_text]]
         ) %>% plotly::layout(
             title=list(text=title, font=list(size=title_font_size)),
             autosize=TRUE,
@@ -596,10 +600,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         )
         
         if (use_webgl) {
-            plt %>% toWebGL()
+            plt %>% toWebGL() %>% assign_fig_settings(rv)
         }
         else {
-            plt
+            plt %>% assign_fig_settings(rv)
         }
     }
     

@@ -27,16 +27,21 @@ setup_spotcheck_ui <- function(id) {
                         conditionalPanel(
                             sprintf("input['%s'] == 1", ns("more_settings")),
                             fluidRow(
-                                column(6, numericInput(ns("text_size"), "Text size", value=10)),
-                                column(6, numericInput(ns("text_angle"), "Axis x text angle", value=0))
+                                column(6, numericInput(ns("text_size"), "Text size", value=10))
+                                # column(6, numericInput(ns("text_angle"), "Axis x text angle", value=0))
                             ),
                             fluidRow(
-                                column(6, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
+                                column(3, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
+                                column(3, checkboxInput(ns("rotate_labels"), "Rotate x-labels", value=FALSE)),
                                 column(6, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
                             ),
                             fluidRow(
                                 column(6, textInput(ns("ref_title"), "Ref. title")),
                                 column(6, textInput(ns("comp_title"), "Comp. title"))
+                            ),
+                            fluidRow(
+                                column(6, checkboxInput(ns("natural_sort"), "Order categories alphanumerically", value=FALSE)),
+                                column(6, checkboxInput(ns("show_legend"), "Show legend", value=TRUE))
                             )
                         )
                     ),
@@ -228,8 +233,22 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             xlab("Condition") +
             ylab("Abundance")
         
-        plt_ref <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin)
-        plt_ref + theme_bw() + theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle), legend.title = element_blank())
+        plt <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin)
+        plt <- plt + theme_bw() + theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle), legend.title = element_blank())
+        
+        if (!input$show_legend) {
+            plt <- plt + theme(legend.position = "none")
+        }
+        
+        if (input$rotate_labels) {
+            plt <- plt + theme(axis.text.x = element_text(angle=90, vjust=0.5))
+        }
+        
+        if (input$natural_sort) {
+            plt <- plt + scale_x_discrete(limits=levels(plot_df$cond) %>% stringr::str_sort(numeric=TRUE))
+        }
+        
+        plt
     }
         
     output$spot_display_ref <- renderPlotly({
@@ -254,7 +273,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         }
         
         plt <- plt %>% 
-            plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
+            # plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
             assign_fig_settings(rv)
         plt
     })
@@ -281,7 +300,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         }
         
         plt <- plt %>% 
-            plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
+            # plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
             assign_fig_settings(rv)
         plt
     })
