@@ -11,7 +11,6 @@ setup_plotly_ui <- function(id) {
         id,
         fluidPage(
             bar_w_help_and_download("Statistical investigations", ns("help"), ns("download_settings")),
-            # downloadButton(ns("plot_download"), "Test download"),
             fluidRow(
                 column(4,
                        wellPanel(
@@ -73,7 +72,7 @@ setup_plotly_ui <- function(id) {
                                    column(4, numericInput(ns("legend_font_size"), "Legend font", value=10, min=0)),
                                    column(4, numericInput(ns("axis_font_size"), "Axis font", value=10, min=0))
                                ),
-                               numericInput(ns("dot_size"), "Dot size", value=1.5, min=0),
+                               numericInput(ns("dot_size"), "Dot size", value=5, min=0),
                                textInput(ns("legend_text"), "Legend text", value=""),
                                checkboxInput(ns("use_webgl"), "Use WebGL (faster / lower res.)", value=TRUE)
                            )
@@ -329,8 +328,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         parse_plot_df(rv$statcols_comp(rv, in_dataset2(), in_stat_base2())) #%>% dplyr::filter(!is.na(fold))
     })
     
-    # plot_comp_df <- debounce(plot_comp_df_raw, 2000)
-    
     # ---------------- OBSERVERS ---------------- 
     
     observeEvent(input$pvalue_type_select, {
@@ -457,11 +454,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                 ymax + 0.01 * (ymax - ymin)
             )
         )
-        # plt + xlim(min_fold, max_fold) + ylim(min_sig, max_sig)
     }
     
     parse_event_key = function(event_data) {
-        
         event_data$key %>% unlist() %>% strsplit(":") %>% lapply(function(elem){elem[[1]]}) %>% unlist()
     }
     
@@ -530,7 +525,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             mode = "markers",
             # text = ~get(hover_text)
             # text = plot_df %>% dplyr::select(hover_text) %>% unlist()
-            text = plot_df[[hover_text]]
+            text = plot_df[[hover_text]],
+            marker = list(size=dot_size)
         ) %>% plotly::layout(
             title=list(text=title, font=list(size=title_font_size)),
             autosize=TRUE,
