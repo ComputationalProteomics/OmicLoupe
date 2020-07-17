@@ -5,8 +5,7 @@
 #' @return shiny application object
 #'
 #' @importFrom ggdendro theme_dendro segment label
-#' @importFrom dplyr %>% mutate arrange pull group_by row_number summarize n inner_join mutate matches rename_all 
-#' @importFrom dplyr rename_at all_of any_vars mutate_if all_of desc summarize_at
+#' @import dplyr
 #' @importFrom forcats fct_collapse
 #' @import ggplot2
 #' @importFrom ggpubr ggarrange

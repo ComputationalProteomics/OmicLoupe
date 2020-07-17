@@ -1,3 +1,8 @@
+# Version 0.9.7
+
+* Import of all dplyr functions, as missing specific imports caused loading crash
+* Include svglite as suggest dependency
+
 # Version 0.9.5
 
 * Rewrite StatDist plots to fully use Plotly (instead of converted ggplot to Plotly)
