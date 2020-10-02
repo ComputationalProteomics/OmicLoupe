@@ -12,6 +12,7 @@ Imports:
     forcats,
     GGally,
     ggdendro,
+    ggforce,
     ggplotify,
     ggpubr,
     ggplot2,
