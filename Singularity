@@ -57,7 +57,7 @@ From: ubuntu:18.04
     echo 'source("/etc/R/Rprofile.site")' >> /etc/littler.r
     # Rscript /etc/little.r
 
-    echo 'devtools::install_github("Jakob37/OmicLoupe")' >> install_omicloupe.R
+    echo 'devtools::install_github("ComputationalProteomics/OmicLoupe")' >> install_omicloupe.R
     # Rscript install_omicloupe.R
 
     echo 'OmicLoupe::runApp()' > run.R
