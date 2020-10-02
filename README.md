@@ -1,9 +1,22 @@
 # OmicLoupe
+
 Understanding expression across comparisons and datasets
+
+## Dependencies
+
+The R packages used by OmicLoupe have certain system dependences. If working on a Debian-based Linux distribution, these can be installed from the command line:
+
+```
+sudo apt install libcurl4-openssl-dev libxml2-dev libssl-dev
+```
 
 ## Installation
 
-For now, it can be installed by downloading as a Zip, and subsequently execute the following from within an R console:
+It can be installed either directly from GitHub or by downloading as a Zip, by running the following commands from an R console:
+
+```{r}
+devtools::install_github("ComputationalProteomics/OmicLoupe")
+```
 
 ```{r}
 devtools::install_local("OmicLoupe-master.zip")
