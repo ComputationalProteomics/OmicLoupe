@@ -38,6 +38,24 @@ Add this line to your .bash_aliases or .bashrc file.
 alias omicloupe="Rscript -e \"runApp()\""
 ```
 
+## Running it as a Singularity container
+
+Singularity is a container software which (similar to Docker) allows execution without needing to prepare local dependencies. It can be downloaded from https://singularity.lbl.gov.
+
+Using Singularity can be a rapid way to get OmicLoupe running locally without needing to install all dependencies. First, retrieve the container:
+
+```{bash}
+singularity pull --name OmicLoupe.simg shub://ComputationalProteomics/OmicLoupe
+```
+
+This will download the Singularity container containing OmicLoupe to `OmicLoupe.simg`. Now you are ready to run OmicLoupe:
+
+```{bash}
+singularity run OmicLoupe.simg
+```
+
+Simply open the provided link in a browser, and you should have access to OmicLoupe.
+
 ## Running on a server
 
 If you have a server running [Shiny Server](https://rstudio.com/products/shiny/shiny-server/) you can easily get OmicLoupe running by:
