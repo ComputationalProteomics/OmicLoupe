@@ -1,6 +1,8 @@
 # OmicLoupe
 Understanding expression across comparisons and datasets
 
+[OmicLoupe illustration](man/figures/overview_visualization.png)
+
 ## Installation
 
 For now, it can be installed by downloading as a Zip, and subsequently execute the following from within an R console:
