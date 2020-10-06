@@ -1,11 +1,24 @@
 # OmicLoupe
+
 Understanding expression across comparisons and datasets
 
 [OmicLoupe illustration](man/figures/overview_visualization.png)
 
+## Dependencies
+
+The R packages used by OmicLoupe have certain system dependences. If working on a Debian-based Linux distribution, these can be installed from the command line:
+
+```
+sudo apt install libcurl4-openssl-dev libxml2-dev libssl-dev
+```
+
 ## Installation
 
-For now, it can be installed by downloading as a Zip, and subsequently execute the following from within an R console:
+It can be installed either directly from GitHub or by downloading as a Zip, by running the following commands from an R console:
+
+```{r}
+devtools::install_github("ComputationalProteomics/OmicLoupe")
+```
 
 ```{r}
 devtools::install_local("OmicLoupe-master.zip")
@@ -26,6 +39,24 @@ Add this line to your .bash_aliases or .bashrc file.
 ```{r}
 alias omicloupe="Rscript -e \"runApp()\""
 ```
+
+## Running it as a Singularity container
+
+Singularity is a container software which (similar to Docker) allows execution without needing to prepare local dependencies. It can be downloaded from https://singularity.lbl.gov.
+
+Using Singularity can be a rapid way to get OmicLoupe running locally without needing to install all dependencies. First, retrieve the container:
+
+```{bash}
+singularity pull --name OmicLoupe.simg shub://ComputationalProteomics/OmicLoupe
+```
+
+This will download the Singularity container containing OmicLoupe to `OmicLoupe.simg`. Now you are ready to run OmicLoupe:
+
+```{bash}
+singularity run OmicLoupe.simg
+```
+
+Simply open the provided link in a browser, and you should have access to OmicLoupe.
 
 ## Running on a server
 
