@@ -2,7 +2,7 @@
 
 Understanding expression across comparisons and datasets
 
-[OmicLoupe illustration](man/figures/overview_visualization.png)
+![OmicLoupe illustration](man/figures/overview_visualization.png)
 
 ## Dependencies
 
