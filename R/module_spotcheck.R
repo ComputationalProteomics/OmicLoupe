@@ -3,7 +3,7 @@ setup_spotcheck_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("Spotcheck", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("FeatureCheck", ns("help"), ns("download_settings")),
             fluidRow(
                 column(
                     12,

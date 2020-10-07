@@ -4,7 +4,13 @@ Understanding expression across comparisons and datasets
 
 ![OmicLoupe illustration](man/figures/overview_visualization.png)
 
-## Dependencies
+# Example data
+
+Example data matrices and the corresponding design matrix is present in the folder `data/example_data`.
+Upload one or both of the matrices `dia_umpire_data.tsv` and `openswath_data.tsv` together with the `design.tsv` as design matrix.
+If using both, the options `Two datasets` and `Matched samples` should be checked.
+
+# Dependencies
 
 The R packages used by OmicLoupe have certain system dependences. If working on a Debian-based Linux distribution, these can be installed from the command line:
 
@@ -12,7 +18,7 @@ The R packages used by OmicLoupe have certain system dependences. If working on 
 sudo apt install libcurl4-openssl-dev libxml2-dev libssl-dev
 ```
 
-## Installation
+# Installation
 
 It can be installed either directly from GitHub or by downloading as a Zip, by running the following commands from an R console:
 

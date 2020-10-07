@@ -318,7 +318,7 @@ module_setup_server <- function(input, output, session, module_name) {
     })
     
     output$input_help_image_design <- renderImage({
-        filename <- normalizePath(file.path("./doc", "design_help.png"))
+        filename <- system.file("extdata", "design_help.png", package="OmicLoupe")
         list(src = filename)
     }, deleteFile = FALSE)
     
@@ -341,7 +341,7 @@ module_setup_server <- function(input, output, session, module_name) {
     })
     
     output$input_help_image_data <- renderImage({
-        filename <- normalizePath(file.path("./doc", "data_help.png"))
+        filename <- system.file("extdata", "data_help.png", package="OmicLoupe")
         list(src = filename)
     }, deleteFile = FALSE)
     

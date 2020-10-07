@@ -14,9 +14,9 @@ get_ui <- function() {
     setup_overlap_ui("Overlap"),
     
     setup_correlation_ui("Correlation"),
-    setup_spotcheck_ui("Spotcheck"),
+    setup_spotcheck_ui("FeatureCheck")
     
-    setup_help_ui("Help")
+    # setup_help_ui("Help")
   )
 }
 
@@ -26,14 +26,14 @@ get_server <- function() {
     reactive_values <- callModule(module_setup_server, id="Setup", module_name="Setup")
     callModule(module_quality_server, id="Quality", rv=reactive_values, module_name="Quality")
     callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
-    callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="Spotcheck")
+    callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="FeatureCheck")
     
     callModule(module_statdist_server, id="StatDist", rv=reactive_values, module_name="StatDist", parent_session=session)
     callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap", parent_session=session)
     
     callModule(module_correlation_server, id="Correlation", rv=reactive_values, module_name="Correlation")
     
-    callModule(module_help_server, id="Help", module_name="Help")
-    callModule(module_ideas_server, id="Ideas", module_name="Ideas")
+    # callModule(module_help_server, id="Help", module_name="Help")
+    # callModule(module_ideas_server, id="Ideas", module_name="Ideas")
   })
 }
