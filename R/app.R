@@ -26,7 +26,7 @@ get_server <- function() {
     reactive_values <- callModule(module_setup_server, id="Setup", module_name="Setup")
     callModule(module_quality_server, id="Quality", rv=reactive_values, module_name="Quality")
     callModule(module_pca_server, id="PCA", rv=reactive_values, module_name="PCA")
-    callModule(module_spotcheck_server, id="Spotcheck", rv=reactive_values, module_name="FeatureCheck")
+    callModule(module_spotcheck_server, id="FeatureCheck", rv=reactive_values, module_name="FeatureCheck")
     
     callModule(module_statdist_server, id="StatDist", rv=reactive_values, module_name="StatDist", parent_session=session)
     callModule(module_overlap_server, id="Overlap", rv=reactive_values, module_name="Overlap", parent_session=session)
