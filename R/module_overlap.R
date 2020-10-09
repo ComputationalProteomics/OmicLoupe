@@ -201,7 +201,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             
             selected_ids <- output_table_reactive()[selected_rows, ]$comb_id %>% as.character()
             rv$set_selected_feature(selected_ids, module_name)
-            updateTabsetPanel(session=parent_session, inputId="navbar", selected="Spotcheck")
+            updateTabsetPanel(session=parent_session, inputId="navbar", selected="FeatureCheck")
         }
         else {
             warning("Switching navbar requires access to parent session")

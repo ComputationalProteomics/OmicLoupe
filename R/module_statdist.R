@@ -141,7 +141,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             selected_rows <- input$table_display_rows_selected
             selected_ids <- get_target_df(rv)[selected_rows, ]$comb_id %>% as.character()
             rv$set_selected_feature(selected_ids, module_name)
-            updateTabsetPanel(session=parent_session, inputId="navbar", selected="Spotcheck")
+            updateTabsetPanel(session=parent_session, inputId="navbar", selected="FeatureCheck")
         }
         else {
             warning("Switching navbar requires access to parent session")
@@ -199,7 +199,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         else {
             if (input$show_only_joint && (in_dataset1() != in_dataset2() || in_stat_base1() != in_stat_base2())) {
-                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
+                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE) %>%
+                    filter(!is.na(UQ(as.name(ref_stat_cols$P.Value)))) %>%
+                    filter(!is.na(UQ(as.name(comp_stat_cols$P.Value))))
             }
             else {
                 combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)

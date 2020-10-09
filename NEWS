@@ -1,3 +1,7 @@
+# Version 0.9.10
+
+* Bugfix (introduced in 0.9.8) correcting the direct jump to the feature check module
+
 # Version 0.9.9
 
 * Bugfix (introduced in 0.9.8) where module names and IDs mismatch caused crash
