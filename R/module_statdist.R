@@ -512,7 +512,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             }
         }
         else {
-            color_scale <- NULL
+            color_scale <- "Set1"
         }
         
         plt <- plot_ly(
