@@ -266,7 +266,11 @@ setup_panel_ui <- function(id) {
                 tabPanel(
                     "TutorialVideos",
                     h3("The input format for OmicLoupe"),
-                    HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/zduz0hhAF9I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),
+                    HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/9zFgh5utywk" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),
+                    h3("Loading your data into OmicLoupe"),
+                    HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/4xhmkhInPaM" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),
+                    h3("Using OmicLoupe for data exploration"),
+                    HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/8xTwjvrF0HU" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),
                     h3("The full list of tutorial videos"),
                     p("Any future tutorial videos will be uploaded to the following Youtube playlist: https://www.youtube.com/playlist?list=PLUSAOuk3pSE3r5YiGbxUck3Hr4SFeHS1T"),
                     HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/videoseries?list=PLUSAOuk3pSE3r5YiGbxUck3Hr4SFeHS1T" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')

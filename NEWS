@@ -1,3 +1,7 @@
+# Version 0.9.12
+
+* Embedding tutorial videos under "Setup/TutorialVideos"
+
 # Version 0.9.11
 
 * Fix issue in StatDist module where highlights didn't de-select and the lower table always showed the full dataset (not the matched subset)
