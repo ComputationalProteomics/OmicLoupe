@@ -262,6 +262,14 @@ setup_panel_ui <- function(id) {
                          plotOutput(ns("input_help_image_design"), height = 200),
                          htmlOutput(ns("input_help_text_data")),
                          plotOutput(ns("input_help_image_data"), height = 600)
+                ),
+                tabPanel(
+                    "TutorialVideos",
+                    h3("The input format for OmicLoupe"),
+                    HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/zduz0hhAF9I" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'),
+                    h3("The full list of tutorial videos"),
+                    p("Any future tutorial videos will be uploaded to the following Youtube playlist: https://www.youtube.com/playlist?list=PLUSAOuk3pSE3r5YiGbxUck3Hr4SFeHS1T"),
+                    HTML('<iframe width="560" height="315" src="https://www.youtube.com/embed/videoseries?list=PLUSAOuk3pSE3r5YiGbxUck3Hr4SFeHS1T" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>')
                 )
             )
         )
