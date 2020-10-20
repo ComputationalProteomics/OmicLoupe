@@ -1,3 +1,8 @@
+# Version 0.9.11
+
+* Fix issue in StatDist module where highlights didn't de-select and the lower table always showed the full dataset (not the matched subset)
+* Display the version in the header bar
+
 # Version 0.9.10
 
 * Bugfix (introduced in 0.9.8) correcting the direct jump to the feature check module

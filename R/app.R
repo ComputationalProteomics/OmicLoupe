@@ -3,7 +3,7 @@ get_ui <- function() {
     
     theme = shinythemes::shinytheme("flatly"),
     
-    title="OmicLoupe",
+    title=sprintf("OmicLoupe v%s", packageVersion("OmicLoupe")),
     id="navbar",
     setup_panel_ui("Setup"),
     

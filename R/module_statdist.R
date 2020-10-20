@@ -175,10 +175,6 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         pass_type_col
     }
     
-    rv_loc <- reactiveValues(
-        
-    )
-    
     reactive_plot_df <- reactive({
         
         shiny::validate(need(in_stat_base1() %in% rv$statsuffixes(rv, in_dataset1()), "Need correct statsuffixes"))
@@ -831,7 +827,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     })
     
     get_target_df <- function(rv) {
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(include_non_matching=!input$show_only_joint)
         pass_thres_col <- get_thres_pass_type_col(
             combined_dataset,
             rv$statcols_ref(rv, in_dataset1(), in_stat_base1()),
@@ -841,9 +837,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             input$pvalue_type_select
         )
         target_df <- cbind(pass_thres=pass_thres_col, combined_dataset)
-        event.data <- event_data("plotly_selected")
-        if (!is.null(event.data) == TRUE) {
-            out_df <- target_df[target_df$comb_id %in% parse_event_key(event.data), ] 
+        # event.data <- event_data("plotly_selected")
+        if (!is.null(selected_data$event_data) == TRUE) {
+            out_df <- target_df[target_df$comb_id %in% parse_event_key(selected_data$event_data), ] 
         }
         else {
             out_df <- target_df %>% dplyr::filter(.data$pass_thres != "None")
