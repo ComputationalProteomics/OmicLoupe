@@ -177,10 +177,10 @@ MapObject <- R6::R6Class("MapObject", list(
             }
 
             if (!include_non_matching) {
+                
                 out_df1 <- self$dataset1[self$joint_indices1, ]
                 out_df2 <- self$dataset2[self$joint_indices2, ]
                 
-                corr_df <- NULL
                 if (!is.null(self$correlations)) {
                     out_df1 <- cbind(out_df1, do.call("cbind", self$correlations))
                     out_df2 <- cbind(out_df2, do.call("cbind", self$correlations))
