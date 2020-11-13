@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/220755544.svg)](https://zenodo.org/badge/latestdoi/220755544)
+
 # OmicLoupe
 
 Understanding expression across comparisons and datasets
