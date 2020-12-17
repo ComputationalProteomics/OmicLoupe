@@ -1,3 +1,7 @@
+# Version 1.0.2
+
+* Fix issues with incorrectly displaying tables in version 1.0.1
+
 # Version 1.0.1
 
 * Correlation columns appear in tables when present

@@ -349,7 +349,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             stop("input$plot_tabs should be either Venn or Upset, found: ", input$plot_tabs)
         }
         
-        rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>%
+        rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE) %>%
             dplyr::filter(.data$comb_id %in% target_ids)
     })
     
@@ -369,7 +369,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     })
     
     upset_presence_dataframe <- reactive({
-        comb_data <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
+        comb_data <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)
         
         nbr_nas <- get_na_nbrs_uppres(rv, input, comb_data, input$upset_pres_cond_ref, input$upset_pres_levels_ref, dataset_nbr=1, target="ref")
         upset_table <- parse_na_nbrs_to_upset_table(
@@ -516,7 +516,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         
         if (input$dataset1 == input$dataset2) {
             
-            long_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>% 
+            long_df <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE) %>% 
                 dplyr::filter(.data$comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, contrast_pval_cols_ref, drop=FALSE]),
@@ -529,7 +529,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
                 tidyr::gather("Comparison", "Fold", -.data$ID, -.data$p_sum)
         }
         else {
-            long_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE) %>% 
+            long_df <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE) %>% 
                 dplyr::filter(.data$comb_id %in% present_in_all) %>%
                 mutate(
                     p_sum=rowSums(.[, c(contrast_pval_cols_ref, contrast_pval_cols_comp), drop=FALSE]),
@@ -612,7 +612,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         
         shiny::validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
         
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=FALSE)
         plot_df <- data.frame(
             ref_sig = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$P.Value]],
             ref_fold = combined_dataset[[rv$statcols_ref(rv, input$dataset1, input$ref_contrast)$logFC]],

@@ -49,13 +49,13 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
         if (type %in% valid_types) {
             out_text <- sprintf(
                 "%s loaded, %s entries matched, %s total entries", 
-                type, nrow(mo$get_combined_dataset(include_non_matching=FALSE)), nrow(mo$get_combined_dataset(include_non_matching=TRUE))
+                type, nrow(mo$get_combined_dataset(include_one_dataset_entries=FALSE)), nrow(mo$get_combined_dataset(include_one_dataset_entries=TRUE))
             )
             
             if (type == "Both") {
                 out_text <- c(out_text, sprintf(" (original number of rows: %s and %s)", mo$get_dataset1_nrow(), mo$get_dataset2_nrow()))
                 if (mo$has_full_entries()) {
-                    out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(mo$get_combined_dataset(full_entries=TRUE)))
+                    out_text <- sprintf("%s (%s with no missing values)", out_text, nrow(mo$get_combined_dataset(only_no_na_entries=TRUE)))
                 }
             }
             sprintf("%s\n%s", out_text, "You can now explore your dataset using the top bar menu")

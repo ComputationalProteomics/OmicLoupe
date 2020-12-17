@@ -96,26 +96,19 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     }
     
     correlation_histograms <- function() {
-        comb_df <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE)
+        comb_df <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=FALSE)
         out_plts <- list()
         if (input$show_pearson) {
-            out_plts$pearson <- make_corr_hist(comb_df, "d2.pearson", "Pearson", has_sig=TRUE, font_size=input$font_size)
+            out_plts$pearson <- make_corr_hist(comb_df, "pearson", "Pearson", has_sig=TRUE, font_size=input$font_size)
         }
         if (input$show_spearman) {
-            out_plts$spearman <- make_corr_hist(comb_df, "d2.spearman", "Spearman", has_sig=TRUE, font_size=input$font_size)
+            out_plts$spearman <- make_corr_hist(comb_df, "spearman", "Spearman", has_sig=TRUE, font_size=input$font_size)
         }
         if (input$show_kendall) {
-            out_plts$kendall <- make_corr_hist(comb_df, "d2.kendall", "Kendall", has_sig=TRUE, font_size=input$font_size)
+            out_plts$kendall <- make_corr_hist(comb_df, "kendall", "Kendall", has_sig=TRUE, font_size=input$font_size)
         }
 
         ggpubr::ggarrange(plotlist=out_plts, nrow=length(out_plts))
-                
-        # ggpubr::ggarrange(
-        #     make_corr_hist(comb_df, "d2.pearson", "Pearson", has_sig=TRUE),
-        #     make_corr_hist(comb_df, "d2.spearman", "Spearman", has_sig=TRUE),
-        #     make_corr_hist(comb_df, "d2.kendall", "Kendall", has_sig=TRUE),
-        #     nrow=3
-        # )
     }
     
     output$correlation_histograms <- renderPlot({

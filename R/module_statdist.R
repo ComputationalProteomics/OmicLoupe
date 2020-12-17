@@ -191,16 +191,16 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         comp_stat_cols <- rv$statcols_comp(rv, in_dataset2(), in_stat_base2())
         
         if (input$color_type == "PCA") {
-            combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=TRUE)
+            combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=TRUE)
         }
         else {
             if (input$show_only_joint && (in_dataset1() != in_dataset2() || in_stat_base1() != in_stat_base2())) {
-                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=FALSE) %>%
+                combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=FALSE) %>%
                     filter(!is.na(UQ(as.name(ref_stat_cols$P.Value)))) %>%
                     filter(!is.na(UQ(as.name(comp_stat_cols$P.Value))))
             }
             else {
-                combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
+                combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=TRUE)
             }
         }
         
@@ -472,7 +472,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         settings_list$manual_scale <- TRUE
         settings_list$cont_scale <- NULL
         if (show_full_table) {
-            settings_list$selected <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)[table_rows_selected, ] %>% pull(.data$comb_id)
+            settings_list$selected <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)[table_rows_selected, ] %>% pull(.data$comb_id)
             settings_list$color_col <- "selected"
         }
         else if (!is.null(event_data) == TRUE) {
@@ -827,7 +827,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     })
     
     get_target_df <- function(rv) {
-        combined_dataset <- rv$mapping_obj()$get_combined_dataset(include_non_matching=!input$show_only_joint)
+        
+        combined_dataset <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=!input$show_only_joint)
+        
         pass_thres_col <- get_thres_pass_type_col(
             combined_dataset,
             rv$statcols_ref(rv, in_dataset1(), in_stat_base1()),
@@ -848,13 +850,14 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     }
     
     output$table_display = DT::renderDataTable({
-        
+
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         shiny::validate(need(in_stat_base1() %in% rv$statsuffixes(rv, in_dataset1()), "Need correct statsuffixes"))
         shiny::validate(need(in_stat_base2() %in% rv$statsuffixes(rv, in_dataset2()), "Need correct statsuffixes"))
         
         target_df <- get_target_df(rv)
+        
         if (!input$show_full_table) {
             rv$dt_parsed_data(rv, target_df, add_show_cols_first="pass_thres")
         }

@@ -86,11 +86,11 @@ MapObject <- R6::R6Class("MapObject", list(
                 corrs <- lapply(
                     corr_types,
                     function(corr_type) {
-                        lapply(seq_len(nrow(ref_sdf_joint)), function(row_i, ref_mat, comp_mat, corr_type) {
+                        lapply(seq_len(nrow(ref_sdf_joint)), function(row_i, ref_mat, comp_mat, corr_type, ids) {
                             ref_row <- ref_mat[row_i, ] %>% unlist()
                             comp_row <- comp_mat[row_i, ] %>% unlist()
                             if (length(na.omit(ref_row + comp_row)) < 3) {
-                                NA
+                                data.frame(pval=NA, cor=NA)
                             }
                             else {
                                 cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type, exact=FALSE)
@@ -103,10 +103,12 @@ MapObject <- R6::R6Class("MapObject", list(
                 ) %>% 
                     do.call("cbind", .) %>% 
                     mutate(
+                        id=ref_rdf_joint[[self$target_col1]],
                         pearson.fdr=p.adjust(pearson.pval, method = "BH"),
                         spearman.fdr=p.adjust(spearman.pval, method = "BH"),
                         kendall.fdr=p.adjust(kendall.pval, method = "BH")
-                    )
+                    ) %>%
+                    dplyr::select(id, everything())
                 
                 self$correlations <- corrs
             }
@@ -162,31 +164,25 @@ MapObject <- R6::R6Class("MapObject", list(
     has_same_number_entries = function() {
         length(self$joint_indices1) == length(self$joint_indices2)
     },
-    # full_entries: Include only entries with no missing values
-    # include_non_matching: Include entries only present in one dataset by including a row of NA-values in the other
-    get_combined_dataset = function(full_entries = FALSE, include_non_matching = TRUE) {
+    # only_no_na_entries: Include only entries with no missing values
+    # include_one_dataset_entries: Include entries only present in one dataset by including a row of NA-values in the other
+    get_combined_dataset = function(only_no_na_entries = FALSE, include_one_dataset_entries = TRUE) {
     
-        if (full_entries && include_non_matching) {
-            warning("Full entries set to TRUE, assigning include_non_matching FALSE")
-            include_non_matching <- FALSE
+        if (only_no_na_entries && include_one_dataset_entries) {
+            include_one_dataset_entries <- FALSE
         }
         
         if (!is.null(self$dataset1) && !is.null(self$dataset2)) {
             if (!self$has_combined() || !self$has_same_number_entries()) {
                 return(NULL)
             }
-
-            if (!include_non_matching) {
+            
+            if (!include_one_dataset_entries) {
                 
                 out_df1 <- self$dataset1[self$joint_indices1, ]
                 out_df2 <- self$dataset2[self$joint_indices2, ]
                 
-                if (!is.null(self$correlations)) {
-                    out_df1 <- cbind(out_df1, do.call("cbind", self$correlations))
-                    out_df2 <- cbind(out_df2, do.call("cbind", self$correlations))
-                }
-                
-                if (full_entries) {
+                if (only_no_na_entries) {
                     out_df1_full_entries <- out_df1 %>% self$get_full_entries(self$samples1)
                     out_df2_full_entries <- out_df2 %>% self$get_full_entries(self$samples2)
                     all_full_entries <- out_df1_full_entries & out_df2_full_entries
@@ -200,16 +196,18 @@ MapObject <- R6::R6Class("MapObject", list(
             else {
                 out_df1 <- self$dataset1 %>% rename_all(~paste0("d1.", .))
                 out_df2 <- self$dataset2 %>% rename_all(~paste0("d2.", .))
-                # out_df1 <- self$dataset1 %>% rename_all(vars(!matches(self$target_col1)), ~paste0("d1.", .))
-                # out_df2 <- self$dataset2 %>% rename_at(vars(!matches(self$target_col2)), ~paste0("d2.", .))
                 out_df <- full_join(out_df1, out_df2, by=setNames(paste0("d2.", self$target_col2), paste0("d1.", self$target_col1)), keep=TRUE)
+            }
+            
+            if (!is.null(self$correlations)) {
+                out_df <- out_df %>% left_join(., self$correlations, by=setNames("id", sprintf("d1.%s", self$target_col1)))
             }
             
             out_df
         }
         else if (!is.null(self$dataset1)) {
             out_df <- self$dataset1
-            if (full_entries) {
+            if (only_no_na_entries) {
                 out_df_full_entries <- out_df %>% self$get_full_entries(self$samples1)
                 out_df <- out_df[out_df_full_entries, ]
             }
@@ -218,7 +216,7 @@ MapObject <- R6::R6Class("MapObject", list(
         }
         else if (!is.null(self$dataset2)) {
             out_df <- self$dataset2
-            if (full_entries) {
+            if (only_no_na_entries) {
                 out_df_full_entries <- out_df %>% self$get_full_entries(self$samples2)
                 out_df <- out_df[out_df_full_entries, ]
             }
@@ -230,10 +228,8 @@ MapObject <- R6::R6Class("MapObject", list(
         }
         
         if (nrow(out_df) > 0) {
-            cbind(
-                comb_id = paste0("C", seq_len(nrow(out_df))),
-                out_df
-            )
+            out_with_id <- cbind(comb_id = paste0("C", seq_len(nrow(out_df))), out_df)
+            out_with_id
         } 
         else {
             NULL

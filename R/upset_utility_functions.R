@@ -35,7 +35,7 @@ parse_contrast_pass_list <- function(rv, input, target_data, target_contrast, co
     
     shiny::validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
     
-    combined_dataset <- rv$mapping_obj()$get_combined_dataset(full_entries=FALSE, include_non_matching=TRUE)
+    combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=TRUE)
     sig_field <- rv$statcols_ref(rv, target_data, target_contrast)[[contrast_type]]
     fold_field <- rv$statcols_ref(rv, target_data, target_contrast)$logFC
     

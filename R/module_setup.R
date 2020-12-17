@@ -373,7 +373,7 @@ module_setup_server <- function(input, output, session, module_name) {
         # req(rv$mapping_obj()$get_combined_dataset())
         shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, something wrong with the mapping?"))
         
-        comb_data_cols <- rv$mapping_obj()$get_combined_dataset(include_non_matching = FALSE) %>% colnames()
+        comb_data_cols <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries = FALSE) %>% colnames()
         samples_ref <- NULL
         if (!is.null(input$data_file_1)) {
             samples_ref <- rv$samples(rv, input$data_file_1$name, prefix="d1.")

@@ -89,7 +89,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             paste("spotcheck-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
         },
         content = function(file) {
-            write_tsv(rv$dt_parsed_data_raw(rv, rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)), file)
+            write_tsv(rv$dt_parsed_data_raw(rv, rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)), file)
         }
     )
     
@@ -142,7 +142,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         shiny::validate(need(!is.null(rv$mapping_obj()$get_combined_dataset()), "No combined dataset found, are samples mapped at the Setup page?"))
         
-        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE), selection_mode=input$multiselect)
+        rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE), selection_mode=input$multiselect)
     })
     
     plot_df_ref <- reactive({
@@ -151,7 +151,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         shiny::validate(need(!is.null(rv$samples(rv, input$dataset1)), "No mapped samples found, are they mapped at the Setup page?"))
         shiny::validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
 
-        map_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
+        map_df <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)
         ddf_ref <- rv$ddf_ref(rv, input$dataset1)
         ddf_ref$None <- "None"
         samples_ref <- rv$samples(rv, input$dataset1)
@@ -178,7 +178,7 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         shiny::validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
         shiny::validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
 
-        map_df <- rv$mapping_obj()$get_combined_dataset(include_non_matching=TRUE)
+        map_df <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)
         ddf_comp <- rv$ddf_comp(rv, input$dataset2)
         ddf_comp$None <- "None"
         samples_comp <- rv$samples(rv, input$dataset2)
