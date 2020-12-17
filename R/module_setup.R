@@ -459,15 +459,7 @@ module_setup_server <- function(input, output, session, module_name) {
     
     rv <- setup_reactive_values_obj(input)
     
-    # stat_patterns <- list(
-    #     P.Value = "P.Value",
-    #     adj.P.Val = "adj.P.Val",
-    #     logFC = "logFC",
-    #     avgExpr = "avgExpr"
-    # )
-    
     statcols <- function(rv, data_field, contrast_field, stat_patterns, prefix_index=NULL) {
-        # statcols <- function(rv, data_field, contrast_field, prefix_index=NULL) {
         dataset_stat_cols <- rv$selected_cols_obj()[[data_field]]$statcols
         parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field, stat_patterns)
         if (!is.null(prefix_index)) {
@@ -585,6 +577,9 @@ module_setup_server <- function(input, output, session, module_name) {
             status_val <- 0
         }
         else {
+            
+            browser()
+            
             if (length(which(samples_from_ddf %in% colnames(rdf))) == 0) {
                 # status_message <- "No samples from design matched to data, something is wrong!"
                 shinyalert(
@@ -638,20 +633,26 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         
         if (length(sample_col_1) == 0) {
-            shinyalert(
-                "Input error", 
-                "No column in design matrix matches column names in the data matrix. 
+            
+            # browser()
+            
+            if (TRUE) {
+                print("TODO: REMOVE")
+            }
+            else {
+                shinyalert(
+                    "Input error", 
+                    "No column in design matrix matches column names in the data matrix. 
                 
                 Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
                 what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
                 on input format.
                 
                 If neither helps, please send a message to the developer.", 
-                type="error")
+                    type="error")
+            }
             return()
         }
-        
-        
         
         autodetect_stat_cols()
         status_data1 <- assign_sample_cols(

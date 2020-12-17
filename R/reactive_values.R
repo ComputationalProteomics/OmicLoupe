@@ -14,6 +14,23 @@ setup_reactive_values_obj <- function(input) {
             return(NULL)
         }
         raw_df <- read_tsv(infile$datapath, col_types = cols())
+        
+        original_colnames <- colnames(raw_df)
+        corrected_colnames <- make.names(colnames(raw_df))
+        
+        if (!all(original_colnames == corrected_colnames)) {
+            
+            shinyalert(
+                "Input warning", 
+                paste(
+                    "Some of your column names does contain patterns which may cause downstream issues.",
+                    "Common examples are sample names starting with numbers, or containing spaces",
+                    "You will likely need to correct the following names in the data matrix for OmicLoupe to run smoothly:\n\n",
+                    paste(setdiff(original_colnames, corrected_colnames), collapse=", ")
+                ),
+                type="error")
+        }
+        
         colnames(raw_df) <- make.names(colnames(raw_df))
         raw_df
     }

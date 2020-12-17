@@ -1,3 +1,8 @@
+# Version 1.0.3
+
+* Warning popup if inserting data frames with variable names changed by make.names
+* Some refactoring, primarily in the MapObject
+
 # Version 1.0.2
 
 * Fix issues with incorrectly displaying tables in version 1.0.1
