@@ -1,5 +1,3 @@
-# library(R6)
-
 MapObject <- R6::R6Class("MapObject", list(
     
     dual_datasets = FALSE,
@@ -81,38 +79,44 @@ MapObject <- R6::R6Class("MapObject", list(
                 comp_sdf_joint <- comp_rdf_joint %>% dplyr::select(self$samples2)
                 
                 showNotification(sprintf("Correlation started for %s features, might take a few moments...", nrow(ref_sdf_joint)))
-                
-                corr_types <- list("pearson", "spearman", "kendall")
-                corrs <- lapply(
-                    corr_types,
-                    function(corr_type) {
-                        lapply(seq_len(nrow(ref_sdf_joint)), function(row_i, ref_mat, comp_mat, corr_type, ids) {
-                            ref_row <- ref_mat[row_i, ] %>% unlist()
-                            comp_row <- comp_mat[row_i, ] %>% unlist()
-                            if (length(na.omit(ref_row + comp_row)) < 3) {
-                                data.frame(pval=NA, cor=NA)
-                            }
-                            else {
-                                cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type, exact=FALSE)
-                                data.frame(pval=cor_val$p.value, cor=cor_val$estimate)
-                            }
-                        }, ref_mat=ref_sdf_joint, comp_mat=comp_sdf_joint, corr_type=corr_type) %>% 
-                            do.call("rbind", .) %>%
-                            rename_all(~paste(corr_type, ., sep="."))
-                    }
-                ) %>% 
-                    do.call("cbind", .) %>% 
-                    mutate(
-                        id=ref_rdf_joint[[self$target_col1]],
-                        pearson.fdr=p.adjust(pearson.pval, method = "BH"),
-                        spearman.fdr=p.adjust(spearman.pval, method = "BH"),
-                        kendall.fdr=p.adjust(kendall.pval, method = "BH")
-                    ) %>%
-                    dplyr::select(id, everything())
-                
-                self$correlations <- corrs
+                self$correlations <- self$generate_correlation_table(ref_sdf_joint, comp_sdf_joint, id_column=ref_rdf_joint[[self$target_col1]])
             }
         }
+    },
+    # Provides correlation values for Pearson, Spearman and Kendall
+    generate_correlation_table = function(ref_sdf_joint, comp_sdf_joint, id_column=NULL, corr_types=list("pearson", "spearman", "kendall")) {
+        
+        corrs <- lapply(
+            corr_types,
+            function(corr_type) {
+                lapply(seq_len(nrow(ref_sdf_joint)), function(row_i, ref_mat, comp_mat, corr_type, ids) {
+                    ref_row <- ref_mat[row_i, ] %>% unlist()
+                    comp_row <- comp_mat[row_i, ] %>% unlist()
+                    if (length(na.omit(ref_row + comp_row)) < 3) {
+                        data.frame(pval=NA, cor=NA)
+                    }
+                    else {
+                        cor_val <- cor.test(ref_row, comp_row, na.action="pairwise.complete.obs", method=corr_type, exact=FALSE)
+                        data.frame(pval=cor_val$p.value, cor=cor_val$estimate)
+                    }
+                }, ref_mat=ref_sdf_joint, comp_mat=comp_sdf_joint, corr_type=corr_type) %>% 
+                    do.call("rbind", .) %>%
+                    rename_all(~paste(corr_type, ., sep="."))
+            }
+        ) %>% 
+            do.call("cbind", .) %>% 
+            dplyr::mutate(
+                pearson.fdr=p.adjust(pearson.pval, method = "BH"),
+                spearman.fdr=p.adjust(spearman.pval, method = "BH"),
+                kendall.fdr=p.adjust(kendall.pval, method = "BH")
+            )
+        
+        if (!is.null(id_column)) {
+            corrs <- corrs %>%
+                dplyr::mutate(id=id_column) %>%
+                dplyr::select(id, everything())
+        }
+        corrs
     },
     has_correlations = function() {
         !is.null(self$correlations)
@@ -164,6 +168,14 @@ MapObject <- R6::R6Class("MapObject", list(
     has_same_number_entries = function() {
         length(self$joint_indices1) == length(self$joint_indices2)
     },
+    prepare_single_dataset = function(out_df, samples, sample_prefix, only_no_na_entries) {
+        if (only_no_na_entries) {
+            out_df_full_entries <- out_df %>% self$get_full_entries(samples)
+            out_df <- out_df[out_df_full_entries, ]
+        }
+        colnames(out_df) <- paste0(sample_prefix, ".", colnames(out_df))
+        out_df
+    },
     # only_no_na_entries: Include only entries with no missing values
     # include_one_dataset_entries: Include entries only present in one dataset by including a row of NA-values in the other
     get_combined_dataset = function(only_no_na_entries = FALSE, include_one_dataset_entries = TRUE) {
@@ -206,21 +218,11 @@ MapObject <- R6::R6Class("MapObject", list(
             out_df
         }
         else if (!is.null(self$dataset1)) {
-            out_df <- self$dataset1
-            if (only_no_na_entries) {
-                out_df_full_entries <- out_df %>% self$get_full_entries(self$samples1)
-                out_df <- out_df[out_df_full_entries, ]
-            }
-            colnames(out_df) <- paste0("d1.", colnames(out_df))
+            out_df <- self$prepare_single_dataset(self$dataset1, self$samples1, "d1", only_no_na_entries)
             out_df
         }
         else if (!is.null(self$dataset2)) {
-            out_df <- self$dataset2
-            if (only_no_na_entries) {
-                out_df_full_entries <- out_df %>% self$get_full_entries(self$samples2)
-                out_df <- out_df[out_df_full_entries, ]
-            }
-            colnames(out_df) <- paste0("d2.", colnames(out_df))
+            out_df <- self$prepare_single_dataset(self$dataset2, self$samples2, "d2", only_no_na_entries)
             out_df
         }
         else {
