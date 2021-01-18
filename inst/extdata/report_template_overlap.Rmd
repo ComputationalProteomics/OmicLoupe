@@ -60,6 +60,12 @@ error_check(params$make_upset_qualitative_plot)
 
 # Settings 
 
+```{r echo=FALSE, results=FALSE}
+library(tidyverse)
+library(DT)
+library(shiny)
+```
+
 ## Tab settings
 
 Current tab
