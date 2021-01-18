@@ -23,7 +23,7 @@ report_generation_handler <- function(base_name, params) {
         content = function(file) {
             
             source_base <- sprintf("report_template_%s.Rmd", base_name)
-            source_path <- normalizePath(file.path("./doc/report_templates", source_base))
+            source_path <- normalizePath(file.path("./doc", source_base))
             
             tempReport <- file.path(tempdir(), source_base)
             file.copy(source_path, tempReport, overwrite = TRUE)
