@@ -127,7 +127,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     output$download_settings <- settings_download_handler("statdist", input)
 
     output$download_report <- report_generation_handler("statdist", params=list(
-        input=as.list(input)
+        input=as.list(input),
+        make_ref_volcano=make_ref_volc_plot,
+        make_comp_volcano=make_comp_volc_plot,
+        make_ref_ma=make_ref_ma_plot,
+        make_comp_ma=make_comp_ma_plot,
+        make_ref_phist=make_ref_hist_plot,
+        make_comp_phist=make_comp_hist_plot
     ))
         
     observeEvent(input$spotcheck, {
@@ -543,8 +549,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         title
     }
     
-    output$plotly_volc1 <- renderPlotly({
-        
+    make_ref_volc_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
@@ -585,11 +590,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         # }
         
         plt
-        
+    }
+    
+    output$plotly_volc1 <- renderPlotly({
+        make_ref_volc_plot()
     })
     
-    output$plotly_volc2 <- renderPlotly({
-        
+    make_comp_volc_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
@@ -600,7 +607,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
                  sprintf("The selected Comp. column needs to have a continuous variable or max %s discrete levels", MAX_DISCRETE_LEVELS))
         )
-
+        
         custom_range <- list(xrange=NULL, yrange=NULL)
         if(input$set_same_axis) {
             custom_range <- set_shared_max_lims("fold", "sig", plot_ref_df(), plot_comp_df())
@@ -627,39 +634,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             axis_font_size=input$axis_font_size)
         
         plt
-        
-        # base_plt <- make_scatter(
-        #     plot_df, 
-        #     x_col="fold", 
-        #     y_col="sig", 
-        #     color_col=settings$color_col, 
-        #     hover_text="descr", 
-        #     alpha=input$alpha,
-        #     cont_scale = settings$cont_scale,
-        #     manual_scale = settings$manual_scale,
-        #     dot_size=input$dot_size)
-        # 
-        # if (input$set_same_axis) {
-        #     base_plt <- set_shared_max_lims(base_plt, "fold", "sig", plot_ref_df(), plot_comp_df())
-        # }
-        # 
-        # build_plotly(
-        #     base_plt, 
-        #     title, 
-        #     in_dataset2(), 
-        #     in_stat_base2(), 
-        #     input$comp_custom_header, 
-        #     xlab="Fold change (log2)",
-        #     ylab="Significance (-log10)",
-        #     title_font_size=input$title_font_size,
-        #     legend_font_size=input$legend_font_size, 
-        #     axis_font_size=input$axis_font_size,
-        #     legend_text=input$legend_text, 
-        #     webgl=input$use_webgl)
+    }
+    
+    output$plotly_volc2 <- renderPlotly({
+        make_comp_volc_plot()
     })
     
-    output$plotly_ma1 <- renderPlotly({
-        
+    make_ref_ma_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
@@ -695,10 +676,13 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             title_font_size=input$title_font_size,
             legend_font_size=input$legend_font_size,
             axis_font_size=input$axis_font_size)
+    }
+    
+    output$plotly_ma1 <- renderPlotly({
+        make_ref_ma_plot()
     })
     
-    output$plotly_ma2 <- renderPlotly({
-        
+    make_comp_ma_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
@@ -706,8 +690,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         plot_df$selected <- plot_df$key %in% settings$selected
         
         shiny::validate(need(is.numeric(plot_df[[settings$color_col]]) || length(unique(plot_df[[settings$color_col]])) < MAX_DISCRETE_LEVELS, 
-                      sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
-
+                             sprintf("The coloring column either needs to be numeric or contain maximum %s unique values", MAX_DISCRETE_LEVELS)))
+        
         custom_range <- list(xrange=NULL, yrange=NULL)
         if(input$set_same_axis) {
             custom_range <- set_shared_max_lims("expr", "fold", plot_ref_df(), plot_comp_df())
@@ -732,41 +716,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             title_font_size=input$title_font_size,
             legend_font_size=input$legend_font_size,
             axis_font_size=input$axis_font_size)
-        
-        # base_plt <- make_scatter(
-        #     plot_df, 
-        #     x_col="expr", 
-        #     y_col="fold", 
-        #     color_col=settings$color_col, 
-        #     alpha=input$alpha,
-        #     hover_text="descr", 
-        #     cont_scale=settings$cont_scale,
-        #     manual_scale=settings$manual_scale,
-        #     dot_size=input$dot_size)
-        # 
-        # if (input$set_same_axis) {
-        #     base_plt <- set_shared_max_lims(base_plt, "expr", "fold", plot_ref_df(), plot_comp_df())
-        # }
-        # 
-        # build_plotly(
-        #     base_plt, 
-        #     title, 
-        #     in_dataset2(), 
-        #     in_stat_base2(), 
-        #     input$comp_custom_header, 
-        #     xlab="Average expression",
-        #     ylab="Fold change (log2)",
-        #     title_font_size=input$title_font_size,
-        #     legend_font_size=input$legend_font_size, 
-        #     axis_font_size=input$axis_font_size,
-        #     legend_text=input$legend_text, 
-        #     webgl=input$use_webgl)
+    }
+    
+    output$plotly_ma2 <- renderPlotly({
+        make_comp_ma_plot()
     })
     
-    output$plotly_hist1 <- renderPlotly({
-        
+    make_ref_hist_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
-
+        
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
         plot_df$selected <- plot_df$key %in% settings$selected
@@ -789,13 +747,16 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         if (input$use_webgl) plt %>% toWebGL()
         else plt
+    }
+    
+    output$plotly_hist1 <- renderPlotly({
+        make_ref_hist_plot()
     })
     
-    output$plotly_hist2 <- renderPlotly({
-        
+    make_comp_hist_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         plot_df <- plot_comp_df()
-
+        
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_comp_df()
         plot_df$selected <- plot_df$key %in% settings$selected
@@ -818,6 +779,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         if (input$use_webgl) plt %>% toWebGL()
         else plt
+    }
+    
+    output$plotly_hist2 <- renderPlotly({
+        make_comp_hist_plot()
     })
     
     get_target_df <- function(rv) {

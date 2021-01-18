@@ -1,7 +1,3 @@
-# library(ggplot2)
-# # library(PCAtools)
-# library(ggthemes)
-
 setup_pca_ui <- function(id) {
     ns <- shiny::NS(id)
     tabPanel(
@@ -104,8 +100,6 @@ setup_pca_ui <- function(id) {
 
 module_pca_server <- function(input, output, session, rv, module_name) {
     
-    ########### REACTIVE ############
-    
     observeEvent(input$help, {
         shinyalert(
             title = "Help: Principal component visuals",
@@ -117,7 +111,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     output$download_settings <- settings_download_handler("pca", input)
     
     output$download_report <- report_generation_handler("pca", params=list(
-        input=as.list(input)
+        input=as.list(input),
+        make_ref_pca=make_ref_pca_plot,
+        make_comp_pca=make_comp_pca_plot
     ))
     
     filtered_samples_ref <- reactive({
@@ -362,10 +358,7 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         )
     })
     
-    output$pca_plot1 <- renderPlotly({
-        
-        # shiny::validate(need(length(plot_list) > 1, sprintf(sprintf("Number of contrasts need to be more than one, found: %s", length(plot_list)))))
-        
+    make_ref_pca_plot <- function() {
         if (has_value(input$color_data1)) color_col <- input$color_data1
         else color_col <- NULL
         
@@ -400,11 +393,14 @@ module_pca_server <- function(input, output, session, rv, module_name) {
         plt %>% 
             ggplotly(tooltip=c("label", "colour", "x", "y")) %>% 
             plotly::layout(dragmode="select") %>% 
-            assign_fig_settings(rv)
+            assign_fig_settings(rv)        
+    }
+    
+    output$pca_plot1 <- renderPlotly({
+        make_ref_pca_plot()
     })
     
-    output$pca_plot2 <- renderPlotly({
-        
+    make_comp_pca_plot <- function() {
         if (has_value(input$color_data2)) color_col <- input$color_data2
         else color_col <- NULL
         
@@ -440,5 +436,9 @@ module_pca_server <- function(input, output, session, rv, module_name) {
             ggplotly(tooltip=c("label", "colour", "x", "y")) %>% 
             plotly::layout(dragmode="select") %>% 
             assign_fig_settings(rv)
+    }
+    
+    output$pca_plot2 <- renderPlotly({
+        make_comp_pca_plot()
     })
 }
