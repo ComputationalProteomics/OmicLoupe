@@ -3,7 +3,7 @@ setup_overlap_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("Overlap study", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("Overlap study", ns("help"), ns("download_settings"), ns("download_report")),
             fluidRow(
                 column(
                     12,
@@ -144,6 +144,10 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     )
     
     output$download_settings <- settings_download_handler("overlap", input)
+    
+    output$download_report <- report_generation_handler("overlap", params=list(
+        input=as.list(input)
+    ))
     
     output$ggplot_download <- downloadHandler(
         filename = function() {

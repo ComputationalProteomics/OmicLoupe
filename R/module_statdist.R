@@ -10,7 +10,7 @@ setup_plotly_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("Statistical investigations", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("Statistical investigations", ns("help"), ns("download_settings"), ns("download_report")),
             fluidRow(
                 column(4,
                        wellPanel(
@@ -108,16 +108,6 @@ setup_plotly_ui <- function(id) {
 
 module_statdist_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
-    # in_dataset1_raw <- reactive(input$dataset1)
-    # in_dataset2_raw <- reactive(input$dataset2)
-    # in_dataset1 <- debounce(in_dataset1_raw, 1000)
-    # in_dataset2 <- debounce(in_dataset2_raw, 1000)
-    # 
-    # in_stat_base1_raw <- reactive(input$stat_base1)
-    # in_stat_base2_raw <- reactive(input$stat_base2)
-    # in_stat_base1 <- debounce(in_stat_base1_raw, 1000)
-    # in_stat_base2 <- debounce(in_stat_base2_raw, 1000)
-    
     in_dataset1 <- reactive(input$dataset1)
     in_dataset2 <- reactive(input$dataset2)
     in_stat_base1 <- reactive(input$stat_base1)
@@ -135,7 +125,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     )
 
     output$download_settings <- settings_download_handler("statdist", input)
-    
+
+    output$download_report <- report_generation_handler("statdist", params=list(
+        input=as.list(input)
+    ))
+        
     observeEvent(input$spotcheck, {
         if (!is.null(parent_session)) {
             selected_rows <- input$table_display_rows_selected

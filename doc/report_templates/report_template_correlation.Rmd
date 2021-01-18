@@ -4,14 +4,7 @@ output: html_document
 params:
     n: NA
     input: NA
-    make_ref_barplot: NA
-    make_comp_barplot: NA
-    make_ref_boxplot: NA
-    make_comp_boxplot: NA
-    make_ref_density: NA
-    make_comp_density: NA
-    make_ref_dendrogram: NA
-    make_comp_dendrogram: NA
+    make_correlation_plot: NA
 ---
 
 ```{r echo=FALSE}
@@ -29,44 +22,12 @@ error_check <- function(func) {
 }
 ```
 
-# Boxplots
+# Plots
+
+## Correlation
 
 ```{r echo=FALSE}
-error_check(params$make_ref_boxplot)
-```
-
-```{r echo=FALSE}
-error_check(params$make_comp_boxplot)
-```
-
-# Density
-
-```{r echo=FALSE}
-error_check(params$make_ref_density)
-```
-
-```{r echo=FALSE}
-error_check(params$make_comp_density)
-```
-
-# Barplots
-
-```{r echo=FALSE}
-error_check(params$make_ref_barplot)
-```
-
-```{r echo=FALSE}
-error_check(params$make_comp_barplot)
-```
-
-# Dendrogram
-
-```{r echo=FALSE}
-error_check(params$make_ref_dendrogram)
-```
-
-```{r echo=FALSE}
-error_check(params$make_comp_dendrogram)
+error_check(params$make_correlation_plot)
 ```
 
 # Settings 

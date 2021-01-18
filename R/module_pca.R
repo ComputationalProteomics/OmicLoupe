@@ -7,7 +7,7 @@ setup_pca_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("Principal Component Analysis", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("Principal Component Analysis", ns("help"), ns("download_settings"), ns("download_report")),
             fluidRow(
                 column(4,
                        wellPanel(
@@ -115,6 +115,10 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     })
     
     output$download_settings <- settings_download_handler("pca", input)
+    
+    output$download_report <- report_generation_handler("pca", params=list(
+        input=as.list(input)
+    ))
     
     filtered_samples_ref <- reactive({
         shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset1)), "No design matrix found for reference dataset"))

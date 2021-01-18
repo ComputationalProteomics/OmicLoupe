@@ -22,8 +22,8 @@ report_generation_handler <- function(base_name, params) {
         },
         content = function(file) {
             
-            tempReport <- file.path(tempdir(), sprintf("%s_report_template.Rmd", base_name))
-            file.copy(sprintf("%s_report_template.Rmd", base_name), tempReport, overwrite = TRUE)
+            tempReport <- file.path(tempdir(), sprintf("report_template_quality.Rmd", base_name))
+            file.copy(sprintf("doc/report_templates/report_template_quality.Rmd", base_name), tempReport, overwrite = TRUE)
             
             # Knit the document, passing in the `params` list, and eval it in a
             # child of the global environment (this isolates the code in the document

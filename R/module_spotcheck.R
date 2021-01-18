@@ -3,7 +3,7 @@ setup_spotcheck_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("FeatureCheck", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("FeatureCheck", ns("help"), ns("download_settings"), ns("download_report")),
             fluidRow(
                 column(
                     12,
@@ -102,6 +102,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     })
     
     output$download_settings <- settings_download_handler("spotcheck", input)
+    
+    output$download_report <- report_generation_handler("spotcheck", params=list(
+        input=as.list(input)
+    ))
     
     observeEvent({
         rv$filedata_1()

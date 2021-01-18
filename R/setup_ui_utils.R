@@ -40,16 +40,16 @@ bar_w_help_and_download <- function(title, button_id, download_id, report_id=NUL
                 h3(title)
             ),
             span(
-                style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+                style="display: inline-block; vertical-align:top; padding-top:25px; padding-bottom:30px;", 
                 actionButton(button_id, "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
             ),
             span(
-                style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
-                downloadButton(download_id, "", style="padding-top:2px; font-size:70%;", class="btn-xs help")
+                style="display: inline-block; vertical-align:top; padding-top:25px; padding-bottom:30px;", 
+                downloadButton(download_id, "Settings", style="padding-top:2px; font-size:70%;", class="btn-xs help")
             ),
             span(
-                style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
-                downloadButton(report_id, "", style="padding-top:2px; font-size:70%;", class="btn-xs help")
+                style="display: inline-block; vertical-align:top; padding-top:25px; padding-bottom:30px;", 
+                downloadButton(report_id, "Report", icon=icon("chart-bar"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
             )
         )
     }

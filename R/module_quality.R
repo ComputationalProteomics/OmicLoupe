@@ -135,8 +135,6 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             make_comp_dendrogram=plot_functions$dendrogram_comp
         ))
         
-    # output$download_report <- report_download_handler
-    
     # Observers
     observeEvent({
         rv$filedata_1()
