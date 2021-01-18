@@ -1,68 +1,77 @@
 ---
-title: "PlotTemplate"
+title: "OmicLoupe: Quality report"
 output: html_document
 params:
     n: NA
     input: NA
-    long_sdf_ref: NA
-    ref_color: NA
-    ddf_ref: NA
-    ddf_samplecol_ref: NA
+    make_ref_barplot: NA
+    make_comp_barplot: NA
+    make_ref_boxplot: NA
+    make_comp_boxplot: NA
+    make_ref_density: NA
+    make_comp_density: NA
+    make_ref_dendrogram: NA
+    make_comp_dendrogram: NA
 ---
 
-```{r}
-# The `params` object is available in the document.
-params$n
+```{r echo=FALSE}
 input <- params$input
-
-library(tidyverse)
-library(plotly)
-
-print(make_density_plot)
-print(params$input)
-```
-
-A plot of `params$n` random points.
-
-```{r}
-plot(rnorm(params$n), rnorm(params$n))
-plot_ly(z = ~volcano) %>% add_surface()
+error_check <- function(func) {
+    tryCatch({
+        func()
+    },
+    error=function(e) {
+        print("An error was encountered. Please sure the plots are showing up correctly in OmicLoupe before export.")
+        print("If not helping, please contact the developers for further support")
+        print("Error message: ")
+        print(e)
+    })
+}
 ```
 
 # Boxplots
 
-```{r}
-plt_ref <- ggplot(params$long_sdf_ref, aes_string(x="name", y="value", color=params$ref_color)) + ggtitle("Title")
+```{r echo=FALSE}
+error_check(params$make_ref_boxplot)
+```
 
-if (input$custom_title1 == "") {
-    plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, params$ref_color))
-} else {
-    plt_ref <- plt_ref + ggtitle(input$custom_title1)
-}
-
-adjust_boxplot(
-    plt_ref,
-    input$do_violin,
-    input$rotate_label,
-    input$order_on_cond,
-    ddf_ref,
-    ddf_samplecol_ref,
-    input$color_data_ref,
-    text_size=input$text_size
-)
-
-plt_ref
+```{r echo=FALSE}
+error_check(params$make_comp_boxplot)
 ```
 
 # Density
 
+```{r echo=FALSE}
+error_check(params$make_ref_density)
+```
+
+```{r echo=FALSE}
+error_check(params$make_comp_density)
+```
+
 # Barplots
+
+```{r echo=FALSE}
+error_check(params$make_ref_barplot)
+```
+
+```{r echo=FALSE}
+error_check(params$make_comp_barplot)
+```
 
 # Dendrogram
 
+```{r echo=FALSE}
+error_check(params$make_ref_dendrogram)
+```
+
+```{r echo=FALSE}
+error_check(params$make_comp_dendrogram)
+```
+
 # Settings 
 
-```{r}
+```{r echo=FALSE}
 settings_df <- params$input %>% 
     unlist() %>% 
     data.frame() %>% 
@@ -80,7 +89,7 @@ DT::datatable(settings_df)
 
 # Environment
 
-```{r}
+```{r echo=FALSE}
 sessionInfo()
 ```
 

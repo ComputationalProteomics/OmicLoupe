@@ -123,61 +123,19 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     output$download_settings <- settings_download_handler("quality", input)
     
-    report_download_handler <- function() {
-        downloadHandler(
-            filename = function() {
-                "report.html"
-            },
-            content = function(file) {
-                
-                tempReport <- file.path(tempdir(), "quality_report_template.Rmd")
-                file.copy("quality_report_template.Rmd", tempReport, overwrite = TRUE)
-                
-                # browser()
-                # Set up parameters to pass to Rmd document
-                # params <- list(n = input$slider)
-                # browser()
-                
-                params <- list(
-                    n = 2, 
-                    input=as.list(input),
-                    
-                    long_sdf_ref=reactive_long_sdf_ref(),
-                    ref_color=ref_color(),
-                    ddf_ref=rv$ddf_ref(rv, input$dataset1),
-                    ddf_samplecol_ref=rv$ddf_samplecol_ref(rv, input$dataset1)
-                )
-                
-                # Knit the document, passing in the `params` list, and eval it in a
-                # child of the global environment (this isolates the code in the document
-                # from the code in this app).
-                rmarkdown::render(tempReport, output_file = file,
-                                  params = params,
-                                  envir = new.env(parent = globalenv())
-                )
-            }
-        )
-    }
-    
-    # plt_ref <- ggplot(
-    #     reactive_long_sdf_ref(), 
-    #     aes_string(x="name", y="value", color=ref_color()))
-    # 
-    # if (input$custom_title1 == "") plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
-    # else plt_ref <- plt_ref + ggtitle(input$custom_title1)
-    # 
-    # adjust_boxplot(
-    #     plt_ref, 
-    #     input$do_violin, 
-    #     input$rotate_label, 
-    #     input$order_on_cond,
-    #     rv$ddf_ref(rv, input$dataset1),
-    #     rv$ddf_samplecol_ref(rv, input$dataset1),
-    #     input$color_data_ref,
-    #     text_size=input$text_size
-    # )
-    
-    output$download_report <- report_download_handler()
+    output$download_report <- report_generation_handler("quality", params=list(
+            input=as.list(input),
+            make_ref_barplot=make_ref_barplot,
+            make_comp_barplot=make_comp_barplot,
+            make_ref_boxplot=plot_functions$boxplot_ref,
+            make_comp_boxplot=plot_functions$boxplot_comp,
+            make_ref_density=make_ref_density,
+            make_comp_density=make_comp_density,
+            make_ref_dendrogram=plot_functions$dendrogram_ref,
+            make_comp_dendrogram=plot_functions$dendrogram_comp
+        ))
+        
+    # output$download_report <- report_download_handler
     
     # Observers
     observeEvent({
@@ -338,11 +296,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         else { NULL }
     })
     
-    output$bars_ref <- renderPlotly({ 
-        
-        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
-        
+    make_ref_barplot <- function() {
         make_barplot(
             reactive_long_sdf_ref(), 
             "value", 
@@ -354,17 +308,18 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$rotate_label_barplot,
             title=input$custom_title1,
             text_size=input$text_size) %>%
-                plotly::ggplotly() %>% 
-                assign_fig_settings(rv)
+            plotly::ggplotly() %>% 
+            assign_fig_settings(rv)
+    }
+    
+    output$bars_ref <- renderPlotly({ 
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        
+        make_ref_barplot()
     })
     
-    output$bars_comp <- renderPlotly({
-        
-        # req(rv$ddf_comp(rv, input$dataset2))
-        # req(reactive_long_sdf_comp())
-        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
-        
+    make_comp_barplot <- function() {
         make_barplot(
             reactive_long_sdf_comp(), 
             "value", 
@@ -376,8 +331,15 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             input$rotate_label_barplot,
             title=input$custom_title2,
             text_size=input$text_size) %>%
-                plotly::ggplotly() %>% 
-                assign_fig_settings(rv)
+            plotly::ggplotly() %>% 
+            assign_fig_settings(rv)
+    }
+    
+    output$bars_comp <- renderPlotly({
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        
+        make_comp_barplot()
     })
 
     plot_functions <- list()
@@ -436,11 +398,7 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         plot_functions$boxplot_comp()
     })
     
-    output$density_ref_plotly <- renderPlotly({
-        
-        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
-        
+    make_ref_density <- function() {
         make_density_plot(
             reactive_long_sdf_ref(),
             ref_color(),
@@ -448,13 +406,17 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             title=input$custom_title1,
             text_size=input$text_size
         ) %>% assign_fig_settings(rv)
+    }
+    
+    output$density_ref_plotly <- renderPlotly({
+        
+        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+        
+        make_ref_density()
     })
     
-    output$density_comp_plotly <- renderPlotly({
-
-        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
-        
+    make_comp_density <- function() {
         make_density_plot(
             reactive_long_sdf_comp(),
             comp_color(),
@@ -462,10 +424,18 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             title=input$custom_title2,
             text_size=input$text_size
         ) %>% plotly::config(toImageButtonOptions=list(
-                format=rv$figure_save_format(),
-                width=rv$figure_save_width(), 
-                height=rv$figure_save_height()
-            ))
+            format=rv$figure_save_format(),
+            width=rv$figure_save_width(), 
+            height=rv$figure_save_height()
+        ))        
+    }
+    
+    output$density_comp_plotly <- renderPlotly({
+
+        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+        
+        make_comp_density()
     })
     
     plot_functions$dendrogram_ref <- function() {

@@ -15,6 +15,26 @@ settings_download_handler <- function(base_name, input) {
     )
 }
 
+report_generation_handler <- function(base_name, params) {
+    downloadHandler(
+        filename = function() {
+            sprintf("omicloupe_%s_report_%s.html", base_name, format(Sys.time(), "%y%m%d_%H%M%S"))
+        },
+        content = function(file) {
+            
+            tempReport <- file.path(tempdir(), sprintf("%s_report_template.Rmd", base_name))
+            file.copy(sprintf("%s_report_template.Rmd", base_name), tempReport, overwrite = TRUE)
+            
+            # Knit the document, passing in the `params` list, and eval it in a
+            # child of the global environment (this isolates the code in the document
+            # from the code in this app).
+            rmarkdown::render(tempReport, output_file = file,
+                              params = params, envir = new.env(parent = globalenv())
+            )
+        }
+    )
+}
+
 # Parses out the set of four statistical columns from the total set of
 # statistical columns given a specific base
 # For example: condA.P.Value, condA.adj.P.Val, condA.logFC, condA.AveExpr
