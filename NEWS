@@ -1,3 +1,7 @@
+# Version 1.1.0
+
+* Report document downloads for each tab now provided
+
 # Version 1.0.3
 
 * Warning popup if inserting data frames with variable names changed by make.names
