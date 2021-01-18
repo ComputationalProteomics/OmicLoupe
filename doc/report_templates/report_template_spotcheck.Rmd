@@ -4,6 +4,7 @@ output: html_document
 params:
     n: NA
     input: NA
+    setup_input: NA
     make_ref_featureplot: NA
     make_comp_featureplot: NA
 ---
@@ -37,14 +38,30 @@ error_check(params$make_comp_featureplot)
 
 # Settings 
 
+## Tab settings
+
+Current tab
+
 ```{r echo=FALSE}
 settings_df <- params$input %>% 
-    unlist() %>% 
-    data.frame() %>% 
-    rownames_to_column() %>% 
+    reactiveValuesToList() %>%
+    unlist() %>%
+    data.frame() %>%
+    rownames_to_column() %>%
     `colnames<-`(c("Name", "Value"))
-
 DT::datatable(settings_df)
+```
+
+Setup tab
+
+```{r echo=FALSE}
+setup_settings_df <- params$setup_input %>%
+    reactiveValuesToList() %>%
+    unlist() %>%
+    data.frame() %>%
+    rownames_to_column() %>%
+    `colnames<-`(c("Name", "Value"))
+DT::datatable(setup_settings_df)
 ```
 
 # Environment

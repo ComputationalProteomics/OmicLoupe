@@ -105,7 +105,6 @@ setup_plotly_ui <- function(id) {
     )
 }
 
-
 module_statdist_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
     
     in_dataset1 <- reactive(input$dataset1)
@@ -127,7 +126,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     output$download_settings <- settings_download_handler("statdist", input)
 
     output$download_report <- report_generation_handler("statdist", params=list(
-        input=as.list(input),
+        input=input,
+        setup_input=rv$setup_input(),
         make_ref_volcano=make_ref_volc_plot,
         make_comp_volcano=make_comp_volc_plot,
         make_ref_ma=make_ref_ma_plot,

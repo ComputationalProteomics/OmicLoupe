@@ -124,7 +124,8 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     output$download_settings <- settings_download_handler("quality", input)
     
     output$download_report <- report_generation_handler("quality", params=list(
-            input=as.list(input),
+            input=input,
+            setup_input=rv$setup_input(),
             make_ref_barplot=make_ref_barplot,
             make_comp_barplot=make_comp_barplot,
             make_ref_boxplot=plot_functions$boxplot_ref,

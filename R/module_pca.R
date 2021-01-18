@@ -111,7 +111,8 @@ module_pca_server <- function(input, output, session, rv, module_name) {
     output$download_settings <- settings_download_handler("pca", input)
     
     output$download_report <- report_generation_handler("pca", params=list(
-        input=as.list(input),
+        input=input,
+        setup_input=rv$setup_input(),
         make_ref_pca=make_ref_pca_plot,
         make_comp_pca=make_comp_pca_plot
     ))

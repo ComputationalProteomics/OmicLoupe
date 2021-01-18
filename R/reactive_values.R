@@ -36,6 +36,7 @@ setup_reactive_values_obj <- function(input) {
     }
     
     rv <- list()
+    rv$setup_input <- reactive(input)
     rv$filedata_1 <- reactive(load_data(input$data_file_1))
     rv$filedata_2 <- reactive(load_data(input$data_file_2, input$two_datasets))
     rv$design_1 <- reactive(load_data(input$design_file_1))

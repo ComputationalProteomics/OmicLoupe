@@ -1,6 +1,3 @@
-# source("R/setup_server_utils.R")
-# source("R/setup_ui_utils.R")
-
 #' UI for setup module
 #' 
 #' @param id Identifier used internally

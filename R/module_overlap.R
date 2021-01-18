@@ -146,7 +146,8 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     output$download_settings <- settings_download_handler("overlap", input)
     
     output$download_report <- report_generation_handler("overlap", params=list(
-        input=as.list(input),
+        input=input,
+        setup_input=rv$setup_input(),
         make_venn_plot=plot_functions$venn,
         make_fold_frac_plot=make_fold_fractions_among_sig_plot,
         make_upset_plot=plot_functions$upset,

@@ -104,7 +104,8 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     output$download_settings <- settings_download_handler("spotcheck", input)
     
     output$download_report <- report_generation_handler("spotcheck", params=list(
-        input=as.list(input),
+        input=input,
+        setup_input=rv$setup_input(),
         make_ref_featureplot=make_ref_feature_plot,
         make_comp_featureplot=make_comp_feature_plot
     ))
