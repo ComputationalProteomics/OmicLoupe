@@ -1,0 +1,90 @@
+---
+title: "PlotTemplate"
+output: html_document
+params:
+    n: NA
+    input: NA
+    long_sdf_ref: NA
+    ref_color: NA
+    ddf_ref: NA
+    ddf_samplecol_ref: NA
+---
+
+```{r}
+# The `params` object is available in the document.
+params$n
+input <- params$input
+
+library(tidyverse)
+library(plotly)
+
+print(make_density_plot)
+print(params$input)
+```
+
+A plot of `params$n` random points.
+
+```{r}
+plot(rnorm(params$n), rnorm(params$n))
+plot_ly(z = ~volcano) %>% add_surface()
+```
+
+# Boxplots
+
+```{r}
+plt_ref <- ggplot(params$long_sdf_ref, aes_string(x="name", y="value", color=params$ref_color)) + ggtitle("Title")
+
+if (input$custom_title1 == "") {
+    plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, params$ref_color))
+} else {
+    plt_ref <- plt_ref + ggtitle(input$custom_title1)
+}
+
+adjust_boxplot(
+    plt_ref,
+    input$do_violin,
+    input$rotate_label,
+    input$order_on_cond,
+    ddf_ref,
+    ddf_samplecol_ref,
+    input$color_data_ref,
+    text_size=input$text_size
+)
+
+plt_ref
+```
+
+# Density
+
+# Barplots
+
+# Dendrogram
+
+# Settings 
+
+```{r}
+settings_df <- params$input %>% 
+    unlist() %>% 
+    data.frame() %>% 
+    rownames_to_column() %>% 
+    `colnames<-`(c("Name", "Value")) # %>%
+    # mutate(Category=gsub("\\..*", "", Name)) %>%
+    # mutate(Name=gsub("quality_settings\\.", "", Name)) %>%
+    # dplyr::select(Category, Name, Value)
+
+DT::datatable(settings_df)
+
+# as.data.frame(params$input) %>% rownames_to_column("setting")
+```
+
+
+# Environment
+
+```{r}
+sessionInfo()
+```
+
+
+
+
+

@@ -3,7 +3,7 @@ setup_quality_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("Quality", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("Quality", ns("help"), ns("download_settings"), ns("download_report")),
             fluidRow(
                 column(
                     12,
@@ -122,6 +122,62 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     })
     
     output$download_settings <- settings_download_handler("quality", input)
+    
+    report_download_handler <- function() {
+        downloadHandler(
+            filename = function() {
+                "report.html"
+            },
+            content = function(file) {
+                
+                tempReport <- file.path(tempdir(), "quality_report_template.Rmd")
+                file.copy("quality_report_template.Rmd", tempReport, overwrite = TRUE)
+                
+                # browser()
+                # Set up parameters to pass to Rmd document
+                # params <- list(n = input$slider)
+                # browser()
+                
+                params <- list(
+                    n = 2, 
+                    input=as.list(input),
+                    
+                    long_sdf_ref=reactive_long_sdf_ref(),
+                    ref_color=ref_color(),
+                    ddf_ref=rv$ddf_ref(rv, input$dataset1),
+                    ddf_samplecol_ref=rv$ddf_samplecol_ref(rv, input$dataset1)
+                )
+                
+                # Knit the document, passing in the `params` list, and eval it in a
+                # child of the global environment (this isolates the code in the document
+                # from the code in this app).
+                rmarkdown::render(tempReport, output_file = file,
+                                  params = params,
+                                  envir = new.env(parent = globalenv())
+                )
+            }
+        )
+    }
+    
+    # plt_ref <- ggplot(
+    #     reactive_long_sdf_ref(), 
+    #     aes_string(x="name", y="value", color=ref_color()))
+    # 
+    # if (input$custom_title1 == "") plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
+    # else plt_ref <- plt_ref + ggtitle(input$custom_title1)
+    # 
+    # adjust_boxplot(
+    #     plt_ref, 
+    #     input$do_violin, 
+    #     input$rotate_label, 
+    #     input$order_on_cond,
+    #     rv$ddf_ref(rv, input$dataset1),
+    #     rv$ddf_samplecol_ref(rv, input$dataset1),
+    #     input$color_data_ref,
+    #     text_size=input$text_size
+    # )
+    
+    output$download_report <- report_download_handler()
     
     # Observers
     observeEvent({
