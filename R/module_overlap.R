@@ -146,7 +146,12 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
     output$download_settings <- settings_download_handler("overlap", input)
     
     output$download_report <- report_generation_handler("overlap", params=list(
-        input=as.list(input)
+        input=as.list(input),
+        make_venn_plot=plot_functions$venn,
+        make_fold_frac_plot=make_fold_fractions_among_sig_plot,
+        make_upset_plot=plot_functions$upset,
+        make_fold_comparison_plot=plot_functions$fold_comp,
+        make_upset_qualitative_plot=plot_functions$upset_qual
     ))
     
     output$ggplot_download <- downloadHandler(
@@ -612,8 +617,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         plot_functions$fold_comp()
     })
     
-    output$fold_fractions_among_sig <- renderPlot({
-        
+    make_fold_fractions_among_sig_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No loaded data found, is everything set up at the Setup page?"))
         
         combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=FALSE)
@@ -634,6 +638,10 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
         
         ggarrange(plt_cumfrac_over_p, plt_cumfrac_over_logp, ncol=1, nrow=2) %>% 
             ggpubr::annotate_figure(., top="Fraction same fold for different p-value thresholds")
+    }
+    
+    output$fold_fractions_among_sig <- renderPlot({
+        make_fold_fractions_among_sig_plot()
     })
     
     output$table_display <- output$table_display_upset <- output$table_display_upset_presence <- DT::renderDataTable({

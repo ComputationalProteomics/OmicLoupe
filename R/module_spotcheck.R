@@ -104,7 +104,9 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     output$download_settings <- settings_download_handler("spotcheck", input)
     
     output$download_report <- report_generation_handler("spotcheck", params=list(
-        input=as.list(input)
+        input=as.list(input),
+        make_ref_featureplot=make_ref_feature_plot,
+        make_comp_featureplot=make_comp_feature_plot
     ))
     
     observeEvent({
@@ -255,10 +257,9 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         plt
     }
         
-    output$spot_display_ref <- renderPlotly({
-
+    make_ref_feature_plot <- function() {
         shiny::validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
-
+        
         target_rows <- input$table_display_rows_selected
         plt <- make_spotcheck_plot(
             plot_df_ref(),
@@ -280,10 +281,13 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             # plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
             assign_fig_settings(rv)
         plt
+    }
+    
+    output$spot_display_ref <- renderPlotly({
+        make_ref_feature_plot()
     })
     
-    output$spot_display_comp <- renderPlotly({
-        
+    make_comp_feature_plot <- function() {
         shiny::validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
         
         target_row <- input$table_display_rows_selected
@@ -307,5 +311,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             # plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
             assign_fig_settings(rv)
         plt
+    }
+    
+    output$spot_display_comp <- renderPlotly({
+        make_comp_feature_plot()
     })
+    
 }

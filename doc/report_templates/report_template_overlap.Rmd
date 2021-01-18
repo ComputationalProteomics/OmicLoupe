@@ -5,6 +5,7 @@ params:
     n: NA
     input: NA
     make_venn_plot: NA
+    make_fold_frac_plot: NA
     make_upset_plot: NA
     make_fold_comparison_plot: NA
     make_upset_qualitative_plot: NA
@@ -33,9 +34,14 @@ error_check <- function(func) {
 error_check(params$make_venn_plot)
 ```
 
+```{r}
+params$make_fold_frac_plot()
+```
+
+
 ## Upset
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.width=12,fig.height=10}
 error_check(params$make_upset_plot)
 ```
 
@@ -47,7 +53,7 @@ error_check(params$make_fold_comparison_plot)
 
 ## Upset (qualitative)
 
-```{r echo=FALSE}
+```{r echo=FALSE,fig.width=12,fig.height=10}
 error_check(params$make_upset_qualitative_plot)
 ```
 

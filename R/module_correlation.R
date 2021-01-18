@@ -3,7 +3,7 @@ setup_correlation_ui <- function(id) {
     tabPanel(
         id,
         fluidPage(
-            bar_w_help_and_download("Correlation", ns("help"), ns("download_settings")),
+            bar_w_help_and_download("Correlation", ns("help"), ns("download_settings"), ns("download_report")),
             fluidRow(
                 column(
                     12,
@@ -51,6 +51,11 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
     )
     
     output$download_settings <- settings_download_handler("corr", input)
+    
+    output$download_report <- report_generation_handler("corr", params=list(
+        input=as.list(input),
+        make_correlation_plot=correlation_histograms
+    ))
     
     observeEvent(input$help, {
         shinyalert(

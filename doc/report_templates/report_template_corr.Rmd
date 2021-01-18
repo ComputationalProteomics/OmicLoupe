@@ -37,14 +37,10 @@ settings_df <- params$input %>%
     unlist() %>% 
     data.frame() %>% 
     rownames_to_column() %>% 
-    `colnames<-`(c("Name", "Value")) # %>%
-    # mutate(Category=gsub("\\..*", "", Name)) %>%
-    # mutate(Name=gsub("quality_settings\\.", "", Name)) %>%
-    # dplyr::select(Category, Name, Value)
+    `colnames<-`(c("Name", "Value"))
 
 DT::datatable(settings_df)
 
-# as.data.frame(params$input) %>% rownames_to_column("setting")
 ```
 
 
