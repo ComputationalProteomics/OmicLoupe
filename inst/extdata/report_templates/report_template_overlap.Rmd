@@ -1,0 +1,76 @@
+---
+title: "OmicLoupe: Overlap report"
+output: html_document
+params:
+    n: NA
+    input: NA
+    make_venn_plot: NA
+    make_fold_frac_plot: NA
+    make_upset_plot: NA
+    make_fold_comparison_plot: NA
+    make_upset_qualitative_plot: NA
+---
+
+```{r echo=FALSE}
+input <- params$input
+error_check <- function(func) {
+    tryCatch({
+        func()
+    },
+    error=function(e) {
+        print("An error was encountered. Please sure the plots are showing up correctly in OmicLoupe before export.")
+        print("If not helping, please contact the developers for further support")
+        print("Error message: ")
+        print(e)
+    })
+}
+```
+
+# Plots
+
+## Venn
+
+```{r echo=FALSE}
+error_check(params$make_venn_plot)
+```
+
+```{r}
+params$make_fold_frac_plot()
+```
+
+
+## Upset
+
+```{r echo=FALSE,fig.width=12,fig.height=10}
+error_check(params$make_upset_plot)
+```
+
+## Fold comparisons
+
+```{r echo=FALSE}
+error_check(params$make_fold_comparison_plot)
+```
+
+## Upset (qualitative)
+
+```{r echo=FALSE,fig.width=12,fig.height=10}
+error_check(params$make_upset_qualitative_plot)
+```
+
+# Settings 
+
+```{r echo=FALSE}
+settings_df <- params$input %>% 
+    unlist() %>% 
+    data.frame() %>% 
+    rownames_to_column() %>% 
+    `colnames<-`(c("Name", "Value"))
+
+DT::datatable(settings_df)
+```
+
+# Environment
+
+```{r echo=FALSE}
+sessionInfo()
+```
