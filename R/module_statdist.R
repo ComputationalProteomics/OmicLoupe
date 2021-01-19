@@ -1,5 +1,6 @@
 MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "First"="red", "Second"="orange", "Contra"="green")
 MY_COLORS_SELECTED <- c("grey50", "green")
+SET1_COLORS <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999")
 
 MAX_DISCRETE_LEVELS <- 20
 MAX_COLORS <- 10
@@ -490,6 +491,31 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         settings_list
     }
+    
+    get_joint_color_map <- function() {
+        
+        # How to retrieve the color columns?
+
+        settings_ref <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
+        settings_comp <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
+        plot_df_ref <- plot_ref_df()
+        plot_df_comp <- plot_comp_df()
+        
+        color_col_ref <- plot_df_ref[[settings_ref$color_col]]
+        color_col_comp <- plot_df_comp[[settings_comp$color_col]]
+        
+        # df1 <- data.frame(entry=c("A", "B", "A", "B"), stringsAsFactors = FALSE)
+        # df2 <- data.frame(entry=c("C", "B", "A", "B"), stringsAsFactors = FALSE)
+        
+        target_levels <- unique(c(as.character(color_col_ref), as.character(color_col_comp)))
+        target_colors <- SET1_COLORS[1:length(target_levels)]
+        names(target_colors) <- target_levels
+        target_colors
+        # color_map <- cbind(value=joint_order, color=set1_colors[1:length(joint_order)])
+        
+        # MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "First"="red", "Second"="orange", "Contra"="green")
+        # MY_COLORS_SELECTED <- c("grey50", "green")
+    }
 
     make_scatter_plotly <- function(plot_df, x_col, y_col, title, x_label=NULL, y_label=NULL, color_col, hover_text="hover_text", 
                                     manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, 
@@ -508,7 +534,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             }
         }
         else {
-            color_scale <- "Set1"
+            color_scale <- get_joint_color_map()
+            # color_scale <- "Set1"
         }
         
         plt <- plot_ly(
@@ -552,6 +579,7 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     make_ref_volc_plot <- function() {
         shiny::validate(need(!is.null(rv$mapping_obj()), "No mapping object found, are samples mapped at the Setup page?"))
         settings <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=TRUE, table_rows_selected=input$table_display_rows_selected)
+        settings_comp <- get_contrast_figure_settings(rv, input$show_full_table, selected_data$event_data, input$color_type, is_ref=FALSE, table_rows_selected=input$table_display_rows_selected)
         plot_df <- plot_ref_df()
         plot_df$selected <- plot_df$key %in% settings$selected
         
