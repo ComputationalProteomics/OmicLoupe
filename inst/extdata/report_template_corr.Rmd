@@ -33,10 +33,11 @@ error_check(params$make_correlation_plot)
 
 # Settings 
 
-```{r echo=FALSE, results=FALSE}
-library(tidyverse)
-library(DT)
-library(shiny)
+```{r echo=FALSE, results=FALSE, warning=FALSE}
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(shiny))
 ```
 
 ## Tab settings

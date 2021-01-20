@@ -73,9 +73,10 @@ error_check(params$make_comp_dendrogram)
 # Settings 
 
 ```{r echo=FALSE, results=FALSE}
-library(tidyverse)
-library(DT)
-library(shiny)
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(shiny))
 ```
 
 ## Tab settings

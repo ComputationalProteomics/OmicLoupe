@@ -1,3 +1,8 @@
+# Version 1.1.3
+
+* Include rmarkdown as suggested package
+* Flexible naming of x- and y-labels
+
 # Version 1.1.2
 
 * Joint color scheme when targeting 'column' in the StatDist tab

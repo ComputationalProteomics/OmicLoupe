@@ -1,4 +1,12 @@
-adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col, text_size) {
+adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, ddf, ddf_sample_col, ddf_cond_col, text_size, xlab="", ylab="") {
+    
+    if (xlab == "") {
+        xlab <- "Sample"
+    }
+    
+    if (ylab == "") {
+        ylab <- "Abundance"
+    }
     
     if (!do_violin) {
         target_geom <- geom_boxplot
@@ -22,10 +30,19 @@ adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, 
     
     plt <- plt + target_geom(na.rm=TRUE) + theme(text=element_text(size=text_size))
     
-    plt + xlab("Sample") + ylab("Abundance")
+    plt + xlab(xlab) + ylab(ylab)
 }
 
-make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL, text_size=10) {
+make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL, text_size=10, xlab="", ylab="") {
+    
+    if (xlab == "") {
+        xlab <- "Abundance"
+    }
+    
+    if (ylab == "") {
+        ylab <- "Density"
+    }
+    
     plt <- ggplot(sdf, aes_string(x="value", group="name", color=color)) + 
         geom_density(na.rm=TRUE)
     
@@ -40,7 +57,7 @@ make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL, text_si
     
     plt %>% 
         plotly::ggplotly() %>%
-        plotly::layout(xaxis=list(title="Abundance"), yaxis=list(title="Density"))
+        plotly::layout(xaxis=list(title=xlab), yaxis=list(title=ylab))
 }
 
 do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_variance=NULL, title="Dendrogram", omit_samples=NULL, legend_title=NULL, text_size=3, vjust=0.5) {
@@ -100,7 +117,11 @@ do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_var
     plt
 }
 
-make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, show_missing=FALSE, rotate_labels=FALSE, text_size=10, title="") {
+make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, show_missing=FALSE, rotate_labels=FALSE, text_size=10, title="", xlab="", ylab="") {
+    
+    if (xlab == "") {
+        xlab <- "Sample"
+    }
     
     join_by_ref <- c("name"=sample_col)
     
@@ -136,12 +157,16 @@ make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, s
         plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
     }
     
+    if (ylab == "") {
+        ylab <- bar_type
+    }
+
     if (!show_missing) {
-        plt <- plt + ylab(bar_type)
+        plt <- plt + ylab(ylab)
     }
     else {
-        plt <- plt + ylab(bar_type)
+        plt <- plt + ylab(ylab)
     }
-    plt + xlab("Sample")
+    plt + xlab(xlab)
 }
 

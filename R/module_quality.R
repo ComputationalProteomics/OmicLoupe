@@ -75,6 +75,10 @@ setup_quality_ui <- function(id) {
                                 column(6, numericInput(ns("text_size"), "Text size", value=10)),
                                 column(3, downloadButton(ns("ggplot_download_ref"), "Download static (ref)"), p("(Download interactive by hover option)")),
                                 column(3, downloadButton(ns("ggplot_download_comp"), "Download static (comp)"))
+                            ),
+                            fluidRow(
+                                column(6, textInput(ns("custom_xlab"), "Custom x-label", value="")),
+                                column(6, textInput(ns("custom_ylab"), "Custom y-label", value=""))
                             )
                         )
                     ),
@@ -306,7 +310,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             show_missing=input$show_missing_ref, 
             input$rotate_label_barplot,
             title=input$custom_title1,
-            text_size=input$text_size) %>%
+            text_size=input$text_size,
+            xlab=input$custom_xlab,
+            ylab=input$custom_ylab
+        ) %>%
             plotly::ggplotly() %>% 
             assign_fig_settings(rv)
     }
@@ -329,7 +336,10 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             show_missing=input$show_missing_comp, 
             input$rotate_label_barplot,
             title=input$custom_title2,
-            text_size=input$text_size) %>%
+            text_size=input$text_size,
+            xlab=input$custom_xlab,
+            ylab=input$custom_ylab
+        ) %>%
             plotly::ggplotly() %>% 
             assign_fig_settings(rv)
     }
@@ -358,7 +368,9 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_ref(rv, input$dataset1),
             rv$ddf_samplecol_ref(rv, input$dataset1),
             input$color_data_ref,
-            text_size=input$text_size
+            text_size=input$text_size,
+            xlab=input$custom_xlab,
+            ylab=input$custom_ylab
         )
     })
     
@@ -378,7 +390,9 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             rv$ddf_comp(rv, input$dataset2),
             rv$ddf_samplecol_comp(rv, input$dataset2),
             input$color_data_comp,
-            text_size=input$text_size
+            text_size=input$text_size,
+            xlab=input$custom_xlab,
+            ylab=input$custom_ylab
         )
     })
     
@@ -403,7 +417,9 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             ref_color(),
             curr_dataset=input$dataset1,
             title=input$custom_title1,
-            text_size=input$text_size
+            text_size=input$text_size,
+            xlab=input$custom_xlab,
+            ylab=input$custom_ylab
         ) %>% assign_fig_settings(rv)
     }
     
@@ -421,7 +437,9 @@ module_quality_server <- function(input, output, session, rv, module_name) {
             comp_color(),
             curr_dataset=input$dataset2,
             title=input$custom_title2,
-            text_size=input$text_size
+            text_size=input$text_size,
+            xlab=input$custom_xlab,
+            ylab=input$custom_ylab
         ) %>% plotly::config(toImageButtonOptions=list(
             format=rv$figure_save_format(),
             width=rv$figure_save_width(), 

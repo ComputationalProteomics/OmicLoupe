@@ -34,7 +34,7 @@ You can subsequently navigate to the browser to access the software.
 The R packages used by OmicLoupe may have certain system dependences. If working on a Debian-based Linux distribution, these can be installed from the command line:
 
 ```
-sudo apt install libcurl4-openssl-dev libxml2-dev libssl-dev
+sudo apt install libcurl4-openssl-dev libxml2-dev libssl-dev libgit2-dev pandoc
 ```
 
 ## Running it as a Singularity container

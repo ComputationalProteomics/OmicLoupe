@@ -36,7 +36,7 @@ error_check(params$make_venn_plot)
 ```
 
 ```{r}
-params$make_fold_frac_plot()
+error_check(params$make_fold_frac_plot())
 ```
 
 
@@ -61,9 +61,10 @@ error_check(params$make_upset_qualitative_plot)
 # Settings 
 
 ```{r echo=FALSE, results=FALSE}
-library(tidyverse)
-library(DT)
-library(shiny)
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tibble))
+suppressPackageStartupMessages(library(DT))
+suppressPackageStartupMessages(library(shiny))
 ```
 
 ## Tab settings
