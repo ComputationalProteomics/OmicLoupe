@@ -116,7 +116,21 @@ setup_panel_ui <- function(id) {
                          ),
                          fluidRow(
                              column(4,
-                                    bar_w_help("Dataset", ns("dataset_help")),
+                                    # bar_w_help("Dataset", ns("dataset_help")),
+                                    fluidRow(
+                                        span(
+                                            style="display: inline-block; vertical-align:top; padding-right:10px; margin-top; -50px;", 
+                                            h3("Dataset")
+                                        ),
+                                        span(
+                                            style="display: inline-block; vertical-align:top; width: 30px; padding-top:25px; padding-bottom:30px;", 
+                                            actionButton(ns("dataset_help"), "", icon=icon("question"), style="padding-top:2px; font-size:70%;", class="btn-xs help")
+                                        ),
+                                        a(
+                                            style="display: inline-block; vertical-align:top; padding-top:25px; padding-bottom:30px;", 
+                                            "Download example data", 
+                                            href="https://github.com/ComputationalProteomics/OmicLoupe/releases/download/1.1.3/omicloupe_example_data.zip", target="_blank")
+                                    ),
                                     sample_input_well(
                                         ns("data_file_1"), 
                                         ns("data_selected_columns_1"), 
