@@ -1,3 +1,7 @@
+# Version 1.1.5
+
+* Moved rmarkdown, svglite and knitr to required imports to facilitate complete installation. 
+
 # Version 1.1.4
 
 * Provide link to example dataset

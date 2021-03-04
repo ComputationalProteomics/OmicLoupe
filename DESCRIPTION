@@ -1,6 +1,6 @@
 Package: OmicLoupe
 Title: OmicLoupe: Taking a closer look at omics
-Version: 1.1.4
+Version: 1.1.5
 Maintainer: Jakob Willforss <jakob.willforss@hotmail.com>
 Author: Jakob Willforss
 Authors@R: c(person("Jakob", "Willforss", email="jakob.willforss@hotmail.com", role=c("aut", "cre")))
@@ -17,11 +17,13 @@ Imports:
     ggpubr,
     ggplot2,
     jsonlite,
+    knitr,
     plotly,
     purrr,
     R6,
     readr,
     rlang,
+    rmarkdown,
     shinythemes,
     shiny,
     shinyalert,
@@ -29,13 +31,11 @@ Imports:
     shinycssloaders,
     stringi,
     stringr,
+    svglite,
     tidyr,
     UpSetR
 Suggests:
-    knitr,
-    svglite,
-    testthat,
-    rmarkdown
+    testthat
 VignetteBuilder: knitr
 License: MIT + file LICENSE
 Encoding: UTF-8
