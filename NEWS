@@ -1,3 +1,8 @@
+# Version 1.1.6
+
+* Add Dockerfile
+* Remove uneeded error alert for when column names start with numbers
+
 # Version 1.1.5
 
 * Moved rmarkdown, svglite and knitr to required imports to facilitate complete installation. 

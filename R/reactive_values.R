@@ -1,5 +1,5 @@
 setup_reactive_values_obj <- function(input) {
-    
+
     get_filename <- function(in_file) {
         infile <- in_file
         if (is.null(infile)) {
@@ -7,34 +7,34 @@ setup_reactive_values_obj <- function(input) {
         }
         stringi::stri_extract_first(str = infile$name, regex = ".*")
     }
-    
+
     load_data <- function(in_file, two_datasets=NULL) {
         infile <- in_file
         if (is.null(infile) || (is.logical(two_datasets) && two_datasets==FALSE)) {
             return(NULL)
         }
         raw_df <- read_tsv(infile$datapath, col_types = cols())
-        
+
         original_colnames <- colnames(raw_df)
         corrected_colnames <- make.names(colnames(raw_df))
-        
-        if (!all(original_colnames == corrected_colnames)) {
-            
-            shinyalert(
-                "Input warning", 
-                paste(
-                    "Some of your column names does contain patterns which may cause downstream issues.",
-                    "Common examples are sample names starting with numbers, or containing spaces",
-                    "You will likely need to correct the following names in the data matrix for OmicLoupe to run smoothly:\n\n",
-                    paste(setdiff(original_colnames, corrected_colnames), collapse=", ")
-                ),
-                type="error")
-        }
-        
+
+        # if (!all(original_colnames == corrected_colnames)) {
+        #
+        #     shinyalert(
+        #         "Input warning",
+        #         paste(
+        #             "Some of your column names does contain patterns which may cause downstream issues.",
+        #             "Common examples are sample names starting with numbers, or containing spaces",
+        #             "You will likely need to correct the following names in the data matrix for OmicLoupe to run smoothly:\n\n",
+        #             paste(setdiff(original_colnames, corrected_colnames), collapse=", ")
+        #         ),
+        #         type="error")
+        # }
+
         colnames(raw_df) <- make.names(colnames(raw_df))
         raw_df
     }
-    
+
     rv <- list()
     rv$setup_input <- reactive(input)
     rv$filedata_1 <- reactive(load_data(input$data_file_1))
@@ -56,31 +56,31 @@ setup_reactive_values_obj <- function(input) {
     rv$data_featurecol_2 <- reactive(input$feature_col_2)
     rv$data_annotcol_1 <- reactive(input$annot_col_1)
     rv$data_annotcol_2 <- reactive(input$annot_col_2)
-    
+
     rv$figure_save_format <- reactive(input$figure_save_format)
     rv$figure_save_width <- reactive(input$figure_save_width)
     rv$figure_save_height <- reactive(input$figure_save_height)
     rv$figure_save_dpi <- reactive(input$figure_save_dpi)
-    
+
     rv$selected_cols_obj <- reactiveVal(list())
     rv$filename_1 <- reactive(get_filename(input$data_file_1))
     rv$filename_2 <- reactive(get_filename(input$data_file_2))
     rv$mapping_obj <- reactiveVal(NULL)
     rv$selected_feature <- reactiveVal(NULL)
     rv$selected_feature_module <- reactiveVal(NULL)
-    
+
     rv$set_selected_feature <- function(feature, module_name) {
         rv$selected_feature(feature)
         rv$selected_feature_module(module_name)
     }
-    
+
     rv$correlations <- reactiveVal(NULL)
-    
+
     retrieve_data <- function(rv, input_field, ind, data_pat) {
         if (!is.null(di_new(rv, input_field, 1))) rv[[sprintf("%s_%s", data_pat, di_new(rv, input_field, ind))]]()
         else NULL
     }
-    
+
     rv$rdf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, 1, "filedata")
     rv$rdf_comp <-              function(rv, input_field) retrieve_data(rv, input_field, 2, "filedata")
     rv$ddf_ref <-               function(rv, input_field) retrieve_data(rv, input_field, 1, "design")
@@ -89,7 +89,7 @@ setup_reactive_values_obj <- function(input) {
     rv$rdf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, 2, "filedata"))
     rv$ddf_cols_ref <-          function(rv, input_field) colnames(retrieve_data(rv, input_field, 1, "design"))
     rv$ddf_cols_comp <-         function(rv, input_field) colnames(retrieve_data(rv, input_field, 2, "design"))
-    
+
     rv$table_settings <- reactiveVal(NULL)
     rv$ddf_condcol_ref <- function(rv, input_field) {
         shiny::validate(need(input_field != "", "No condition column found for reference data"))
@@ -99,7 +99,7 @@ setup_reactive_values_obj <- function(input) {
         shiny::validate(need(input_field != "", "No condition column found for comparison data"))
         rv[[sprintf("design_condcol_%s", di_new(rv, input_field, 2))]]()
     }
-    
+
     rv$ddf_samplecol_ref <- function(rv, input_field) {
         sample_col_string <- sprintf("design_samplecol_%s", di_new(rv, input_field, 1))
         shiny::validate(need(
@@ -114,7 +114,7 @@ setup_reactive_values_obj <- function(input) {
             "Comparison samples not found, have you loaded a dataset and mapped sample columns?"))
         rv[[sample_col_string]]()
     }
-    
+
     rv$rdf_featurecol_ref <- function(rv, input_field)
         rv[[sprintf("data_featurecol_%s", di_new(rv, input_field, 1))]]()
     rv$rdf_featurecol_comp <- function(rv, input_field)
@@ -123,14 +123,14 @@ setup_reactive_values_obj <- function(input) {
         rv[[sprintf("data_annotcol_%s", di_new(rv, input_field, 1))]]()
     rv$rdf_annotcol_comp <- function(rv, input_field)
         rv[[sprintf("data_annotcol_%s", di_new(rv, input_field, 2))]]()
-    
-    rv$statsuffixes <- function(rv, input_field) 
+
+    rv$statsuffixes <- function(rv, input_field)
         rv$selected_cols_obj()[[input_field]]$statpatterns
-    
-    rv$samples <- function(rv, input_field, prefix="") { 
-        paste(prefix, rv$selected_cols_obj()[[input_field]]$samples, sep="") 
+
+    rv$samples <- function(rv, input_field, prefix="") {
+        paste(prefix, rv$selected_cols_obj()[[input_field]]$samples, sep="")
     }
-    
+
     rv$calculate_preselect_index <- function(rv, shown_data) {
         if (is.null(rv$selected_feature())) {
             1
@@ -139,10 +139,10 @@ setup_reactive_values_obj <- function(input) {
             which(shown_data$comb_id %>% as.character() %in% rv$selected_feature())
         }
     }
-    
+
     rv$dt_parsed_data_raw <- function(rv, shown_data) {
         table_settings <- rv$table_settings()
-        
+
         parsed_shown_data <- shown_data %>%
             mutate_if(
                 is.character,
@@ -151,15 +151,15 @@ setup_reactive_values_obj <- function(input) {
             mutate_if(
                 is.numeric,
                 ~round(., table_settings$round_digits)
-            ) 
+            )
         parsed_shown_data
     }
-    
+
     rv$dt_parsed_data <- function(rv, shown_data, with_row_selection=TRUE, add_show_cols_first=NULL, add_show_cols_last=NULL, selection_mode='single') {
-        
+
         table_settings <- rv$table_settings()
         parsed_shown_data <- rv$dt_parsed_data_raw(rv, shown_data)
-        
+
         if (is.null(rv$selected_feature())) {
             selected_row_nbr <- 1
         }
@@ -172,17 +172,17 @@ setup_reactive_values_obj <- function(input) {
                 selected_row_nbr <- target_index
             }
         }
-        
+
         page_length <- 10
         display_pos <- (selected_row_nbr-1) - ((selected_row_nbr-1) %% page_length)
-        
+
         if (with_row_selection) {
-            parsed_shown_data %>% 
+            parsed_shown_data %>%
                 dplyr::select(all_of(c(add_show_cols_first, table_settings$shown_fields, add_show_cols_last))) %>%
-                DT::datatable(data=., 
+                DT::datatable(data=.,
                               selection=list(mode=selection_mode, selected=c(selected_row_nbr)),
                               options=list(
-                                  pageLength=page_length, 
+                                  pageLength=page_length,
                                   displayStart=display_pos
                               ))
         }
@@ -190,6 +190,6 @@ setup_reactive_values_obj <- function(input) {
             parsed_shown_data
         }
     }
-    
+
     rv
 }
