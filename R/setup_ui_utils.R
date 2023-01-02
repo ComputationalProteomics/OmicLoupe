@@ -73,6 +73,7 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_co
             # class = "file_browser_button",
             multiple = FALSE,
             accept = c("test/tsv", ".tsv")
+            accept = c("test/tsv", ".tsv", ".txt")
         ),
         uiOutput(parsing_errors_id),
         selectInput(
@@ -107,6 +108,7 @@ design_input_well <- function(design_upload_id, sample_col_id, cond_col_id, pars
             "Choose design file (TSV)",
             multiple = FALSE,
             accept = c("test/tsv", ".tsv")
+            accept = c("test/tsv", ".tsv", ".txt")
         ),
         uiOutput(parsing_errors_id),
         selectInput(

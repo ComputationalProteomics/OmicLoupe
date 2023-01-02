@@ -37,23 +37,23 @@ The R packages used by OmicLoupe may have certain system dependences. If working
 sudo apt install libcurl4-openssl-dev libxml2-dev libssl-dev libgit2-dev pandoc libfontconfig1-dev
 ```
 
-## Running it as a Singularity container
+## Running it as a Docker container
 
-Singularity is a container software which (similar to Docker) allows execution without needing to prepare local dependencies. It can be downloaded from https://singularity.lbl.gov.
+Docker is a container software which allows execution without needing to prepare local dependencies. It can be downloaded from https://www.docker.com.
 
-Using Singularity can be a rapid way to get OmicLoupe running locally without needing to install all dependencies. First, retrieve the container:
-
-```{bash}
-singularity pull --name OmicLoupe.simg shub://ComputationalProteomics/OmicLoupe
-```
-
-This will download the Singularity container containing OmicLoupe to `OmicLoupe.simg`. Now you are ready to run OmicLoupe:
+Using Docker can be a rapid way to get OmicLoupe running locally without needing to install all dependencies. First, retrieve the container:
 
 ```{bash}
-singularity run OmicLoupe.simg
+docker pull computationalproteomics/omicloupe:latest
 ```
 
-Simply open the provided link in a browser, and you should have access to OmicLoupe.
+This will download the Docker container containing OmicLoupe. Now you are ready to run OmicLoupe:
+
+```{bash}
+docker run --rm -p 3838:3838 computationalproteomics/omicloupe
+```
+
+Simply open the provided link (usually localhost:3838) in a browser, and you should have access to OmicLoupe.
 
 ## Running on a server
 
