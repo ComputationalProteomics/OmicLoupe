@@ -68,11 +68,10 @@ top_bar_w_help <- function(title, button_id) {
 sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_col_id, parsing_errors_id, select_size=12) {
     wellPanel(
         fileInput(
-            upload_id, 
+            upload_id,
             "Choose data file (TSV)",
             # class = "file_browser_button",
             multiple = FALSE,
-            accept = c("test/tsv", ".tsv")
             accept = c("test/tsv", ".tsv", ".txt")
         ),
         uiOutput(parsing_errors_id),
@@ -104,10 +103,9 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_co
 design_input_well <- function(design_upload_id, sample_col_id, cond_col_id, parsing_errors_id) {
     wellPanel(
         fileInput(
-            design_upload_id, 
+            design_upload_id,
             "Choose design file (TSV)",
             multiple = FALSE,
-            accept = c("test/tsv", ".tsv")
             accept = c("test/tsv", ".tsv", ".txt")
         ),
         uiOutput(parsing_errors_id),
