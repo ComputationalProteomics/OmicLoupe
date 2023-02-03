@@ -1,6 +1,6 @@
 Package: OmicLoupe
 Title: OmicLoupe: Taking a closer look at omics
-Version: 1.1.6
+Version: 1.1.7
 Maintainer: Jakob Willforss <jakob.willforss@hotmail.com>
 Author: Jakob Willforss
 Authors@R: c(person("Jakob", "Willforss", email="jakob.willforss@hotmail.com", role=c("aut", "cre")))

@@ -1,3 +1,8 @@
+# Version 1.1.7
+
+* Fixes error that occurred when column names referred to in a design matrix began with numbers or other disallowed characters
+* Silences warning on startup about useShinyalert
+
 # Version 1.1.6
 
 * Add Dockerfile
