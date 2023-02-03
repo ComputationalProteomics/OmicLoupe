@@ -26,7 +26,7 @@ After installation, you can immediately run the program.
 You can subsequently navigate to the browser to access the software.
 
 ```{r}
-> OmicLoupe::runApp()
+OmicLoupe::runApp()
 ```
 
 ## Dependencies
