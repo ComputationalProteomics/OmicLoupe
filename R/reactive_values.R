@@ -8,17 +8,23 @@ setup_reactive_values_obj <- function(input) {
         stringi::stri_extract_first(str = infile$name, regex = ".*")
     }
 
-    load_data <- function(in_file, two_datasets=NULL) {
+    load_data <- function(in_file, two_datasets=NULL, is_design_file = FALSE) {
         infile <- in_file
         if (is.null(infile) || (is.logical(two_datasets) && two_datasets==FALSE)) {
             return(NULL)
         }
         raw_df <- read_tsv(infile$datapath, col_types = cols())
 
-        original_colnames <- colnames(raw_df)
-        corrected_colnames <- make.names(colnames(raw_df))
 
-        colnames(raw_df) <- make.names(colnames(raw_df))
+        if (is_design_file) {
+            raw_df <- raw_df %>%
+              mutate_all(make.names)
+        } else {
+          original_colnames <- colnames(raw_df)
+          corrected_colnames <- make.names(colnames(raw_df))
+          colnames(raw_df) <- make.names(colnames(raw_df))
+        }
+
         raw_df
     }
 
@@ -26,13 +32,13 @@ setup_reactive_values_obj <- function(input) {
     rv$setup_input <- reactive(input)
     rv$filedata_1 <- reactive(load_data(input$data_file_1))
     rv$filedata_2 <- reactive(load_data(input$data_file_2, input$two_datasets))
-    rv$design_1 <- reactive(load_data(input$design_file_1))
+    rv$design_1 <- reactive(load_data(input$design_file_1, is_design_file = TRUE))
     rv$design_2 <- reactive({
         if (!input$matched_samples) {
-            load_data(input$design_file_2)
+            load_data(input$design_file_2, is_design_file = TRUE)
         }
         else {
-            load_data(input$design_file_1)
+            load_data(input$design_file_1, is_design_file = TRUE)
         }
     })
     rv$design_samplecol_1 <- reactive(input$design_sample_col_1)
