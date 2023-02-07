@@ -18,7 +18,7 @@ setup_reactive_values_obj <- function(input) {
 
         if (is_design_file) {
             raw_df <- raw_df %>%
-              mutate_all(make.names) # Run make.names on all elements of the design matrix
+              mutate_all(make.names) # Run make.names on all variables of the design matrix
         } else {
           colnames(raw_df) <- make.names(colnames(raw_df))
         }
