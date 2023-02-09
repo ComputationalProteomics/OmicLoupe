@@ -11,7 +11,6 @@ setup_panel_ui <- function(id) {
         fluidPage(
             id = "outer_area",
             shinyjs::useShinyjs(),
-            shinyalert::useShinyalert(),
             tags$head(
                 tags$link(rel = "stylesheet", type = "text/css", href = "bootstrap")
             ),
