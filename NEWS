@@ -1,3 +1,13 @@
+# Version 1.2.0
+
+* Add NormalyzerDE handoff token support and preloaded data loading
+* Improve dataset mapping, PCA robustness, and error handling
+* Add GitHub Actions workflows for R CMD check and Docker images
+* Update Dockerfile and add docker-compose for running OmicLoupe
+* Move bundled example and test data to inst/extdata
+* Add a comprehensive unit test suite
+* Require R >= 4.1
+
 # Version 1.1.7
 
 * Fixes error that occurred when column names referred to in a design matrix began with numbers or other disallowed characters

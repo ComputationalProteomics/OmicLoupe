@@ -1,6 +1,6 @@
 Package: OmicLoupe
 Title: Taking a Closer Look at Omics Data
-Version: 1.1.7
+Version: 1.2.0
 Authors@R: c(person("Jakob", "Willforss", email="jakob.willforss@hotmail.com", role=c("aut", "cre")))
 Description:
     Interactive Shiny application for exploring and comparing omics datasets,
