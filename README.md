@@ -6,6 +6,8 @@ Understanding expression across comparisons and datasets
 
 ![OmicLoupe illustration](man/figures/overview_visualization.png)
 
+Try it online: https://omicloupe.serve.scilifelab.se
+
 # Example data
 
 Example data matrices and the corresponding design matrix are available under `inst/extdata/example_data` in the source tree (and via `system.file("extdata", "example_data", package = "OmicLoupe")` after installation).
@@ -14,9 +16,11 @@ If using both, the options `Two datasets` and `Matched samples` should be checke
 
 # Installation
 
+Requires R >= 4.1.
+
 It can be installed either directly from GitHub or by downloading as a Zip. To install it directly from GitHub, open R and run the following command (requires the R package `devtools` to be installed):
 
-```{r}
+```r
 devtools::install_github("ComputationalProteomics/OmicLoupe")
 ```
 
@@ -25,7 +29,7 @@ devtools::install_github("ComputationalProteomics/OmicLoupe")
 After installation, you can immediately run the program.
 You can subsequently navigate to the browser to access the software.
 
-```{r}
+```r
 OmicLoupe::runApp()
 ```
 
@@ -43,14 +47,14 @@ Docker is a container software which allows execution without needing to prepare
 
 Using Docker can be a rapid way to get OmicLoupe running locally without needing to install all dependencies. First, retrieve the container:
 
-```{bash}
-docker pull computationalproteomics/omicloupe:latest
+```bash
+docker pull ghcr.io/computationalproteomics/omicloupe:latest
 ```
 
 This will download the Docker container containing OmicLoupe. Now you are ready to run OmicLoupe:
 
-```{bash}
-docker run --rm -p 3838:3838 computationalproteomics/omicloupe
+```bash
+docker run --rm -p 3838:3838 ghcr.io/computationalproteomics/omicloupe:latest
 ```
 
 Simply open the provided link (usually localhost:3838) in a browser, and you should have access to OmicLoupe.
@@ -67,6 +71,6 @@ If you have a server running [Shiny Server](https://rstudio.com/products/shiny/s
 You could make a convenient Bash alias for this, which lets you execute OmicLoupe by simply typing "omicloupe" into a Bash terminal.
 Add this line to your .bash_aliases or .bashrc file.
 
-```{r}
-alias omicloupe="Rscript -e \"runApp()\""
+```bash
+alias omicloupe="Rscript -e \"OmicLoupe::runApp()\""
 ```
