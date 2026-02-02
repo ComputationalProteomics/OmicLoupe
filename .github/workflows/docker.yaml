@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - improvements
   workflow_dispatch:
 
 concurrency:
@@ -64,14 +65,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute image tags
+        id: image-tags
+        run: |
+          set -euo pipefail
+
+          ref="${GITHUB_REF_NAME}"
+          ref="${ref//\//-}"
+
+          tags=()
+          tags+=("${REGISTRY}/${IMAGE_NAME}:${GITHUB_SHA}")
+
+          if [ "${ref}" = "main" ] || [ "${ref}" = "master" ]; then
+            tags+=("${REGISTRY}/${IMAGE_NAME}:latest")
+          else
+            tags+=("${REGISTRY}/${IMAGE_NAME}:${ref}")
+          fi
+
+          {
+            echo 'tags<<EOF'
+            printf '%s\n' "${tags[@]}"
+            echo 'EOF'
+          } >> "${GITHUB_OUTPUT}"
+
       - name: Build and push Docker image
         uses: docker/build-push-action@ad44023a93711e3deb337508980b4b5e9bcdc5dc
         with:
           context: .
           platforms: linux/amd64
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          tags: ${{ steps.image-tags.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
