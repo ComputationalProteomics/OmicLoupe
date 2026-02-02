@@ -132,8 +132,9 @@ setup_overlap_ui <- function(id) {
     )
 }
 
-module_overlap_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
-    
+module_overlap_server <- function(id, rv, module_name, parent_session=NULL) {
+    moduleServer(id, function(input, output, session) {
+
     output$download_table <- output$download_table_upset <- output$download_table_upset_presence <- downloadHandler(
         filename = function() {
             paste("overlap-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
@@ -204,7 +205,10 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
                 selected_rows <- input$table_display_upset_presence_rows_selected
             }
             else {
-                warning("Unknown situation, cannot spotcheck for tab: ", input$plot_tabs)
+                stop(sprintf(
+                    "Unknown plot tab '%s'. Expected one of: 'Venn', 'Upset', 'UpsetPresence'",
+                    input$plot_tabs
+                ))
             }
             
             req(length(selected_rows) > 0)
@@ -403,8 +407,8 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             ref_count <- ncol(upset_table) - 1
             comp_count <- ncol(upset_table_comp) - 1
             upset_table <- cbind(
-                upset_table[, -ncol(upset_table), drop=FALSE] %>% rename_all(~paste("d1", ., sep=".")),
-                upset_table_comp %>% rename_at(vars(!matches("^comb_id$")), ~paste("d2", ., sep="."))
+                upset_table[, -ncol(upset_table), drop=FALSE] %>% rename_with(~paste("d1", ., sep=".")),
+                upset_table_comp %>% rename_with(~paste("d2", ., sep="."), !matches("^comb_id$"))
             )
         }
         upset_table
@@ -536,7 +540,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
                 head(input$max_fold_comps) %>%
                 dplyr::select(ID=.data$comb_id, p_sum=.data$p_sum, contrast_fold_cols_ref
                 ) %>%
-                tidyr::gather("Comparison", "Fold", -.data$ID, -.data$p_sum)
+                tidyr::pivot_longer(cols = -c(.data$ID, .data$p_sum), names_to = "Comparison", values_to = "Fold")
         }
         else {
             long_df <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE) %>% 
@@ -549,7 +553,7 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
                 head(input$max_fold_comps) %>%
                 dplyr::select(ID=.data$comb_id, p_sum=.data$p_sum, contrast_fold_cols_ref, contrast_fold_cols_comp
                 ) %>%
-                tidyr::gather("Comparison", "Fold", -.data$ID, -.data$p_sum)
+                tidyr::pivot_longer(cols = -c(.data$ID, .data$p_sum), names_to = "Comparison", values_to = "Fold")
         }
         
         plt <- ggplot(long_df, aes(x=reorder(.data$ID, .data$p_sum), y=.data$Fold)) + 
@@ -721,5 +725,5 @@ module_overlap_server <- function(input, output, session, rv, module_name, paren
             updateSelectInput(session, "upset_pres_cond_comp", choices = comp_cond_choices, selected=set_if_new(input$upset_pres_cond_ref, ref_cond_choices, ref_cond_choices[2]))
             # updateSelectInput(session, "upset_pres_cond_comp", choices = comp_cond_choices, selected=comp_cond_choices[2])
         })
+    })
 }
-

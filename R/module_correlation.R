@@ -32,8 +32,9 @@ setup_correlation_ui <- function(id) {
     )
 }
 
-module_correlation_server <- function(input, output, session, rv, module_name) {
-    
+module_correlation_server <- function(id, rv, module_name) {
+    moduleServer(id, function(input, output, session) {
+
     output$ggplot_download <- downloadHandler(
         filename = function() {
             sprintf("%s-%s.%s", "corr", format(Sys.time(), "%y%m%d_%H%M%S"), rv$figure_save_format())
@@ -89,8 +90,8 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         }
         
         mean_corr <- mean(target_df[[cor_str]], na.rm=TRUE)
-        median_corr <- median(target_df[[cor_str]], na.rm=TRUE)
-        ggplot(target_df, aes_string(x=cor_str, fill="sig_type")) +
+        median_corr <- stats::median(target_df[[cor_str]], na.rm=TRUE)
+        ggplot(target_df, aes(x=.data[[cor_str]], fill=.data[["sig_type"]])) +
             geom_histogram(bins=bins, na.rm=TRUE) +
             geom_vline(xintercept = mean_corr, na.rm=TRUE) +
             ggtitle(sprintf("%s (median %s, mean %s)", title, round(median_corr, 3), round(mean_corr, 3))) +
@@ -124,6 +125,6 @@ module_correlation_server <- function(input, output, session, rv, module_name) {
         correlation_histograms()
 
     }, height = 800)
+    })
 }
-
 

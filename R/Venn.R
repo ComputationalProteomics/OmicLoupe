@@ -58,9 +58,9 @@ Venn <- R6::R6Class(
             
             plt <- ggplot2::ggplot(data=df.venn) +
                 ggforce::geom_circle(
-                    ggplot2::aes_string(x0 = "x", y0 = "y", r = 1.5, fill = "labels"),
+                    ggplot2::aes(x0 = .data[["x"]], y0 = .data[["y"]], r = 1.5, fill = .data[["labels"]]),
                     alpha = 0.3,
-                    size = 0.5,
+                    linewidth = 0.5,
                     colour = 'darkgray'
                 ) +
                 ggplot2::coord_fixed() +
@@ -117,10 +117,9 @@ Venn <- R6::R6Class(
             
             plt <- ggplot2::ggplot(data=df.venn) +
                 ggforce::geom_circle(
-                    ggplot2::aes_string(x0 = "x", y0 = "y", r = 1.5, fill="labels"), 
-                    # ggplot2::aes_string(x0 = "x", y0 = "y", r = 1.5, fill = "labels"), 
-                    alpha = 0.3, 
-                    size = 0.5, 
+                    ggplot2::aes(x0 = .data[["x"]], y0 = .data[["y"]], r = 1.5, fill=.data[["labels"]]),
+                    alpha = 0.3,
+                    linewidth = 0.5,
                     colour = 'darkgray'
                 ) +
                 ggplot2::coord_fixed() +
@@ -179,14 +178,11 @@ Venn <- R6::R6Class(
             
             plt <- plt + ggplot2::scale_fill_manual(values = colors) +
                 ggplot2::scale_colour_manual(values = colors, guide = FALSE) +
-                # ggplot2::labs(fill = NULL) +
                 theme(legend.position="none") +
                 ggplot2::annotate("text", x = df.vdc$x, y = df.vdc$y, label = df.vdc$label, size = 5) +
                 ggplot2::ggtitle(title) +
                 scale_x_continuous(expand=c(0.1, 0.1))
-            
-            # ggsave(plt, filename = "~/Desktop/out.png")
-            
+
             plt
         }
     )

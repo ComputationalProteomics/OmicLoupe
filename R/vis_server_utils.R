@@ -4,12 +4,12 @@ settings_download_handler <- function(base_name, input) {
             sprintf("%s_settings_%s.json", base_name, format(Sys.time(), "%y%m%d_%H%M%S"))
         },
         content = function(file) {
-            
+
             settings <- list()
             settings[[sprintf("%s_settings", base_name)]] <- as.list(input)
             settings$date_retrieved <- format(Sys.time(), "%y%m%d_%H%M%S")
             settings$version <- packageVersion("OmicLoupe")
-            
+
             write(jsonlite::toJSON(settings, auto_unbox=TRUE, pretty=TRUE, force=TRUE), file = file)
         }
     )
@@ -21,19 +21,33 @@ report_generation_handler <- function(base_name, params) {
             sprintf("omicloupe_%s_report_%s.html", base_name, format(Sys.time(), "%y%m%d_%H%M%S"))
         },
         content = function(file) {
-            
+
+            showNotification(
+                sprintf("Building %s report... This may take a few moments.", base_name),
+                duration = NULL,
+                closeButton = FALSE,
+                id = paste0(base_name, "_report_notification"),
+                type = "message"
+            )
+
             source_base <- sprintf("report_template_%s.Rmd", base_name)
             source_path <- system.file("extdata", source_base, package="OmicLoupe")
-            # source_path <- normalizePath(file.path("./doc", source_base))
-            
+
             tempReport <- file.path(tempdir(), source_base)
             file.copy(source_path, tempReport, overwrite = TRUE)
-            
+
             # Knit the document, passing in the `params` list, and eval it in a
             # child of the global environment (this isolates the code in the document
             # from the code in this app).
             rmarkdown::render(tempReport, output_file = file,
                               params = params, envir = new.env(parent = globalenv())
+            )
+
+            removeNotification(id = paste0(base_name, "_report_notification"))
+            showNotification(
+                sprintf("%s report generated successfully!", base_name),
+                duration = 5,
+                type = "message"
             )
         }
     )
@@ -128,6 +142,5 @@ assign_fig_settings <- function(plt, rv) {
         height=rv$figure_save_height()
     ))
 }
-
 
 

@@ -24,17 +24,20 @@ setup_spotcheck_ui <- function(id) {
                             column(4, checkboxInput(ns("show_violin"), "Show violin", value=FALSE))
                         ),
                         checkboxInput(ns("more_settings"), "Show advanced settings", value=FALSE),
-                        conditionalPanel(
-                            sprintf("input['%s'] == 1", ns("more_settings")),
-                            fluidRow(
-                                column(6, numericInput(ns("text_size"), "Text size", value=10))
-                                # column(6, numericInput(ns("text_angle"), "Axis x text angle", value=0))
-                            ),
-                            fluidRow(
-                                column(3, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
-                                column(3, checkboxInput(ns("rotate_labels"), "Rotate x-labels", value=FALSE)),
-                                column(6, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
-                            ),
+	                        conditionalPanel(
+	                            sprintf("input['%s'] == 1", ns("more_settings")),
+	                            fluidRow(
+	                                column(6, numericInput(ns("text_size"), "Text size", value=10))
+	                            ),
+	                            fluidRow(
+	                                column(6, numericInput(ns("y_axis_min"), "Y-axis min (optional)", value = NA)),
+	                                column(6, numericInput(ns("y_axis_max"), "Y-axis max (optional)", value = NA))
+	                            ),
+	                            fluidRow(
+	                                column(3, checkboxInput(ns("assign_numeric_as_factor"), "Numeric as factor", value=TRUE)),
+	                                column(3, checkboxInput(ns("rotate_labels"), "Rotate x-labels", value=FALSE)),
+	                                column(6, selectInput(ns("multiselect"), "Feature selection mode", choices=c("single", "multiple"), selected="single"))
+	                            ),
                             fluidRow(
                                 column(6, textInput(ns("ref_title"), "Ref. title")),
                                 column(6, textInput(ns("comp_title"), "Comp. title"))
@@ -82,8 +85,9 @@ parse_vector_to_bullets <- function(vect, number=TRUE) {
     sprintf("<%s>%s</%s>", list_style, html_string, list_style)
 }
 
-module_spotcheck_server <- function(input, output, session, rv, module_name) {
-    
+module_spotcheck_server <- function(id, rv, module_name) {
+    moduleServer(id, function(input, output, session) {
+
     output$download_table <- downloadHandler(
         filename = function() {
             paste("spotcheck-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
@@ -179,10 +183,10 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         plt_df_ref
     })
     
-    plot_df_comp <- reactive({
-        shiny::validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No data matrix found, is it loaded at the Setup page?"))
-        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
-        shiny::validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
+	    plot_df_comp <- reactive({
+	        shiny::validate(need(!is.null(rv$rdf_ref(rv, input$dataset2)), "No data matrix found, is it loaded at the Setup page?"))
+	        shiny::validate(need(!is.null(rv$ddf_ref(rv, input$dataset2)), "No design matrix found, is it loaded at the Setup page?"))
+	        shiny::validate(need(!is.null(rv$samples(rv, input$dataset2)), "No mapped samples found, are they mapped at the Setup page?"))
         shiny::validate(need(!is.null(input$table_display_rows_selected), "No rows to display found, something seems to be wrong"))
 
         map_df <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)
@@ -204,13 +208,40 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             dplyr::mutate(cond=rep(parsed_cond, length(input$table_display_rows_selected)))
         
         plt_df_comp
-    })
+	    })
 
-    
-    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, title=NULL, text_size=10, text_angle=90, text_vjust=0.5) {
-        add_geoms <- function(plt, show_box, show_scatter, show_violin) {
-            if (show_violin) {
-                plt <- plt + geom_violin(na.rm = TRUE)
+	    
+	    resolve_y_range <- function(plot_df, y_min, y_max) {
+	        if (is.null(y_min) || is.na(y_min)) {
+	            y_min <- NA_real_
+	        }
+	        if (is.null(y_max) || is.na(y_max)) {
+	            y_max <- NA_real_
+	        }
+	        if (is.na(y_min) && is.na(y_max)) {
+	            return(NULL)
+	        }
+	
+	        data_min <- suppressWarnings(min(plot_df$value, na.rm = TRUE))
+	        data_max <- suppressWarnings(max(plot_df$value, na.rm = TRUE))
+	        if (!is.finite(data_min) || !is.finite(data_max)) {
+	            return(NULL)
+	        }
+	
+	        if (is.na(y_min)) y_min <- data_min
+	        if (is.na(y_max)) y_max <- data_max
+	
+	        if (!is.finite(y_min) || !is.finite(y_max) || y_min >= y_max) {
+	            return(NULL)
+	        }
+	
+	        c(y_min, y_max)
+	    }
+	    
+	    make_spotcheck_plot <- function(plot_df, target_row, show_boxplot, show_scatter, show_violin, title=NULL, text_size=10, text_angle=90, text_vjust=0.5, y_range=NULL) {
+	        add_geoms <- function(plt, show_box, show_scatter, show_violin) {
+	            if (show_violin) {
+	                plt <- plt + geom_violin(na.rm = TRUE)
             }
             if (show_box) {
                 plt <- plt + geom_boxplot(na.rm = TRUE)
@@ -235,16 +266,19 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
             title <- sprintf("%s (C%s)", plot_df$map_id[1], paste(target_row, collapse=","))
         }
         
-        plt_ref_base <- plt_ref_base +
-            ggtitle(title) +
-            xlab("Condition") +
-            ylab("Abundance")
-        
-        plt <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin)
-        plt <- plt + theme_bw() + theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle), legend.title = element_blank())
-        
-        if (!input$show_legend) {
-            plt <- plt + theme(legend.position = "none")
+	        plt_ref_base <- plt_ref_base +
+	            ggtitle(title) +
+	            xlab("Condition") +
+	            ylab("Abundance")
+	        
+	        plt <- add_geoms(plt_ref_base, show_boxplot, show_scatter, show_violin)
+	        if (!is.null(y_range) && length(y_range) == 2) {
+	            plt <- plt + coord_cartesian(ylim = y_range)
+	        }
+	        plt <- plt + theme_bw() + theme(text=element_text(size=text_size), axis.text.x=element_text(vjust = text_vjust, angle = text_angle), legend.title = element_blank())
+	        
+	        if (!input$show_legend) {
+	            plt <- plt + theme(legend.position = "none")
         }
         
         if (input$rotate_labels) {
@@ -254,29 +288,36 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         if (input$natural_sort) {
             plt <- plt + scale_x_discrete(limits=levels(plot_df$cond) %>% stringr::str_sort(numeric=TRUE))
         }
-        
+
         plt
     }
         
-    make_ref_feature_plot <- function() {
-        shiny::validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
-        
-        target_rows <- input$table_display_rows_selected
-        plt <- make_spotcheck_plot(
-            plot_df_ref(),
-            target_rows,
-            input$show_boxplot,
-            input$show_scatter,
-            input$show_violin,
-            title=input$ref_title,
-            text_size=input$text_size,
-            text_angle=input$text_angle,
-            text_vjust=input$text_vjust
-        ) %>% ggplotly()
-        
-        if (input$multiselect == "multiple") {
-            plt <- plt %>% plotly::layout(boxmode="group")
-        }
+	    make_ref_feature_plot <- function() {
+	        shiny::validate(need(!is.null(plot_df_ref()), "Reference plot data frame needed but not found, something went wrong!"))
+	        
+	        target_rows <- input$table_display_rows_selected
+	        y_range <- resolve_y_range(plot_df_ref(), input$y_axis_min, input$y_axis_max)
+
+	        plt <- make_spotcheck_plot(
+	            plot_df_ref(),
+	            target_rows,
+	            input$show_boxplot,
+	            input$show_scatter,
+	            input$show_violin,
+	            title=input$ref_title,
+	            text_size=input$text_size,
+	            text_angle=input$text_angle,
+	            text_vjust=input$text_vjust,
+	            y_range=y_range
+	        ) %>% ggplotly()
+	        
+	        if (!is.null(y_range)) {
+	            plt <- plt %>% plotly::layout(yaxis = list(range = y_range))
+	        }
+	        
+	        if (input$multiselect == "multiple") {
+	            plt <- plt %>% plotly::layout(boxmode="group")
+	        }
         
         plt <- plt %>% 
             # plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
@@ -288,25 +329,32 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
         make_ref_feature_plot()
     })
     
-    make_comp_feature_plot <- function() {
-        shiny::validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
-        
-        target_row <- input$table_display_rows_selected
-        plt <- make_spotcheck_plot(
-            plot_df_comp(),
-            target_row,
-            input$show_boxplot,
-            input$show_scatter,
-            input$show_violin,
-            title=input$comp_title,
-            text_size=input$text_size,
-            text_angle=input$text_angle,
-            text_vjust=input$text_vjust
-        ) %>% ggplotly()
-        
-        if (input$multiselect == "multiple") {
-            plt <- plt %>% plotly::layout(boxmode="group")
-        }
+	    make_comp_feature_plot <- function() {
+	        shiny::validate(need(!is.null(plot_df_ref()), "Comparison plot data frame needed but not found, something went wrong!"))
+
+	        target_row <- input$table_display_rows_selected
+	        y_range <- resolve_y_range(plot_df_comp(), input$y_axis_min, input$y_axis_max)
+
+	        plt <- make_spotcheck_plot(
+	            plot_df_comp(),
+	            target_row,
+	            input$show_boxplot,
+	            input$show_scatter,
+	            input$show_violin,
+	            title=input$comp_title,
+	            text_size=input$text_size,
+	            text_angle=input$text_angle,
+	            text_vjust=input$text_vjust,
+	            y_range=y_range
+	        ) %>% ggplotly()
+	        
+	        if (!is.null(y_range)) {
+	            plt <- plt %>% plotly::layout(yaxis = list(range = y_range))
+	        }
+	        
+	        if (input$multiselect == "multiple") {
+	            plt <- plt %>% plotly::layout(boxmode="group")
+	        }
         
         plt <- plt %>% 
             # plotly::layout(xaxis=list(tickangle=input$text_angle)) %>% 
@@ -317,5 +365,5 @@ module_spotcheck_server <- function(input, output, session, rv, module_name) {
     output$spot_display_comp <- renderPlotly({
         make_comp_feature_plot()
     })
-    
+    })
 }

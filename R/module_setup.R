@@ -60,11 +60,12 @@ setup_panel_ui <- function(id) {
                 "#column_select_noselectize { height: 500px; }"
             ),
             
-            tabsetPanel(
-                id = ns("setup_panels"),
-                type = "tabs",
-                tabPanel("LoadData",
+                tabsetPanel(
+                    id = ns("setup_panels"),
+                    type = "tabs",
+                    tabPanel("LoadData",
                          bar_w_help_and_download("Load data", ns("help"), ns("download_settings")),
+                         uiOutput(ns("handoff_banner")),
                          fluidRow(
                              column(6,
                                     wellPanel(
@@ -135,7 +136,7 @@ setup_panel_ui <- function(id) {
                                         ns("data_selected_columns_1"), 
                                         ns("feature_col_1"), 
                                         ns("annot_col_1"), 
-                                        ns("parse_err_data_1"), select_size=5)
+                                        ns("parse_err_data_1"), select_size=5, after_upload_ui = uiOutput(ns("handoff_data_file_1_info")))
                              ),
                              column(4,
                                     bar_w_help("Design", ns("design_help")),
@@ -143,7 +144,8 @@ setup_panel_ui <- function(id) {
                                         ns("design_file_1"), 
                                         ns("design_sample_col_1"), 
                                         ns("design_cond_col_1"),
-                                        ns("parse_err_design_1")
+                                        ns("parse_err_design_1"),
+                                        after_upload_ui = uiOutput(ns("handoff_design_file_1_info"))
                                     )
                              ),
                              column(4,
@@ -171,28 +173,30 @@ setup_panel_ui <- function(id) {
                          ),
                          fluidRow(
                              column(4,
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 1", ns("two_datasets")),
-                                        sample_input_well(
-                                            ns("data_file_2"), 
-                                            ns("data_selected_columns_2"), 
-                                            ns("feature_col_2"), 
-                                            ns("annot_col_2"), 
-                                            ns("parse_err_data_2"), 
-                                            select_size=5)
-                                    )
-                             ),
-                             column(4,
-                                    conditionalPanel(
-                                        sprintf("input['%s'] == 1 && input['%s'] == 0", ns("two_datasets"), ns("matched_samples")),
-                                        design_input_well(
-                                            ns("design_file_2"), 
-                                            ns("design_sample_col_2"), 
-                                            ns("design_cond_col_2"),
-                                            ns("parse_err_design_2")
-                                        )
-                                    )
-                             ),
+	                                    conditionalPanel(
+	                                        sprintf("input['%s'] == 1", ns("two_datasets")),
+	                                        sample_input_well(
+	                                            ns("data_file_2"), 
+	                                            ns("data_selected_columns_2"), 
+	                                            ns("feature_col_2"), 
+	                                            ns("annot_col_2"), 
+	                                            ns("parse_err_data_2"), 
+	                                            select_size=5,
+	                                            after_upload_ui = uiOutput(ns("preloaded_data_file_2_info")))
+	                                    )
+	                             ),
+	                             column(4,
+	                                    conditionalPanel(
+	                                        sprintf("input['%s'] == 1 && input['%s'] == 0", ns("two_datasets"), ns("matched_samples")),
+	                                        design_input_well(
+	                                            ns("design_file_2"), 
+	                                            ns("design_sample_col_2"), 
+	                                            ns("design_cond_col_2"),
+	                                            ns("parse_err_design_2"),
+	                                            after_upload_ui = uiOutput(ns("preloaded_design_file_2_info"))
+	                                        )
+	                                    )
+	                             ),
                              column(4,
                                     conditionalPanel(
                                         sprintf("input['%s'] == 1", ns("two_datasets")),
@@ -292,13 +296,12 @@ setup_panel_ui <- function(id) {
 
 #' Server for setup module
 #' 
-#' @param input Internally used
-#' @param output Internally used
-#' @param session Internally used
+#' @param id Internally used
 #' @param module_name Name of the module
 #' @export
-module_setup_server <- function(input, output, session, module_name) {
-    
+module_setup_server <- function(id, module_name) {
+    moduleServer(id, function(input, output, session) {
+
     output$download_table <- downloadHandler(
         filename = function() {
             paste(input$data_table_tabs, "-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv", sep="")
@@ -385,13 +388,13 @@ module_setup_server <- function(input, output, session, module_name) {
         
         comb_data_cols <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries = FALSE) %>% colnames()
         samples_ref <- NULL
-        if (!is.null(input$data_file_1)) {
-            samples_ref <- rv$samples(rv, input$data_file_1$name, prefix="d1.")
+        if (!is.null(rv$filename_1())) {
+            samples_ref <- rv$samples(rv, rv$filename_1(), prefix="d1.")
         }
         
         samples_comp <- NULL
-        if (!is.null(input$data_file_2)) {
-            samples_comp <- rv$samples(rv, input$data_file_2$name, prefix="d2.")
+        if (!is.null(rv$filename_2())) {
+            samples_comp <- rv$samples(rv, rv$filename_2(), prefix="d2.")
         }
         start_select <- comb_data_cols[!comb_data_cols %in% c(samples_ref, samples_comp)]
         updateSelectInput(session, "shown_fields", choices = comb_data_cols, selected=start_select)
@@ -466,9 +469,391 @@ module_setup_server <- function(input, output, session, module_name) {
     output$table_output <- DT::renderDataTable({
         get_target_data(input$data_table_tabs)
     })
-    
-    rv <- setup_reactive_values_obj(input)
-    
+
+		    session_preloaded_rv <- shiny::reactiveVal(get_preloaded_data())
+		    autoload_done <- shiny::reactiveVal(FALSE)
+		    handoff_banner_dismissed <- shiny::reactiveVal(FALSE)
+
+		    output$handoff_banner <- renderUI({
+		        preloaded <- session_preloaded_rv()
+		        if (isTRUE(handoff_banner_dismissed())) {
+		            return(NULL)
+		        }
+
+		        has_preloaded_data <- !is.null(preloaded) && !is.null(preloaded$data1)
+		        loading_from_handoff <- isTRUE(handoff_loading()) && !has_preloaded_data
+		        has_handoff_error <- !is.null(handoff_error_msg()) && nzchar(handoff_error_msg())
+
+		        if (!has_preloaded_data && !loading_from_handoff && !has_handoff_error) {
+		            return(NULL)
+		        }
+
+		        is_normalyzerde <- isTRUE(identical(preloaded$handoff_source, "NormalyzerDE")) || loading_from_handoff || has_handoff_error
+
+		        loaded_from_preloaded <- is.null(input$data_file_1) &&
+		            is.null(input$design_file_1) &&
+		            is.null(input$data_file_2) &&
+		            is.null(input$design_file_2)
+	        override_note <- if (!loaded_from_preloaded) {
+	            tags$span(class = "text-muted", " (currently overridden by uploads)")
+	        } else {
+	            NULL
+	        }
+
+		        banner_title <- if (has_handoff_error) {
+		            "NormalyzerDE handoff error"
+		        } else if (loading_from_handoff) {
+		            "Loading from NormalyzerDE"
+		        } else if (is_normalyzerde) {
+		            "Loaded from NormalyzerDE"
+		        } else {
+		            "Loaded with pre-filled data"
+		        }
+
+		        banner_class <- if (has_handoff_error) "alert alert-danger" else "alert alert-info"
+		        banner_message <- if (has_handoff_error) {
+		            paste0(handoff_error_msg(), " Uploading your own files below replaces these inputs.")
+		        } else if (loading_from_handoff) {
+		            "Loading data from NormalyzerDE. Uploading your own files below replaces these inputs."
+		        } else {
+		            "Uploading your own files below replaces these inputs."
+		        }
+
+		        tags$div(
+		            class = banner_class,
+		            style = "margin-top: 10px;",
+		            tags$button(
+	                type = "button",
+	                class = "close",
+                `data-dismiss` = "alert",
+                `aria-label` = "Close",
+                onclick = sprintf(
+                    "Shiny.setInputValue('%s', Date.now(), {priority: 'event'});",
+                    session$ns("dismiss_handoff_banner")
+                ),
+	                tags$span(`aria-hidden` = "true", HTML("&times;"))
+		            ),
+		            tags$div(
+		                tags$strong(banner_title),
+		                override_note,
+		                ". ",
+		                banner_message
+		            )
+		        )
+		    })
+
+	    output$download_handoff_data <- downloadHandler(
+	        filename = function() {
+	            preloaded <- session_preloaded_rv()
+	            prefix <- if (!is.null(preloaded) && isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))) {
+	                "normalyzerde-data"
+	            } else {
+	                "preloaded-data1"
+	            }
+	            paste0(prefix, "-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv")
+	        },
+	        content = function(file) {
+	            preloaded <- session_preloaded_rv()
+	            shiny::validate(need(!is.null(preloaded) && is.data.frame(preloaded$data1), "No pre-loaded data is available"))
+	            readr::write_tsv(preloaded$data1, file)
+	        }
+	    )
+
+	    output$download_handoff_design <- downloadHandler(
+	        filename = function() {
+	            preloaded <- session_preloaded_rv()
+	            prefix <- if (!is.null(preloaded) && isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))) {
+	                "normalyzerde-design"
+	            } else {
+	                "preloaded-design1"
+	            }
+	            paste0(prefix, "-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv")
+	        },
+	        content = function(file) {
+	            preloaded <- session_preloaded_rv()
+	            shiny::validate(need(!is.null(preloaded) && is.data.frame(preloaded$design1), "No pre-loaded design is available"))
+	            readr::write_tsv(preloaded$design1, file)
+	        }
+	    )
+
+	    output$handoff_data_file_1_info <- renderUI({
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(preloaded) || is.null(preloaded$data1)) {
+	            return(NULL)
+	        }
+
+	        is_normalyzerde <- isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))
+
+	        overridden <- !is.null(input$data_file_1)
+	        label <- if (overridden) {
+	            if (is_normalyzerde) "NormalyzerDE dataset available" else "Pre-filled dataset available"
+	        } else {
+	            if (is_normalyzerde) "Loaded from NormalyzerDE" else "Loaded with pre-filled data"
+	        }
+
+	        tags$div(
+	            class = if (overridden) "help-block text-muted" else "help-block",
+	            tags$span(label),
+	            " \u00b7 ",
+	            downloadLink(session$ns("download_handoff_data"), "download data.tsv")
+	        )
+	    })
+
+	    output$handoff_design_file_1_info <- renderUI({
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(preloaded) || is.null(preloaded$design1)) {
+	            return(NULL)
+	        }
+
+	        is_normalyzerde <- isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))
+
+	        overridden <- !is.null(input$design_file_1)
+	        label <- if (overridden) {
+	            if (is_normalyzerde) "NormalyzerDE dataset available" else "Pre-filled design available"
+	        } else {
+	            if (is_normalyzerde) "Loaded from NormalyzerDE" else "Loaded with pre-filled design"
+	        }
+
+	        tags$div(
+	            class = if (overridden) "help-block text-muted" else "help-block",
+	            tags$span(label),
+	            " \u00b7 ",
+	            downloadLink(session$ns("download_handoff_design"), "download design.tsv")
+	        )
+	    })
+
+	    output$download_preloaded_data2 <- downloadHandler(
+	        filename = function() {
+	            paste0("preloaded-data2-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv")
+	        },
+	        content = function(file) {
+	            preloaded <- session_preloaded_rv()
+	            shiny::validate(need(!is.null(preloaded) && is.data.frame(preloaded$data2), "No pre-loaded dataset 2 is available"))
+	            readr::write_tsv(preloaded$data2, file)
+	        }
+	    )
+
+	    output$download_preloaded_design2 <- downloadHandler(
+	        filename = function() {
+	            paste0("preloaded-design2-", format(Sys.time(), "%y%m%d_%H%M%S"), ".tsv")
+	        },
+	        content = function(file) {
+	            preloaded <- session_preloaded_rv()
+	            shiny::validate(need(!is.null(preloaded) && is.data.frame(preloaded$design2), "No pre-loaded design 2 is available"))
+	            readr::write_tsv(preloaded$design2, file)
+	        }
+	    )
+
+	    output$preloaded_data_file_2_info <- renderUI({
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(preloaded) || is.null(preloaded$data2)) {
+	            return(NULL)
+	        }
+
+	        overridden <- !is.null(input$data_file_2)
+	        label <- if (overridden) {
+	            "Pre-filled dataset 2 available"
+	        } else {
+	            "Loaded with pre-filled dataset 2"
+	        }
+
+	        tags$div(
+	            class = if (overridden) "help-block text-muted" else "help-block",
+	            tags$span(label),
+	            " \u00b7 ",
+	            downloadLink(session$ns("download_preloaded_data2"), "download data2.tsv")
+	        )
+	    })
+
+	    output$preloaded_design_file_2_info <- renderUI({
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(preloaded) || is.null(preloaded$design2)) {
+	            return(NULL)
+	        }
+
+	        overridden <- !is.null(input$design_file_2)
+	        label <- if (overridden) {
+	            "Pre-filled design 2 available"
+	        } else {
+	            "Loaded with pre-filled design 2"
+	        }
+
+	        tags$div(
+	            class = if (overridden) "help-block text-muted" else "help-block",
+	            tags$span(label),
+	            " \u00b7 ",
+	            downloadLink(session$ns("download_preloaded_design2"), "download design2.tsv")
+	        )
+	    })
+
+    set_fileinput_display_text <- function(input_id, display_value) {
+        if (is.null(display_value)) {
+            display_value <- ""
+        }
+        shinyjs::runjs(sprintf(
+            "(function(){var id=%s; var v=%s; var group=$('#'+id).closest('.input-group'); var t=group.find('input.form-control[type=\"text\"]'); if(t.length){ t.val(v); }})();",
+            jsonlite::toJSON(input_id, auto_unbox = TRUE),
+            jsonlite::toJSON(display_value, auto_unbox = TRUE)
+        ))
+    }
+
+    move_uioutput_below_fileinput_label <- function(file_input_id, uioutput_id) {
+        shinyjs::runjs(sprintf(
+            "(function(){var fileId=%s; var outId=%s; var out=$('#'+outId); if(!out.length) return; var container=$('#'+fileId).closest('.form-group'); if(!container.length) return; var label=container.find('label.control-label').first(); if(!label.length) return; out.detach().insertAfter(label);})();",
+            jsonlite::toJSON(file_input_id, auto_unbox = TRUE),
+            jsonlite::toJSON(uioutput_id, auto_unbox = TRUE)
+        ))
+    }
+
+	    observe({
+	        preloaded <- session_preloaded_rv()
+	        is_handoff <- !is.null(preloaded) && isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))
+	        has_preloaded_1 <- !is.null(preloaded) && !is.null(preloaded$data1)
+	        has_preloaded_design_1 <- !is.null(preloaded) && !is.null(preloaded$design1)
+	        has_preloaded_2 <- !is.null(preloaded) && !is.null(preloaded$data2)
+	        has_preloaded_design_2 <- !is.null(preloaded) && !is.null(preloaded$design2)
+
+	        data_id <- session$ns("data_file_1")
+	        design_id <- session$ns("design_file_1")
+	        data2_id <- session$ns("data_file_2")
+	        design2_id <- session$ns("design_file_2")
+
+	        if (is_handoff && is.null(input$data_file_1)) {
+	            set_fileinput_display_text(data_id, "NormalyzerDE: data.tsv")
+	        } else if (!is_handoff && has_preloaded_1 && is.null(input$data_file_1)) {
+	            set_fileinput_display_text(data_id, "Pre-filled: data.tsv")
+	        } else if (is.null(input$data_file_1)) {
+	            set_fileinput_display_text(data_id, "")
+	        }
+
+	        if (is_handoff && is.null(input$design_file_1)) {
+	            set_fileinput_display_text(design_id, "NormalyzerDE: design.tsv")
+	        } else if (!is_handoff && has_preloaded_design_1 && is.null(input$design_file_1)) {
+	            set_fileinput_display_text(design_id, "Pre-filled: design.tsv")
+	        } else if (is.null(input$design_file_1)) {
+	            set_fileinput_display_text(design_id, "")
+	        }
+
+	        if (has_preloaded_2 && is.null(input$data_file_2)) {
+	            set_fileinput_display_text(data2_id, "Pre-filled: data2.tsv")
+	        } else if (is.null(input$data_file_2)) {
+	            set_fileinput_display_text(data2_id, "")
+	        }
+
+	        if (has_preloaded_design_2 && is.null(input$design_file_2)) {
+	            set_fileinput_display_text(design2_id, "Pre-filled: design2.tsv")
+	        } else if (is.null(input$design_file_2)) {
+	            set_fileinput_display_text(design2_id, "")
+	        }
+
+	        session$onFlushed(function() {
+	            move_uioutput_below_fileinput_label(data_id, session$ns("handoff_data_file_1_info"))
+	            move_uioutput_below_fileinput_label(design_id, session$ns("handoff_design_file_1_info"))
+	            move_uioutput_below_fileinput_label(data2_id, session$ns("preloaded_data_file_2_info"))
+	            move_uioutput_below_fileinput_label(design2_id, session$ns("preloaded_design_file_2_info"))
+	        }, once = TRUE)
+	    })
+
+	    handoff_token_r <- reactive({
+	        invisible(tryCatch(session$clientData$url_search, error = function(e) NULL))
+	        get_handoff_token(session)
+	    })
+	    handoff_handled_token <- shiny::reactiveVal(NULL)
+	    handoff_loading <- shiny::reactiveVal(FALSE)
+	    handoff_error_msg <- shiny::reactiveVal(NULL)
+
+	    observeEvent(handoff_token_r(), {
+	        token <- handoff_token_r()
+	        if (is.null(token)) {
+	            return()
+	        }
+
+	        preloaded <- session_preloaded_rv()
+	        if (!is.null(preloaded) && !is.null(preloaded$data1) && !isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))) {
+	            return()
+	        }
+
+	        if (identical(handoff_handled_token(), token)) {
+	            return()
+	        }
+	        handoff_handled_token(token)
+
+	        handoff_loading(TRUE)
+	        handoff_error_msg(NULL)
+	        handoff_banner_dismissed(FALSE)
+
+	        session$onFlushed(function() {
+	            handoff_error <- NULL
+	            handoff_preloaded <- tryCatch(
+	                load_handoff_preloaded(token),
+	                error = function(e) {
+	                    handoff_error <<- conditionMessage(e)
+	                    NULL
+	                }
+	            )
+
+	            if (is.null(handoff_preloaded)) {
+	                err_text <- if (!is.null(handoff_error) && nzchar(handoff_error)) {
+	                    handoff_error
+	                } else {
+	                    "Could not load handoff bundle"
+	                }
+	                handoff_loading(FALSE)
+	                handoff_error_msg(err_text)
+	                shinyalert("Handoff error", err_text, type = "error")
+	                return()
+	            }
+
+	            session_preloaded_rv(handoff_preloaded)
+	            autoload_done(FALSE)
+	            handoff_loading(FALSE)
+	        }, once = TRUE)
+	    }, ignoreInit = FALSE, priority = -1000)
+
+    observeEvent(input$dismiss_handoff_banner, {
+        handoff_banner_dismissed(TRUE)
+    }, ignoreInit = TRUE)
+
+    observeEvent(input$clear_handoff, {
+        preloaded <- session_preloaded_rv()
+        if (is.null(preloaded) || !isTRUE(identical(preloaded$handoff_source, "NormalyzerDE"))) {
+            return()
+        }
+        session_preloaded_rv(NULL)
+        autoload_done(FALSE)
+        rv$selected_cols_obj(list())
+        rv$mapping_obj(NULL)
+        rv$selected_feature(NULL)
+        rv$selected_feature_module(NULL)
+        output$column_status <- renderText("")
+        output$load_status <- renderText("")
+        shiny::showNotification("NormalyzerDE dataset discarded; upload your own files to continue.", type = "message")
+    }, ignoreInit = TRUE)
+
+    rv <- setup_reactive_values_obj(input, preloaded = session_preloaded_rv)
+
+    observe({
+        preloaded <- session_preloaded_rv()
+        if (!is.null(preloaded) && !is.null(preloaded$data1)) {
+
+            if (!is.null(preloaded$two_datasets)) {
+                updateCheckboxInput(session, "two_datasets", value = preloaded$two_datasets)
+            }
+
+            if (!is.null(preloaded$matched_samples)) {
+                updateCheckboxInput(session, "matched_samples", value = preloaded$matched_samples)
+            }
+
+            if (!is.null(preloaded$discard_duplicates)) {
+                updateCheckboxInput(session, "two_datasets_random_discard", value = preloaded$discard_duplicates)
+            }
+
+            if (!is.null(preloaded$skip_correlation)) {
+                updateCheckboxInput(session, "skip_correlation", value = preloaded$skip_correlation)
+            }
+        }
+    })
+
     statcols <- function(rv, data_field, contrast_field, stat_patterns, prefix_index=NULL) {
         dataset_stat_cols <- rv$selected_cols_obj()[[data_field]]$statcols
         parsed_cols <- parse_stat_cols(dataset_stat_cols, contrast_field, stat_patterns)
@@ -507,6 +892,9 @@ module_setup_server <- function(input, output, session, module_name) {
     update_selcol_obj <- function(rv, dataset, colname, new_value, stat_pattern, sync_stat_patterns=FALSE) {
         
         selcol_obj <- rv$selected_cols_obj()
+        if (is.null(selcol_obj[[dataset]])) {
+            selcol_obj[[dataset]] <- list()
+        }
         selcol_obj[[dataset]][[colname]] <- new_value
         
         if (sync_stat_patterns) {
@@ -587,9 +975,6 @@ module_setup_server <- function(input, output, session, module_name) {
             status_val <- 0
         }
         else {
-            
-            browser()
-            
             if (length(which(samples_from_ddf %in% colnames(rdf))) == 0) {
                 # status_message <- "No samples from design matched to data, something is wrong!"
                 shinyalert(
@@ -625,15 +1010,39 @@ module_setup_server <- function(input, output, session, module_name) {
         list(message=status_message, status=status_val)
     }
     
-    observeEvent(input$identify_columns, {
-        
+    samples_assigned <- function(data_key) {
+        if (is.null(data_key) || length(data_key) == 0 || is.na(data_key) || data_key == "") {
+            return(FALSE)
+        }
+        selcol_list <- rv$selected_cols_obj()[[data_key]]
+        !is.null(selcol_list) &&
+            "samples" %in% names(selcol_list) &&
+            !is.null(selcol_list$samples) &&
+            length(selcol_list$samples) > 0
+    }
+
+    identify_columns_impl <- function(add_proceed_message = TRUE) {
+
         output$column_status <- renderText("A dataset and a design matrix need to be assigned before being able to detect sample columns")
-        
-        # req(!is.null(input$design_sample_col_1), input$design_sample_col_1 != "", !is.null(rv$filedata_1()))
-        shiny::validate(need(!is.null(input$design_sample_col_1), "Autodetect columns didn't find any sample column in the design matrix"))
-        shiny::validate(need(input$design_sample_col_1 != "", "Autodetect columns didn't find any non-empty sample column in the design matrix"))
-        shiny::validate(need(!is.null(rv$filedata_1()), "Autodetect columns didn't find any filedata 1"))
-        
+
+        if (is.null(rv$filedata_1())) {
+            shinyalert(
+                "Input error",
+                "No data file detected, please upload in the 'Choose data file' field before identifying columns.",
+                type = "error"
+            )
+            return(FALSE)
+        }
+
+        if (is.null(rv$design_1())) {
+            shinyalert(
+                "Input error",
+                "No design file detected, please upload in the 'Choose design file' field before identifying columns.",
+                type = "error"
+            )
+            return(FALSE)
+        }
+
         if (input$automatic_sample_detect) {
             sample_col_1 <- detect_sample_column(rv$design_1(), rv$filedata_1())
             updateSelectInput(session, "design_sample_col_1", selected = sample_col_1)
@@ -641,29 +1050,21 @@ module_setup_server <- function(input, output, session, module_name) {
         else {
             sample_col_1 <- input$design_sample_col_1
         }
-        
+
         if (length(sample_col_1) == 0) {
-            
-            # browser()
-            
-            if (TRUE) {
-                print("TODO: REMOVE")
-            }
-            else {
-                shinyalert(
-                    "Input error", 
-                    "No column in design matrix matches column names in the data matrix. 
-                
+            shinyalert(
+                "Input error",
+                "No column in design matrix matches column names in the data matrix.
+
                 Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
                 what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
                 on input format.
-                
-                If neither helps, please send a message to the developer.", 
-                    type="error")
-            }
-            return()
+
+                If neither helps, please send a message to the developer.",
+                type="error")
+            return(FALSE)
         }
-        
+
         autodetect_stat_cols()
         status_data1 <- assign_sample_cols(
             rv,
@@ -673,87 +1074,151 @@ module_setup_server <- function(input, output, session, module_name) {
             sample_col_1,
             rv$filename_1()
         )
-        
+
         status_data2 <- list(message=NULL, status=0)
         if (!is.null(rv$design_2()) && !is.null(rv$filedata_2())) {
-            
+
             if (input$automatic_sample_detect) {
                 sample_col_2 <- detect_sample_column(rv$design_2(), rv$filedata_2())
                 updateSelectInput(session, "design_sample_col_2", selected = sample_col_2)
             }
-            else {
+            else if (!is.null(input$design_sample_col_2) && input$design_sample_col_2 != "") {
                 sample_col_2 <- input$design_sample_col_2
             }
-            
+            else {
+                sample_col_2 <- sample_col_1
+            }
+
             if (length(sample_col_2) == 0) {
                 shinyalert(
-                    "Input error", 
+                    "Input error",
                     "No column in design matrix matches column names in the second data matrix. 
                 
                 Please carefully inspect your inputs. You can use the 'TableSetup' tab to inspect
                 what is currently loaded into OmicLoupe and 'InputHelp' for further instructions
                 on input format.
                 
-                If neither helps, please send a message to the developer.", 
+                If neither helps, please send a message to the developer.",
                     type="error")
-                return()
+                status_data2 <- list(message = "", status = 1)
+                if (isTRUE(input$matched_samples)) {
+                    return(FALSE)
+                }
             }
-            
-            status_data2 <- assign_sample_cols(
-                rv,
-                data_nbr=2,
-                rv$design_2(),
-                rv$filedata_2(),
-                sample_col_2,
-                rv$filename_2()
-            )
+            else {
+                status_data2 <- assign_sample_cols(
+                    rv,
+                    data_nbr=2,
+                    rv$design_2(),
+                    rv$filedata_2(),
+                    sample_col_2,
+                    rv$filename_2()
+                )
+            }
         }
-        
+
         info_text <- paste(c(status_data1$message, status_data2$message), sep="\n")
-        if (status_data1$status == 0 && status_data2$status == 0) {
+        if (add_proceed_message && status_data1$status == 0 && status_data2$status == 0) {
             info_text <- sprintf("%s\n%s", info_text, "Proceed to load the data using 'Load data'.")
         }
         output$column_status <- renderText(info_text)
+
+        status_data1$status == 0 && (!isTRUE(input$matched_samples) || status_data2$status == 0)
+    }
+
+    observeEvent(input$identify_columns, {
+        identify_columns_impl(add_proceed_message = TRUE)
     })
     
     # Clear/reset fildata 1 related fields
     observeEvent(rv$filedata_1(), {
-        
+        if (is.null(rv$filedata_1())) {
+            return()
+        }
+
         clear_fields(session, rv$filedata_1, c("sample_selected_1", "statcols_selected_1"))
         clear_file_fields(session, rv$filedata_1, c("data_selected_columns_1", "feature_col_1", "annot_col_1"))
-        rv$selected_cols_obj(
-            c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_1()))
-        )
-    }, ignoreInit=TRUE, ignoreNULL=FALSE)
-    
+
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(input$data_file_1) && !is.null(preloaded) && !is.null(preloaded$feature_col1)) {
+	            updateSelectInput(session, "feature_col_1", selected = preloaded$feature_col1)
+	        }
+
+	        selcol_obj <- rv$selected_cols_obj()
+	        selcol_obj[[rv$filename_1()]] <- list()
+	        rv$selected_cols_obj(selcol_obj)
+	    }, ignoreNULL=FALSE)
+
     # Clear/reset filedata 2 related fields
     observeEvent(rv$filedata_2(), {
+        if (is.null(rv$filedata_2())) {
+            return()
+        }
         clear_fields(session, rv$filedata_2, c("sample_selected_2", "statcols_selected_2"))
         clear_file_fields(session, rv$filedata_2, c("data_selected_columns_2", "feature_col_2", "annot_col_2"))
-        rv$selected_cols_obj(
-            c(rv$selected_cols_obj(), setNames(list(list()), rv$filename_2()))
-        )
-    }, ignoreInit=TRUE, ignoreNULL=FALSE)
+
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(input$data_file_2) && !is.null(preloaded) && !is.null(preloaded$feature_col2)) {
+	            updateSelectInput(session, "feature_col_2", selected = preloaded$feature_col2)
+	        }
+
+	        selcol_obj <- rv$selected_cols_obj()
+	        selcol_obj[[rv$filename_2()]] <- list()
+	        rv$selected_cols_obj(selcol_obj)
+	    }, ignoreNULL=FALSE)
     
     observeEvent(rv$design_1(), {
         updateSelectInput(session, "design_sample_col_1", choices=colnames(rv$design_1()))
-        if (length(colnames(rv$design_1())) > 1) start_cond <- colnames(rv$design_1())[2]
-        else start_cond <- colnames(rv$design_1())[1]
-        updateSelectInput(session, "design_cond_col_1", choices=colnames(rv$design_1()), selected = start_cond)
-    })
-    
+
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(input$design_file_1) && !is.null(preloaded) && !is.null(preloaded$sample_col1) && preloaded$sample_col1 %in% colnames(rv$design_1())) {
+	            updateSelectInput(session, "design_sample_col_1", selected = preloaded$sample_col1)
+	        }
+
+	        if (length(colnames(rv$design_1())) > 1) start_cond <- colnames(rv$design_1())[2]
+	        else start_cond <- colnames(rv$design_1())[1]
+	        updateSelectInput(session, "design_cond_col_1", choices=colnames(rv$design_1()), selected = start_cond)
+	    })
+
     observeEvent(rv$design_2(), {
         updateSelectInput(session, "design_sample_col_2", choices=colnames(rv$design_2()))
-        if (length(colnames(rv$design_2())) > 1) start_cond <- colnames(rv$design_2())[2]
-        else start_cond <- colnames(rv$design_2())[1]
-        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()), selected = start_cond)
-    })
+
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(input$design_file_2) && !is.null(preloaded) && !is.null(preloaded$sample_col2) && preloaded$sample_col2 %in% colnames(rv$design_2())) {
+	            updateSelectInput(session, "design_sample_col_2", selected = preloaded$sample_col2)
+	        }
+
+	        if (length(colnames(rv$design_2())) > 1) start_cond <- colnames(rv$design_2())[2]
+	        else start_cond <- colnames(rv$design_2())[1]
+	        updateSelectInput(session, "design_cond_col_2", choices=colnames(rv$design_2()), selected = start_cond)
+	    })
+
+	    reset_mapping_outputs <- function() {
+	        rv$mapping_obj(NULL)
+	        output$load_status <- renderText("")
+	    }
+
+	    observeEvent(input$data_file_1, {
+	        reset_mapping_outputs()
+	    }, ignoreInit = TRUE)
+
+	    observeEvent(input$design_file_1, {
+	        reset_mapping_outputs()
+	    }, ignoreInit = TRUE)
+
+	    observeEvent(input$data_file_2, {
+	        reset_mapping_outputs()
+	    }, ignoreInit = TRUE)
+
+	    observeEvent(input$design_file_2, {
+	        reset_mapping_outputs()
+	    }, ignoreInit = TRUE)
     
-    perform_mapping <- function(rv, output, data_file_1, data_file_2, feature_col_1, feature_col_2) {
+    perform_mapping <- function(rv, output, data_key_1, data_key_2, feature_col_1, feature_col_2) {
         
         selcol1 <- NULL
-        if (!is.null(data_file_1)) {
-            selcol_list <- rv$selected_cols_obj()[[data_file_1$name]]
+        if (!is.null(data_key_1)) {
+            selcol_list <- rv$selected_cols_obj()[[data_key_1]]
             if ("samples" %in% names(selcol_list)) {
                 selcol1 <- selcol_list$samples
             }
@@ -764,8 +1229,8 @@ module_setup_server <- function(input, output, session, module_name) {
         
         req(selcol1)
         selcol2 <- NULL
-        if (!is.null(data_file_2)) {
-            selcol2_list <- rv$selected_cols_obj()[[data_file_2$name]]
+        if (!is.null(data_key_2)) {
+            selcol2_list <- rv$selected_cols_obj()[[data_key_2]]
             if ("samples" %in% names(selcol2_list)) {
                 selcol2 <- selcol2_list$samples
             }
@@ -785,15 +1250,64 @@ module_setup_server <- function(input, output, session, module_name) {
         
         rv
     }
+
+	    observeEvent(rv$filedata_1(), {
+	        if (autoload_done()) {
+	            return()
+	        }
+
+	        preloaded <- session_preloaded_rv()
+	        if (is.null(preloaded) || is.null(preloaded$data1) || !isTRUE(preloaded$auto_load)) {
+	            return()
+	        }
+
+	        if (!is.null(input$data_file_1) || !is.null(input$design_file_1)) {
+	            return()
+	        }
+
+	        req(!is.null(input$automatic_sample_detect), !is.null(input$matched_samples))
+
+        ok <- identify_columns_impl(add_proceed_message = FALSE)
+        if (!isTRUE(ok)) {
+            return()
+        }
+
+        feature_col_1 <- preloaded$feature_col1
+        if (is.null(feature_col_1) || feature_col_1 == "") {
+            feature_col_1 <- input$feature_col_1
+        }
+        if (is.null(feature_col_1) || feature_col_1 == "") {
+            feature_col_1 <- colnames(rv$filedata_1())[1]
+        }
+
+        feature_col_2 <- preloaded$feature_col2
+        if (is.null(feature_col_2) || feature_col_2 == "") {
+            feature_col_2 <- input$feature_col_2
+        }
+        if (is.null(feature_col_2) || feature_col_2 == "") {
+            if (!is.null(rv$filedata_2())) {
+                feature_col_2 <- colnames(rv$filedata_2())[1]
+            }
+            else {
+                feature_col_2 <- ""
+            }
+        }
+
+        perform_mapping(rv, output, rv$filename_1(), rv$filename_2(), feature_col_1, feature_col_2)
+        autoload_done(TRUE)
+    }, ignoreInit = FALSE)
     
     observeEvent(input$perform_map_button, {
         
-        if (is.null(input$data_file_1) && is.null(input$design_file_1)) {
+        data_key_1 <- rv$filename_1()
+        data_key_2 <- rv$filename_2()
+
+        if (is.null(rv$filedata_1()) && is.null(rv$design_1())) {
             shinyalert("Input error", "Neither data file or design file detected, please upload and assign columns before loading data", type = "error")
             return()
         }
         
-        if (!is.null(input$data_file_1) && is.null(input$design_file_1)) {
+        if (!is.null(rv$filedata_1()) && is.null(rv$design_1())) {
             shinyalert(
                 "Input error", 
                 "No design file detected, please upload in the 'Choose design file' field and assign columns using 'Identify columns' before loading data
@@ -803,7 +1317,7 @@ module_setup_server <- function(input, output, session, module_name) {
             return()
         }
         
-        if (is.null(input$data_file_1) && !is.null(input$design_file_1)) {
+        if (is.null(rv$filedata_1()) && !is.null(rv$design_1())) {
             shinyalert(
                 "Input error", 
                 "No data file detected, please upload in the 'Choose data file' field and assign columns using 'Identify columns' before loading data
@@ -813,20 +1327,29 @@ module_setup_server <- function(input, output, session, module_name) {
             return()
         }
         
-        if (length(rv$selected_cols_obj()[[input$data_file_1$name]]) == 0) {
+        needs_identify <- !samples_assigned(data_key_1) || (input$matched_samples && !samples_assigned(data_key_2))
+        if (needs_identify) {
+            ok <- identify_columns_impl(add_proceed_message = FALSE)
+            if (!isTRUE(ok)) {
+                return()
+            }
+        }
+
+        if (!samples_assigned(data_key_1)) {
             shinyalert(
-                "Input error", 
-                "Data present but no sample columns assigned, please identify columns using 'Identify columns' before loading
+                "Input error",
+                "Data present but no sample columns assigned. Try using 'Identify columns' before loading.
                 
-                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.", 
-                type = "error")
+                For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.",
+                type = "error"
+            )
             return()
         }
         
-        if (input$matched_samples && (is.null(input$data_file_1) || is.null(input$data_file_2))) {
+        if (input$matched_samples && (is.null(rv$filedata_1()) || is.null(rv$filedata_2()))) {
             shinyalert(
                 "Input error",
-                "Matched samples requires two uploaded data files, at least one was not found
+                "Matched samples requires two data files, at least one was not found
                 
                 For further help, please check the 'InputHelp' tab. If still stuck, please send a message to the developer.",
                 type = "error"
@@ -835,8 +1358,9 @@ module_setup_server <- function(input, output, session, module_name) {
         }
         
         if (input$matched_samples &&
-                 (is.null(rv$selected_cols_obj()[[input$data_file_1$name]]$samples) ||
-                  is.null(rv$selected_cols_obj()[[input$data_file_2$name]]$samples))) {
+                 (is.null(data_key_1) || is.null(data_key_2) ||
+                  is.null(rv$selected_cols_obj()[[data_key_1]]$samples) ||
+                  is.null(rv$selected_cols_obj()[[data_key_2]]$samples))) {
             
             shinyalert(
                 "Input error", 
@@ -847,25 +1371,13 @@ module_setup_server <- function(input, output, session, module_name) {
             return()
         }
         
-        rv <- perform_mapping(rv, output, input$data_file_1, input$data_file_2, input$feature_col_1, input$feature_col_2)
+        rv <- perform_mapping(rv, output, data_key_1, data_key_2, input$feature_col_1, input$feature_col_2)
     })
     
     observeEvent(rv$mapping_obj(), {
         # req(!is.null(rv$mapping_obj()))
         
         number_files <- length(which(c(!is.null(input$data_file_1), !is.null(input$data_file_2))))
-        
-        if (number_files == 2) {
-            message("Dual found")
-            # output$load_status <- renderText({ "Two datasets detected as assigned" })
-        }
-        else if (number_files == 1) {
-            message("Single found")
-            # output$load_status <- renderText({ "One dataset detected as assigned" })
-        }
-        else {
-            message("Number identified files: %s", number_files)
-        }
     })
     
     observeEvent(input$help, {
@@ -912,7 +1424,7 @@ module_setup_server <- function(input, output, session, module_name) {
             html = TRUE
         )
     })
-    
-    return(rv)
-}
 
+    return(rv)
+    })
+}

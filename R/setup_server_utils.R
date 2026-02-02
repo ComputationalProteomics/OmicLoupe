@@ -13,13 +13,13 @@ sync_select_inputs <- function(session, source_id, selection_id, filedata, joint
 
     all_headers <- colnames(filedata())
     updateSelectInput(
-        session, 
-        selection_id, 
+        session,
+        selection_id,
         choices = all_headers[all_headers %in% joint_selected_samples]
     )
     updateSelectInput(
-        session, 
-        source_id, 
+        session,
+        source_id,
         choices = setdiff(all_headers, joint_selected_samples)
     )
 }
@@ -33,7 +33,6 @@ reset_reactive_cols <- function(rv) {
 clear_file_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=colnames(filedata())))
 }
-
 
 clear_fields <- function(session, filedata, field_ids) {
     field_ids %>% walk(~updateSelectInput(session, .x, choices=c("")))
@@ -109,9 +108,9 @@ do_dataset_mapping <- function(rv, feature_col_1, feature_col_2, output, sample_
     }
     else if (is.null(rv$filedata_1())) {
         rv$mapping_obj(MapObject$new(
-            rv$filedata_2(), 
-            feature_col_2, 
-            samples2=sample_cols2
+            rv$filedata_2(),
+            feature_col_2,
+            samples1=sample_cols2
         ))
         output$load_status <- renderText({ get_output_text(rv, "Dataset2") })
     }

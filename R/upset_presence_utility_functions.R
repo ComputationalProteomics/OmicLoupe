@@ -36,7 +36,7 @@ get_na_nbrs_uppres <- function(rv, input, comb_data, selected_cond, selected_lev
 parse_na_nbrs_to_upset_table <- function(nbr_nas_df, dataset, ddf, selected_cond, selected_levels, presence_fraction_thres) {
     
     tot_counts <- table(ddf[[selected_cond]]) %>% as.list()
-    parsed <- nbr_nas_df[, -1, drop=FALSE] %>% rename_all(~gsub("\\.nbr_na", "", .))
+    parsed <- nbr_nas_df[, -1, drop=FALSE] %>% rename_with(~gsub("\\.nbr_na", "", .))
     if (presence_fraction_thres == 0) {
         upset_table <- data.frame(ifelse(parsed > 0, 1, 0))
     }

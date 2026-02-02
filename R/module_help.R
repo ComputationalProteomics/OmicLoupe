@@ -41,7 +41,7 @@ setup_help_ui <- function(id) {
 module_help_server <- function(input, output, session, module_name) {
 
     output$setup_image <- renderImage({
-        filename <- normalizePath(file.path("./doc", "setup_screen.png"))
+        filename <- system.file("extdata", "setup_screen.png", package="OmicLoupe")
         list(src = filename)
     }, deleteFile = FALSE)
     
@@ -64,7 +64,7 @@ module_help_server <- function(input, output, session, module_name) {
     })
     
     output$plotly1_image <- renderImage({
-        filename <- normalizePath(file.path("./doc", "plotly_screen1.png"))
+        filename <- system.file("extdata", "plotly_screen1.png", package="OmicLoupe")
         list(src = filename)
     }, deleteFile = FALSE)
     
@@ -76,7 +76,7 @@ module_help_server <- function(input, output, session, module_name) {
     })
     
     output$plotly2_image <- renderImage({
-        filename <- normalizePath(file.path("./doc", "plotly_screen2.png"))
+        filename <- system.file("extdata", "plotly_screen2.png", package="OmicLoupe")
         list(src = filename)
     }, deleteFile = FALSE)
     
@@ -88,7 +88,7 @@ module_help_server <- function(input, output, session, module_name) {
     })
     
     output$pca_image <- renderImage({
-        filename <- normalizePath(file.path("./doc", "PCA_screen.png"))
+        filename <- system.file("extdata", "PCA_screen.png", package="OmicLoupe")
         list(src = filename)
     }, deleteFile = FALSE)
     

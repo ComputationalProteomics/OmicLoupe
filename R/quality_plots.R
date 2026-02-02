@@ -19,11 +19,17 @@ adjust_boxplot <- function(plt, do_violin, rotate_x_labels, order_on_condition, 
         plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
     }
     
-    if (order_on_condition) {
+    if (
+        order_on_condition &&
+        !is.null(ddf_cond_col) &&
+        ddf_cond_col != "None" &&
+        ddf_cond_col != "" &&
+        ddf_cond_col %in% colnames(ddf)
+    ) {
         plt <- plt + scale_x_discrete(
-            limits=ddf %>% 
-                arrange(UQ(as.name(ddf_cond_col))) %>% 
-                dplyr::select(ddf_sample_col) %>% 
+            limits=ddf %>%
+                arrange(.data[[ddf_cond_col]]) %>%
+                dplyr::select(ddf_sample_col) %>%
                 unlist()
         )
     }
@@ -43,8 +49,14 @@ make_density_plot <- function(sdf, color, curr_dataset=NULL, title=NULL, text_si
         ylab <- "Density"
     }
     
-    plt <- ggplot(sdf, aes_string(x="value", group="name", color=color)) + 
-        geom_density(na.rm=TRUE)
+    plt <- ggplot(sdf, aes(x=.data[["value"]], group=.data[["name"]]))
+    if (!is.null(color)) {
+        plt <- plt + aes(color=.data[[color]])
+    }
+    else {
+        plt <- plt + aes(color=.data[["name"]])
+    }
+    plt <- plt + geom_density(na.rm=TRUE)
     
     if (!is.null(title) && title != "") {
         plt <- plt + ggtitle(title)
@@ -85,9 +97,6 @@ do_dendrogram = function(raw_data_m, raw_color_levels, labels=NULL, pick_top_var
     hc <- stats::hclust(stats::dist(scaledTransposedMatrix), "ave")
     dhc <- stats::as.dendrogram(hc)
 
-    # plot_dendro(dhc)
-    
-    
     # Note - Label order is shuffled within this object! Be careful with coloring.
     ddata <- ggdendro::dendro_data(dhc, type="rectangle")
 
@@ -142,16 +151,23 @@ make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, s
     }
     
     if (title == "") {
-        title <- sprintf("%s Dataset: %s Color: %s", bar_type, dataset, color)
-    }
-    else {
-        title <- title
+        if (!is.null(color)) {
+            title <- sprintf("%s Dataset: %s Color: %s", bar_type, dataset, color)
+        }
+        else {
+            title <- sprintf("%s Dataset: %s", bar_type, dataset)
+        }
     }
     
-    plt <- ggplot(summed_data, aes_string(x="name", y=target_col, fill=color)) + 
-        geom_col() + 
-        ggtitle(title) + 
-        theme(text=element_text(size=text_size))
+    plt <- ggplot(summed_data, aes(x=.data[["name"]], y=.data[[target_col]]))
+    if (!is.null(color)) {
+        plt <- plt + aes(fill=.data[[color]])
+        plt <- plt + geom_col()
+    }
+    else {
+        plt <- plt + geom_col(fill="#000077")
+    }
+    plt <- plt + ggtitle(title) + theme(text=element_text(size=text_size))
     
     if (rotate_labels) {
         plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
@@ -169,4 +185,3 @@ make_barplot <- function(long_sdf, value_col, ddf, sample_col, dataset, color, s
     }
     plt + xlab(xlab)
 }
-

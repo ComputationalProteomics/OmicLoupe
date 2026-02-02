@@ -41,29 +41,40 @@ setup_quality_ui <- function(id) {
                                 column(4, checkboxInput(ns("rotate_label_barplot"), "Rotate label", value=TRUE))
                             )
                         ),
-                        conditionalPanel(
-                            sprintf("input['%s'] == 'Histograms'", ns("plot_tabs")),
-                            fluidRow(
-                                column(6,
-                                       selectInput(ns("data_num_col_ref"), "Histogram column ref", choices=c("")),
-                                       selectInput(ns("data_cat_col_ref"), "Fill column ref", choices=c(""))
-                                ),
-                                column(6,
-                                       selectInput(ns("data_num_col_comp"), "Histogram column comp", choices=c("")),
-                                       selectInput(ns("data_cat_col_comp"), "Fill column comp", choices=c(""))
-                                )
-                            ),
-                            fluidRow(
-                                column(4, numericInput(ns("max_color_cats"), "Maximum color cats.", min=1, step=1, value=5)),
-                                column(4, numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)),
-                                column(4, numericInput(ns("numeric_color_bins"), "Numeric color bins", min=1, step=1, value=4))
-                            )
-                        ),
-                        conditionalPanel(
-                            sprintf("input['%s'] == 'Dendrograms'", ns("plot_tabs")),
-                            numericInput(ns("dendrogram_height"), "Dendrogram plot height (inactive, requires UI render)", value=500, min = 50, step = 50),
-                            numericInput(ns("dendrogram_textsize"), "Dendrogram text size", value=3, min=1, step=1)
-                        ),
+	                        conditionalPanel(
+	                            sprintf("input['%s'] == 'Histograms'", ns("plot_tabs")),
+	                            fluidRow(
+	                                column(6,
+	                                       selectInput(ns("data_num_col_ref"), "Histogram column ref", choices=c("")),
+	                                       selectInput(ns("data_cat_col_ref"), "Fill column ref", choices=c(""))
+	                                ),
+	                                column(6,
+	                                       selectInput(ns("data_num_col_comp"), "Histogram column comp", choices=c("")),
+	                                       selectInput(ns("data_cat_col_comp"), "Fill column comp", choices=c(""))
+	                                )
+	                            ),
+	                            fluidRow(
+	                                column(4, numericInput(ns("max_color_cats"), "Maximum color cats.", min=1, step=1, value=5)),
+	                                column(4, numericInput(ns("hist_bins"), "Histogram bins.", min=10, step=5, value=50)),
+	                                column(4, numericInput(ns("numeric_color_bins"), "Numeric color bins", min=1, step=1, value=4))
+	                            )
+	                        ),
+	                        conditionalPanel(
+	                            sprintf("input['%s'] == 'Design matrix'", ns("plot_tabs")),
+	                            fluidRow(
+	                                column(6, selectInput(ns("design_num_col_ref"), "Design numeric column ref", choices=c("None"))),
+	                                column(6, selectInput(ns("design_num_col_comp"), "Design numeric column comp", choices=c("None")))
+	                            ),
+	                            fluidRow(
+	                                column(6, selectInput(ns("design_plot_type"), "Design plot", choices=c("Boxplot", "Density"), selected="Boxplot")),
+	                                column(6, checkboxInput(ns("design_rotate_label"), "Rotate label", value=TRUE))
+	                            )
+	                        ),
+		                        conditionalPanel(
+		                            sprintf("input['%s'] == 'Dendrograms'", ns("plot_tabs")),
+		                            numericInput(ns("dendrogram_height"), "Dendrogram plot height", value=500, min = 50, step = 50),
+		                            numericInput(ns("dendrogram_textsize"), "Dendrogram text size", value=3, min=1, step=1)
+		                        ),
                         checkboxInput(ns("show_more_settings"), "Show more settings", value = FALSE),
                         conditionalPanel(
                             sprintf("input['%s'] == 1", ns("show_more_settings")),
@@ -98,25 +109,32 @@ setup_quality_ui <- function(id) {
                                  plotlyOutput(ns("bars_ref")) %>% withSpinner(),
                                  plotlyOutput(ns("bars_comp")) %>% withSpinner()
                         ),
-                        tabPanel("Dendrograms",
-                                 fluidRow(
-                                     column(6, plotOutput(ns("dendrogram_ref")) %>% withSpinner()),
-                                     column(6, plotOutput(ns("dendrogram_comp")) %>% withSpinner())
-                                 )
-                        ),
-                        tabPanel("Histograms", 
-                                 plotOutput(ns("histogram_ref")) %>% withSpinner(),
-                                 plotOutput(ns("histogram_comp")) %>% withSpinner()
-                        )
-                    )
-                )
-            )
+	                        tabPanel("Dendrograms",
+	                                 fluidRow(
+	                                     column(6, uiOutput(ns("dendrogram_ref_ui"))),
+	                                     column(6, uiOutput(ns("dendrogram_comp_ui")))
+	                                 )
+	                        ),
+	                        tabPanel("Histograms", 
+	                                 plotOutput(ns("histogram_ref")) %>% withSpinner(),
+	                                 plotOutput(ns("histogram_comp")) %>% withSpinner()
+	                        ),
+	                        tabPanel("Design matrix",
+	                                 fluidRow(
+	                                     column(6, plotlyOutput(ns("design_ref_plotly")) %>% withSpinner()),
+	                                     column(6, plotlyOutput(ns("design_comp_plotly")) %>% withSpinner())
+	                                 )
+	                        )
+	                    )
+	                )
+	            )
         )
     )
 }
 
-module_quality_server <- function(input, output, session, rv, module_name) {
-    
+module_quality_server <- function(id, rv, module_name) {
+    moduleServer(id, function(input, output, session) {
+
     observeEvent(input$help, {
         shinyalert(
             title = "Help: Quality visuals",
@@ -213,13 +231,24 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         updateSelectInput(session, "sample_data1", choices = ref_choices, selected=set_if_new(input$sample_data1, ref_choices, ref_choices[1]))
         updateSelectInput(session, "sample_data2", choices = comp_choices, selected=set_if_new(input$sample_data2, comp_choices, comp_choices[1]))
 
-        ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
-        comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
-        updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=set_if_new(input$data_num_col_ref, ref_data_choices, ref_data_choices[1]))
-        updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=set_if_new(input$data_cat_col_ref, ref_data_choices, ref_data_choices[1]))
-        updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=set_if_new(input$data_num_col_comp, comp_data_choices, comp_data_choices[1]))
-        updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=set_if_new(input$data_cat_col_comp, comp_data_choices, comp_data_choices[1]))
-    }
+	        ref_data_choices <- c("None", rv$rdf_cols_ref(rv, input$dataset1))
+	        comp_data_choices <- c("None", rv$rdf_cols_comp(rv, input$dataset2))
+	        updateSelectInput(session, "data_num_col_ref", choices = ref_data_choices, selected=set_if_new(input$data_num_col_ref, ref_data_choices, ref_data_choices[1]))
+	        updateSelectInput(session, "data_cat_col_ref", choices = ref_data_choices, selected=set_if_new(input$data_cat_col_ref, ref_data_choices, ref_data_choices[1]))
+	        updateSelectInput(session, "data_num_col_comp", choices = comp_data_choices, selected=set_if_new(input$data_num_col_comp, comp_data_choices, comp_data_choices[1]))
+	        updateSelectInput(session, "data_cat_col_comp", choices = comp_data_choices, selected=set_if_new(input$data_cat_col_comp, comp_data_choices, comp_data_choices[1]))
+
+	        ddf_ref <- rv$ddf_ref(rv, input$dataset1)
+	        ddf_comp <- rv$ddf_comp(rv, input$dataset2)
+	        ref_numeric_cols <- names(ddf_ref)[vapply(ddf_ref, is.numeric, logical(1))]
+	        comp_numeric_cols <- names(ddf_comp)[vapply(ddf_comp, is.numeric, logical(1))]
+	        ref_design_num_choices <- c("None", ref_numeric_cols)
+	        comp_design_num_choices <- c("None", comp_numeric_cols)
+	        default_ref_design_num <- if (length(ref_design_num_choices) > 1) ref_design_num_choices[2] else "None"
+	        default_comp_design_num <- if (length(comp_design_num_choices) > 1) comp_design_num_choices[2] else "None"
+	        updateSelectInput(session, "design_num_col_ref", choices = ref_design_num_choices, selected=set_if_new(input$design_num_col_ref, ref_design_num_choices, default_ref_design_num))
+	        updateSelectInput(session, "design_num_col_comp", choices = comp_design_num_choices, selected=set_if_new(input$design_num_col_comp, comp_design_num_choices, default_comp_design_num))
+	    }
     
     observeEvent({
         rv$ddf_ref(rv, input$dataset1)
@@ -255,16 +284,18 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     
     reactive_long_sdf_ref <- reactive({
         long_df <- get_long(di_new(rv, input$dataset1, 1), rv, ref_ddf_samplecol())
-        if (input$numeric_as_category) {
-            long_df[[ref_color()]] <- as.factor(long_df[[ref_color()]])
+        target_color <- ref_color()
+        if (input$numeric_as_category && !is.null(target_color)) {
+            long_df[[target_color]] <- as.factor(long_df[[target_color]])
         }
         long_df
     })
     
     reactive_long_sdf_comp <- reactive({
         long_df <- get_long(di_new(rv, input$dataset2, 2), rv, comp_ddf_samplecol())
-        if (input$numeric_as_category) {
-            long_df[[comp_color()]] <- as.factor(long_df[[comp_color()]])
+        target_color <- comp_color()
+        if (input$numeric_as_category && !is.null(target_color)) {
+            long_df[[target_color]] <- as.factor(long_df[[target_color]])
         }
         long_df
     })
@@ -353,12 +384,21 @@ module_quality_server <- function(input, output, session, rv, module_name) {
 
     plot_functions <- list()
     plot_functions$boxplot_ref <- reactive({
-        plt_ref <- ggplot(
-            reactive_long_sdf_ref(), 
-            aes_string(x="name", y="value", color=ref_color()))
+        target_color <- ref_color()
+        plt_ref <- ggplot(reactive_long_sdf_ref(), aes(x=.data[["name"]], y=.data[["value"]]))
+        if (!is.null(target_color)) {
+            plt_ref <- plt_ref + aes(color=.data[[target_color]])
+        }
         
-        if (input$custom_title1 == "") plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
-        else plt_ref <- plt_ref + ggtitle(input$custom_title1)
+        if (input$custom_title1 == "") {
+            if (!is.null(target_color)) {
+                plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, target_color))
+            } else {
+                plt_ref <- plt_ref + ggtitle(sprintf("Dataset: %s", input$dataset1))
+            }
+        } else {
+            plt_ref <- plt_ref + ggtitle(input$custom_title1)
+        }
         
         adjust_boxplot(
             plt_ref, 
@@ -375,12 +415,21 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     })
     
     plot_functions$boxplot_comp <- reactive({
-        plt_comp <- ggplot(
-            reactive_long_sdf_comp(), 
-            aes_string(x="name", y="value", color=comp_color()))
+        target_color <- comp_color()
+        plt_comp <- ggplot(reactive_long_sdf_comp(), aes(x=.data[["name"]], y=.data[["value"]]))
+        if (!is.null(target_color)) {
+            plt_comp <- plt_comp + aes(color=.data[[target_color]])
+        }
         
-        if (input$custom_title2 == "") plt_comp <- plt_comp + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
-        else plt_comp <- plt_comp + ggtitle(input$custom_title2)
+        if (input$custom_title2 == "") {
+            if (!is.null(target_color)) {
+                plt_comp <- plt_comp + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, target_color))
+            } else {
+                plt_comp <- plt_comp + ggtitle(sprintf("Dataset: %s", input$dataset2))
+            }
+        } else {
+            plt_comp <- plt_comp + ggtitle(input$custom_title2)
+        }
         
         adjust_boxplot(
             plt_comp, 
@@ -456,13 +505,34 @@ module_quality_server <- function(input, output, session, rv, module_name) {
     })
     
     plot_functions$dendrogram_ref <- function() {
+        ddf <- rv$ddf_ref(rv, input$dataset1)
+        sample_col <- ref_ddf_samplecol()
+        samples <- colnames(ref_sdf())
+        target_color <- ref_color()
+        
+        labels <- ddf[[sample_col]][match(samples, ddf[[sample_col]])]
+        if (!is.null(target_color) && target_color %in% colnames(ddf)) {
+            color_levels <- ddf[[target_color]]
+            names(color_levels) <- ddf[[sample_col]]
+            color_levels <- color_levels[samples]
+            legend_title <- target_color
+        } else {
+            color_levels <- rep("None", length(samples))
+            legend_title <- NULL
+        }
+        
         plt <- do_dendrogram(
             ref_sdf(),
-            rv$ddf_ref(rv, input$dataset1)[[ref_color()]],
-            labels=rv$ddf_ref(rv, input$dataset1)[[ref_ddf_samplecol()]], 
-            legend_title = ref_color(), 
-            text_size=input$dendrogram_textsize
-        ) + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, ref_color()))
+            color_levels,
+            labels = labels,
+            legend_title = legend_title,
+            text_size = input$dendrogram_textsize
+        )
+        if (!is.null(target_color)) {
+            plt <- plt + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset1, target_color))
+        } else {
+            plt <- plt + ggtitle(sprintf("Dataset: %s", input$dataset1))
+        }
         
         if (input$custom_title1 != "") {
             plt <- plt + ggtitle(input$custom_title1)
@@ -471,26 +541,63 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         plt
     }
     
-    plot_functions$dendrogram_comp <- function() {
+	    plot_functions$dendrogram_comp <- function() {
+        ddf <- rv$ddf_comp(rv, input$dataset2)
+        sample_col <- comp_ddf_samplecol()
+        samples <- colnames(comp_sdf())
+        target_color <- comp_color()
+        
+        labels <- ddf[[sample_col]][match(samples, ddf[[sample_col]])]
+        if (!is.null(target_color) && target_color %in% colnames(ddf)) {
+            color_levels <- ddf[[target_color]]
+            names(color_levels) <- ddf[[sample_col]]
+            color_levels <- color_levels[samples]
+            legend_title <- target_color
+        } else {
+            color_levels <- rep("None", length(samples))
+            legend_title <- NULL
+        }
+        
         plt <- do_dendrogram(
             comp_sdf(),
-            rv$ddf_comp(rv, input$dataset2)[[comp_color()]],
-            labels=rv$ddf_comp(rv, input$dataset2)[[comp_ddf_samplecol()]],
-            legend_title = comp_color(),
-            text_size=input$dendrogram_textsize
-        ) + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, comp_color()))
+            color_levels,
+            labels = labels,
+            legend_title = legend_title,
+            text_size = input$dendrogram_textsize
+        )
+        if (!is.null(target_color)) {
+            plt <- plt + ggtitle(sprintf("Dataset: %s Color: %s", input$dataset2, target_color))
+        } else {
+            plt <- plt + ggtitle(sprintf("Dataset: %s", input$dataset2))
+        }
         if (input$custom_title2 != "") {
             plt <- plt + ggtitle(input$custom_title2)
         }
         
-        plt
-    }
-    
-    
-    output$dendrogram_ref <- renderPlot({
+	        plt
+	    }
+	    
+	    output$dendrogram_ref_ui <- renderUI({
+	        height_px <- input$dendrogram_height
+	        if (is.null(height_px) || is.na(height_px) || height_px < 50) {
+	            height_px <- 500
+	        }
+	        plotOutput(session$ns("dendrogram_ref"), height = paste0(height_px, "px")) %>% withSpinner()
+	    })
 
-        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
-        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
+	    output$dendrogram_comp_ui <- renderUI({
+	        height_px <- input$dendrogram_height
+	        if (is.null(height_px) || is.na(height_px) || height_px < 50) {
+	            height_px <- 500
+	        }
+	        plotOutput(session$ns("dendrogram_comp"), height = paste0(height_px, "px")) %>% withSpinner()
+	    })
+	    
+	    
+	    output$dendrogram_ref <- renderPlot({
+
+	        shiny::validate(need(rv$ddf_ref(rv, input$dataset1), "No design matrix found, please upload at the Setup page"))
+	        shiny::validate(need(reactive_long_sdf_ref(), "No data matrix found, please upload at the Setup page"))
         plot_functions$dendrogram_ref()
     })
     
@@ -509,8 +616,11 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 rdf_ref <- factor_prep_color_col(rdf_ref, input$data_cat_col_ref, input$max_color_cats, input$numeric_color_bins)
                 target_color <- input$data_cat_col_ref
             }
-            plt_ref <- ggplot(rdf_ref, aes_string(x=input$data_num_col_ref, fill=target_color)) + 
-                geom_histogram(na.rm=TRUE, bins=input$hist_bins)
+            plt_ref <- ggplot(rdf_ref, aes(x=.data[[input$data_num_col_ref]]))
+            if (!is.null(target_color)) {
+                plt_ref <- plt_ref + aes(fill=.data[[target_color]])
+            }
+            plt_ref <- plt_ref + geom_histogram(na.rm=TRUE, bins=input$hist_bins)
             
             if (input$custom_title1 == "") plot_title <- sprintf("Dataset: %s Column: %s Fill: %s", input$dataset1, input$data_num_col_ref, input$data_cat_col_ref)
             else plot_title <- input$custom_title1
@@ -532,12 +642,15 @@ module_quality_server <- function(input, output, session, rv, module_name) {
                 rdf_comp <- factor_prep_color_col(rdf_comp, input$data_cat_col_comp, input$max_color_cats, input$numeric_color_bins)
                 target_color <- input$data_cat_col_comp
             }
-            plt_comp <- ggplot(rdf_comp, aes_string(x=input$data_num_col_comp, fill=target_color)) + 
-                geom_histogram(na.rm=TRUE, bins=input$hist_bins)
+            plt_comp <- ggplot(rdf_comp, aes(x=.data[[input$data_num_col_comp]]))
+            if (!is.null(target_color)) {
+                plt_comp <- plt_comp + aes(fill=.data[[target_color]])
+            }
+            plt_comp <- plt_comp + geom_histogram(na.rm=TRUE, bins=input$hist_bins)
             
             if (input$custom_title2 == "") plot_title <- sprintf("Dataset: %s Column: %s Fill: %s", input$dataset2, input$data_num_col_comp, input$data_cat_col_comp)
             else plot_title <- input$custom_title2
-            plt_ref <- plt_comp + ggtitle(plot_title)
+            plt_comp <- plt_comp + ggtitle(plot_title)
         }
         else {
             plt_comp <- ggplot() + ggtitle("Empty histogram")
@@ -553,10 +666,118 @@ module_quality_server <- function(input, output, session, rv, module_name) {
         plot_functions$histogram_ref()
     })
     
-    output$histogram_comp <- renderPlot({ 
-        
-        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
-        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
-        plot_functions$histogram_comp()
-    })
-}
+	    output$histogram_comp <- renderPlot({ 
+	        
+	        shiny::validate(need(rv$ddf_comp(rv, input$dataset2), "No design matrix found, please upload at the Setup page"))
+	        shiny::validate(need(reactive_long_sdf_comp(), "No data matrix found, please upload at the Setup page"))
+	        plot_functions$histogram_comp()
+	    })
+
+	    make_design_plot <- function(ddf, dataset_label, value_col, group_col, plot_type, custom_title, rotate_labels) {
+	        shiny::validate(need(value_col %in% names(ddf), sprintf("Design column '%s' not found", value_col)))
+	        shiny::validate(need(is.numeric(ddf[[value_col]]), sprintf("Design column '%s' must be numeric", value_col)))
+
+	        plot_df <- ddf %>%
+	            dplyr::mutate(
+	                .value = .data[[value_col]]
+	            )
+
+	        if (!is.null(group_col) && group_col %in% names(plot_df)) {
+	            group_vals <- plot_df[[group_col]]
+	            if (is.numeric(group_vals)) {
+	                uniq_count <- length(unique(group_vals[!is.na(group_vals)]))
+	                if (uniq_count > 20) {
+	                    group_vals <- cut(group_vals, 4)
+	                }
+	            }
+	            plot_df$.group <- as.factor(group_vals)
+	        } else {
+	            plot_df$.group <- as.factor("All")
+	        }
+
+	        title <- custom_title
+	        if (is.null(title) || title == "") {
+	            if (!is.null(group_col) && group_col %in% names(plot_df) && !identical(plot_df$.group, factor("All"))) {
+	                title <- sprintf("Design: %s - %s (group: %s)", dataset_label, value_col, group_col)
+	            } else {
+	                title <- sprintf("Design: %s - %s", dataset_label, value_col)
+	            }
+	        }
+
+	        if (plot_type == "Boxplot") {
+	            xlab <- if (input$custom_xlab != "") input$custom_xlab else if (!is.null(group_col) && group_col %in% names(plot_df)) group_col else "Group"
+	            ylab <- if (input$custom_ylab != "") input$custom_ylab else value_col
+	            plt <- ggplot(plot_df, aes(x = .data$.group, y = .data$.value, fill = .data$.group)) +
+	                geom_boxplot(na.rm = TRUE) +
+	                ggtitle(title) +
+	                xlab(xlab) +
+	                ylab(ylab) +
+	                theme_bw() +
+	                theme(text = element_text(size = input$text_size), legend.title = element_blank())
+	            if (isTRUE(rotate_labels)) {
+	                plt <- plt + theme(axis.text.x = element_text(angle = 90, vjust = 0.5))
+	            }
+	            if (length(levels(plot_df$.group)) == 1 && identical(levels(plot_df$.group), "All")) {
+	                plt <- plt + theme(legend.position = "none")
+	            }
+	        } else if (plot_type == "Density") {
+	            xlab <- if (input$custom_xlab != "") input$custom_xlab else value_col
+	            ylab <- if (input$custom_ylab != "") input$custom_ylab else "Density"
+	            plt <- ggplot(plot_df, aes(x = .data$.value, color = .data$.group)) +
+	                geom_density(na.rm = TRUE) +
+	                ggtitle(title) +
+	                xlab(xlab) +
+	                ylab(ylab) +
+	                theme_bw() +
+	                theme(text = element_text(size = input$text_size), legend.title = element_blank())
+	            if (length(levels(plot_df$.group)) == 1 && identical(levels(plot_df$.group), "All")) {
+	                plt <- plt + theme(legend.position = "none")
+	            }
+	        } else {
+	            stop(sprintf("Unknown design plot type: %s", plot_type))
+	        }
+
+	        plt %>% plotly::ggplotly() %>% assign_fig_settings(rv)
+	    }
+
+	    output$design_ref_plotly <- renderPlotly({
+	        ddf <- rv$ddf_ref(rv, input$dataset1)
+	        shiny::validate(need(!is.null(ddf), "No design matrix found, please upload at the Setup page"))
+	        shiny::validate(need(!is.null(input$design_num_col_ref), "Select a numeric design column to plot"))
+
+	        if (input$design_num_col_ref == "None") {
+	            return(plotly::ggplotly(ggplot() + ggtitle("Select a numeric design column")) %>% assign_fig_settings(rv))
+	        }
+
+	        make_design_plot(
+	            ddf = ddf,
+	            dataset_label = input$dataset1,
+	            value_col = input$design_num_col_ref,
+	            group_col = ref_color(),
+	            plot_type = input$design_plot_type,
+	            custom_title = input$custom_title1,
+	            rotate_labels = input$design_rotate_label
+	        )
+	    })
+
+	    output$design_comp_plotly <- renderPlotly({
+	        ddf <- rv$ddf_comp(rv, input$dataset2)
+	        shiny::validate(need(!is.null(ddf), "No design matrix found, please upload at the Setup page"))
+	        shiny::validate(need(!is.null(input$design_num_col_comp), "Select a numeric design column to plot"))
+
+	        if (input$design_num_col_comp == "None") {
+	            return(plotly::ggplotly(ggplot() + ggtitle("Select a numeric design column")) %>% assign_fig_settings(rv))
+	        }
+
+	        make_design_plot(
+	            ddf = ddf,
+	            dataset_label = input$dataset2,
+	            value_col = input$design_num_col_comp,
+	            group_col = comp_color(),
+	            plot_type = input$design_plot_type,
+	            custom_title = input$custom_title2,
+	            rotate_labels = input$design_rotate_label
+	        )
+	    })
+	    })
+	}

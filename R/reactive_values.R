@@ -1,6 +1,20 @@
-setup_reactive_values_obj <- function(input) {
+setup_reactive_values_obj <- function(input, preloaded = NULL) {
 
-    get_filename <- function(in_file) {
+	    get_preloaded <- function() {
+	        if (is.null(preloaded)) {
+	            return(get_preloaded_data())
+	        }
+	        if (is.function(preloaded)) {
+	            return(preloaded())
+	        }
+	        preloaded
+	    }
+
+	    get_filename <- function(in_file, preloaded_name = NULL) {
+	        if (!is.null(preloaded_name)) {
+	            return(preloaded_name)
+        }
+
         infile <- in_file
         if (is.null(infile)) {
             return(NULL)
@@ -8,37 +22,82 @@ setup_reactive_values_obj <- function(input) {
         stringi::stri_extract_first(str = infile$name, regex = ".*")
     }
 
-    load_data <- function(in_file, two_datasets=NULL, is_design_file = FALSE) {
+    load_data <- function(in_file, two_datasets=NULL, is_design_file = FALSE, preloaded_data = NULL) {
+        if (!is.null(preloaded_data)) {
+            return(preloaded_data)
+        }
+
         infile <- in_file
         if (is.null(infile) || (is.logical(two_datasets) && two_datasets==FALSE)) {
             return(NULL)
         }
         raw_df <- read_tsv(infile$datapath, col_types = cols())
 
-
-        if (is_design_file) {
-            raw_df <- raw_df %>%
-              mutate_all(make.names) # Run make.names on all variables of the design matrix
-        } else {
-          colnames(raw_df) <- make.names(colnames(raw_df))
-        }
-
         raw_df
     }
 
     rv <- list()
-    rv$setup_input <- reactive(input)
-    rv$filedata_1 <- reactive(load_data(input$data_file_1))
-    rv$filedata_2 <- reactive(load_data(input$data_file_2, input$two_datasets))
-    rv$design_1 <- reactive(load_data(input$design_file_1, is_design_file = TRUE))
-    rv$design_2 <- reactive({
-        if (!input$matched_samples) {
-            load_data(input$design_file_2, is_design_file = TRUE)
-        }
-        else {
-            load_data(input$design_file_1, is_design_file = TRUE)
-        }
-    })
+	    rv$setup_input <- reactive(input)
+
+		    rv$filedata_1 <- reactive({
+		        if (!is.null(input$data_file_1)) {
+		            return(load_data(input$data_file_1))
+		        }
+		        preloaded_now <- get_preloaded()
+		        if (!is.null(preloaded_now) && !is.null(preloaded_now$data1)) {
+		            return(preloaded_now$data1)
+		        }
+		        NULL
+		    })
+
+		    rv$filedata_2 <- reactive({
+		        if (!is.null(input$data_file_2)) {
+		            return(load_data(input$data_file_2, input$two_datasets))
+		        }
+		        preloaded_now <- get_preloaded()
+		        if (!is.null(preloaded_now) && !is.null(preloaded_now$data2)) {
+		            return(preloaded_now$data2)
+		        }
+		        NULL
+		    })
+
+		    rv$design_1 <- reactive({
+		        if (!is.null(input$design_file_1)) {
+		            return(load_data(input$design_file_1, is_design_file = TRUE))
+		        }
+		        preloaded_now <- get_preloaded()
+		        if (!is.null(preloaded_now) && !is.null(preloaded_now$design1)) {
+		            return(preloaded_now$design1)
+		        }
+		        NULL
+		    })
+
+		    rv$design_2 <- reactive({
+		        preloaded_now <- get_preloaded()
+		        matched <- if (!is.null(preloaded_now) && !is.null(preloaded_now$matched_samples)) {
+		            isTRUE(preloaded_now$matched_samples)
+		        } else {
+		            isTRUE(input$matched_samples)
+		        }
+
+		        if (matched) {
+		            if (!is.null(input$design_file_1)) {
+		                return(load_data(input$design_file_1, is_design_file = TRUE))
+		            }
+		            if (!is.null(preloaded_now) && !is.null(preloaded_now$design1)) {
+		                return(preloaded_now$design1)
+		            }
+		            return(load_data(input$design_file_1, is_design_file = TRUE))
+		        }
+
+		        if (!is.null(input$design_file_2)) {
+		            return(load_data(input$design_file_2, is_design_file = TRUE))
+		        }
+		        if (!is.null(preloaded_now) && !is.null(preloaded_now$design2)) {
+		            return(preloaded_now$design2)
+		        }
+		        load_data(input$design_file_2, is_design_file = TRUE)
+		    })
     rv$design_samplecol_1 <- reactive(input$design_sample_col_1)
     rv$design_samplecol_2 <- reactive(input$design_sample_col_2)
     rv$design_condcol_1 <- reactive(input$design_cond_col_1)
@@ -53,9 +112,32 @@ setup_reactive_values_obj <- function(input) {
     rv$figure_save_height <- reactive(input$figure_save_height)
     rv$figure_save_dpi <- reactive(input$figure_save_dpi)
 
-    rv$selected_cols_obj <- reactiveVal(list())
-    rv$filename_1 <- reactive(get_filename(input$data_file_1))
-    rv$filename_2 <- reactive(get_filename(input$data_file_2))
+		    rv$selected_cols_obj <- reactiveVal(list())
+		    rv$filename_1 <- reactive({
+		        if (!is.null(input$data_file_1)) {
+		            return(get_filename(input$data_file_1))
+		        }
+		        preloaded_now <- get_preloaded()
+		        if (!is.null(preloaded_now) && !is.null(preloaded_now$data1)) {
+		            preloaded_name <- if (isTRUE(identical(preloaded_now$handoff_source, "NormalyzerDE"))) {
+		                "NormalyzerDE"
+		            } else {
+		                "PreloadedData1"
+		            }
+		            return(get_filename(NULL, preloaded_name = preloaded_name))
+		        }
+		        NULL
+		    })
+		    rv$filename_2 <- reactive({
+		        if (!is.null(input$data_file_2)) {
+		            return(get_filename(input$data_file_2))
+		        }
+		        preloaded_now <- get_preloaded()
+		        if (!is.null(preloaded_now) && !is.null(preloaded_now$data2)) {
+		            return(get_filename(NULL, preloaded_name = "PreloadedData2"))
+		        }
+		        NULL
+	    })
     rv$mapping_obj <- reactiveVal(NULL)
     rv$selected_feature <- reactiveVal(NULL)
     rv$selected_feature_module <- reactiveVal(NULL)
@@ -135,13 +217,9 @@ setup_reactive_values_obj <- function(input) {
         table_settings <- rv$table_settings()
 
         parsed_shown_data <- shown_data %>%
-            mutate_if(
-                is.character,
-                ~str_trunc(., table_settings$trunc_length)
-            ) %>%
-            mutate_if(
-                is.numeric,
-                ~round(., table_settings$round_digits)
+            mutate(
+                across(where(is.character), ~str_trunc(., table_settings$trunc_length)),
+                across(where(is.numeric), ~round(., table_settings$round_digits))
             )
         parsed_shown_data
     }
@@ -164,7 +242,7 @@ setup_reactive_values_obj <- function(input) {
             }
         }
 
-        page_length <- 10
+        page_length <- DEFAULT_PAGE_LENGTH
         display_pos <- (selected_row_nbr-1) - ((selected_row_nbr-1) %% page_length)
 
         if (with_row_selection) {

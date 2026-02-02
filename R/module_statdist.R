@@ -1,10 +1,3 @@
-MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "First"="red", "Second"="orange", "Contra"="green")
-MY_COLORS_SELECTED <- c("grey50", "green")
-SET1_COLORS <- c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3", "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999")
-
-MAX_DISCRETE_LEVELS <- 20
-MAX_COLORS <- 10
-
 setup_plotly_ui <- function(id) {
     
     ns <- shiny::NS(id)
@@ -47,11 +40,11 @@ setup_plotly_ui <- function(id) {
                            fluidRow(
                                column(9,
                                       sliderInput(ns("pvalue_cutoff"), "P-value cutoff", value=0.05, step=0.01, min=0, max=1)
-                               ), column(3, 
+                               ), column(3,
                                          span(
-                                             selectInput(ns("pvalue_type_select"), 
-                                                         choices = c("P.Value", "adj.P.Val"), 
-                                                         selected = "P.Value", 
+                                             selectInput(ns("pvalue_type_select"),
+                                                         choices = c("P.Value", "adj.P.Val"),
+                                                         selected = "P.Value",
                                                          label = "P-value type"),
                                              style="padding:20px")
                                )),
@@ -106,8 +99,9 @@ setup_plotly_ui <- function(id) {
     )
 }
 
-module_statdist_server <- function(input, output, session, rv, module_name, parent_session=NULL) {
-    
+module_statdist_server <- function(id, rv, module_name, parent_session=NULL) {
+    moduleServer(id, function(input, output, session) {
+
     in_dataset1 <- reactive(input$dataset1)
     in_dataset2 <- reactive(input$dataset2)
     in_stat_base1 <- reactive(input$stat_base1)
@@ -197,8 +191,8 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         else {
             if (input$show_only_joint && (in_dataset1() != in_dataset2() || in_stat_base1() != in_stat_base2())) {
                 combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=FALSE) %>%
-                    filter(!is.na(UQ(as.name(ref_stat_cols$P.Value)))) %>%
-                    filter(!is.na(UQ(as.name(comp_stat_cols$P.Value))))
+                    filter(!is.na(.data[[ref_stat_cols$P.Value]])) %>%
+                    filter(!is.na(.data[[comp_stat_cols$P.Value]]))
             }
             else {
                 combined_dataset <- rv$mapping_obj()$get_combined_dataset(only_no_na_entries=FALSE, include_one_dataset_entries=TRUE)
@@ -216,11 +210,11 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         target_statcol <- ref_stat_cols[[input$pvalue_type_select]]
         base_df <- cbind(
-            combined_dataset, 
+            combined_dataset,
             pass_threshold_data=pass_thres_col,
             annot_ref=combined_dataset[, paste0(sprintf("d%s.", di(rv, in_dataset1(), 1)), rv$rdf_annotcol_ref(rv, in_dataset1()))],
             annot_comp=combined_dataset[, paste0(sprintf("d%s.", di(rv, in_dataset2(), 2)), rv$rdf_annotcol_comp(rv, in_dataset2()))]
-        ) %>% arrange(desc(UQ(as.name(target_statcol))))
+        ) %>% arrange(desc(.data[[target_statcol]]))
         
         if (input$color_type == "Threshold") {
             base_df
@@ -255,8 +249,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         }
         else if (input$color_type == "Column") {
 
-            ref_color_col <- base_df[[sprintf("d%s.%s", di(rv, in_dataset1(), 1), input$color_col_1)]]
-            comp_color_col <- base_df[[sprintf("d%s.%s", di(rv, in_dataset2(), 2), input$color_col_2)]]
+            ref_col_name <- sprintf("d%s.%s", di(rv, in_dataset1(), 1), input$color_col_1)
+            comp_col_name <- sprintf("d%s.%s", di(rv, in_dataset2(), 2), input$color_col_2)
+            shiny::validate(need(ref_col_name %in% names(base_df),
+                sprintf("Column '%s' not found in dataset", ref_col_name)))
+            shiny::validate(need(comp_col_name %in% names(base_df),
+                sprintf("Column '%s' not found in dataset", comp_col_name)))
+
+            ref_color_col <- base_df[[ref_col_name]]
+            comp_color_col <- base_df[[comp_col_name]]
             
             ref_color_count <- ref_color_col %>% unique() %>% length()
             comp_color_count <- comp_color_col %>% unique() %>% length()
@@ -275,7 +276,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             base_df %>% arrange(.data$ref.color_col)
         }
         else {
-            warning("Unknown color_type !")
+            stop(sprintf(
+                "Unknown color_type '%s'. Expected one of: 'Threshold', 'PCA', 'Column'",
+                input$color_type
+            ))
         }
     })
     
@@ -300,8 +304,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
                 strwrap, width=30), 
             paste, collapse="<br>") %>% unlist()
         if (input$color_type == "PCA") {
-            plot_df$ref.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "ref", input$plot_pc1)]]
-            plot_df$comp.PC <- reactive_plot_df()[[sprintf("%s.PC%s", "comp", input$plot_pc2)]]
+            ref_pc_col <- sprintf("%s.PC%s", "ref", input$plot_pc1)
+            comp_pc_col <- sprintf("%s.PC%s", "comp", input$plot_pc2)
+            shiny::validate(need(ref_pc_col %in% names(reactive_plot_df()),
+                sprintf("PC column '%s' not found in dataset", ref_pc_col)))
+            shiny::validate(need(comp_pc_col %in% names(reactive_plot_df()),
+                sprintf("PC column '%s' not found in dataset", comp_pc_col)))
+
+            plot_df$ref.PC <- reactive_plot_df()[[ref_pc_col]]
+            plot_df$comp.PC <- reactive_plot_df()[[comp_pc_col]]
             warning("The pass_thres could be better calculated for histograms also in PCA")
             plot_df$pass_thres <- TRUE
         }
@@ -401,10 +412,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         plot_ly(
             plot_df,
-            x = ~get(x_col),
-            color = ~get(fill_col),
-            type = "histogram", 
-            colors = target_colors, 
+            x = plot_df[[x_col]],
+            color = plot_df[[fill_col]],
+            type = "histogram",
+            colors = target_colors,
             alpha = 0.6,
             nbinsx = bin_count,
             source = "subset",
@@ -431,7 +442,10 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             color_col <- sprintf("%s.color_col", data_pattern)
         }
         else {
-            warning("Unknown input$color_type: ", input$color_type)
+            stop(sprintf(
+                "Unknown color_type '%s'. Expected one of: 'Threshold', 'PCA', 'Column'",
+                color_type
+            ))
         }
         color_col
     }
@@ -466,14 +480,47 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
     observeEvent(input$clear_selection, {
         selected_data$event_data <- NULL
     })
-    
+
+    map_table_selection_to_plot_ids <- function(rv, table_rows_selected) {
+        if (is.null(table_rows_selected) || length(table_rows_selected) == 0) {
+            return(character(0))
+        }
+
+        table_df <- rv$mapping_obj()$get_combined_dataset(
+            only_no_na_entries = FALSE,
+            include_one_dataset_entries = TRUE
+        )
+        if (is.null(table_df) || nrow(table_df) == 0) {
+            return(character(0))
+        }
+        plot_df <- reactive_plot_df()
+        if (is.null(plot_df) || nrow(plot_df) == 0 || !"comb_id" %in% names(plot_df)) {
+            return(character(0))
+        }
+
+        id_col_1 <- if (!is.null(rv$mapping_obj()$target_col1)) paste0("d1.", rv$mapping_obj()$target_col1) else NULL
+        id_col_2 <- if (!is.null(rv$mapping_obj()$target_col2)) paste0("d2.", rv$mapping_obj()$target_col2) else NULL
+
+        make_key <- function(df) {
+            id1 <- if (!is.null(id_col_1) && id_col_1 %in% names(df)) as.character(df[[id_col_1]]) else rep(NA_character_, nrow(df))
+            id2 <- if (!is.null(id_col_2) && id_col_2 %in% names(df)) as.character(df[[id_col_2]]) else rep(NA_character_, nrow(df))
+            paste0("d1=", id1, "|d2=", id2)
+        }
+
+        table_keys <- make_key(table_df)
+        selected_keys <- unique(table_keys[table_rows_selected])
+        plot_keys <- make_key(plot_df)
+
+        plot_df$comb_id[plot_keys %in% selected_keys] %>% as.character()
+    }
+
     get_contrast_figure_settings <- function(rv, show_full_table, event_data, color_type, is_ref, table_rows_selected) {
         
         settings_list <- list()
         settings_list$manual_scale <- TRUE
         settings_list$cont_scale <- NULL
         if (show_full_table) {
-            settings_list$selected <- rv$mapping_obj()$get_combined_dataset(include_one_dataset_entries=TRUE)[table_rows_selected, ] %>% pull(.data$comb_id)
+            settings_list$selected <- map_table_selection_to_plot_ids(rv, table_rows_selected)
             settings_list$color_col <- "selected"
         }
         else if (!is.null(event_data) == TRUE) {
@@ -512,18 +559,15 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         names(target_colors) <- target_levels
         target_colors
         # color_map <- cbind(value=joint_order, color=set1_colors[1:length(joint_order)])
-        
-        # MY_COLORS_COMPARISON <- c("None"="grey50", "Both"="blue", "First"="red", "Second"="orange", "Contra"="green")
-        # MY_COLORS_SELECTED <- c("grey50", "green")
     }
 
-    make_scatter_plotly <- function(plot_df, x_col, y_col, title, x_label=NULL, y_label=NULL, color_col, hover_text="hover_text", 
-                                    manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2, 
+    make_scatter_plotly <- function(plot_df, x_col, y_col, title, x_label=NULL, y_label=NULL, color_col, hover_text="hover_text",
+                                    manual_scale=TRUE, cont_scale=NULL, alpha=0.5, dot_size=2,
                                     title_font_size=10, axis_font_size=10, legend_font_size=10, use_webgl=TRUE, xrange=NULL, yrange=NULL) {
-        
+
         plot_df_no_na <- plot_df %>%
-            dplyr::filter(!is.na(UQ(as.name(x_col)))) %>%
-            dplyr::filter(!is.na(UQ(as.name(y_col))))
+            dplyr::filter(!is.na(.data[[x_col]])) %>%
+            dplyr::filter(!is.na(.data[[y_col]]))
         
         if (manual_scale) {
             if (color_col == "selected") {
@@ -540,9 +584,9 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
         
         plt <- plot_ly(
             plot_df,
-            x = ~get(x_col),
-            y = ~get(y_col),
-            color = ~get(color_col),
+            x = plot_df[[x_col]],
+            y = plot_df[[y_col]],
+            color = plot_df[[color_col]],
             colors = color_scale,
             key = plot_df[["key"]],
             alpha = alpha,
@@ -852,5 +896,5 @@ module_statdist_server <- function(input, output, session, rv, module_name, pare
             rv$dt_parsed_data(rv, rv$mapping_obj()$get_combined_dataset(), selection_mode='multiple')
         }
     })
+    })
 }
-

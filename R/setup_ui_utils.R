@@ -65,7 +65,7 @@ top_bar_w_help <- function(title, button_id) {
     bar_w_help(title, button_id)
 }
 
-sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_col_id, parsing_errors_id, select_size=12) {
+sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_col_id, parsing_errors_id, select_size=12, after_upload_ui = NULL) {
     wellPanel(
         fileInput(
             upload_id,
@@ -74,6 +74,7 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_co
             multiple = FALSE,
             accept = c("test/tsv", ".tsv", ".txt")
         ),
+        after_upload_ui,
         uiOutput(parsing_errors_id),
         selectInput(
             select_col_id,
@@ -100,7 +101,7 @@ sample_input_well <- function(upload_id, select_col_id, feature_col_id, annot_co
     )
 }
 
-design_input_well <- function(design_upload_id, sample_col_id, cond_col_id, parsing_errors_id) {
+design_input_well <- function(design_upload_id, sample_col_id, cond_col_id, parsing_errors_id, after_upload_ui = NULL) {
     wellPanel(
         fileInput(
             design_upload_id,
@@ -108,6 +109,7 @@ design_input_well <- function(design_upload_id, sample_col_id, cond_col_id, pars
             multiple = FALSE,
             accept = c("test/tsv", ".tsv", ".txt")
         ),
+        after_upload_ui,
         uiOutput(parsing_errors_id),
         selectInput(
             sample_col_id,

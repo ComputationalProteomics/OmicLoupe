@@ -33,22 +33,22 @@ two_level_colors_other <- c("#CCCCCC", "#0000CC")
 # }
 
 minimap_hist <- function(dataset, target_col, pvalue_cutoff, bin_count, label="(No label)") {
-    ggplot(dataset, aes_string(x=target_col)) + 
+    ggplot(dataset, aes(x=.data[[target_col]])) +
         geom_histogram(bins=bin_count, na.rm = TRUE) +
-        geom_vline(xintercept=pvalue_cutoff) + 
+        geom_vline(xintercept=pvalue_cutoff) +
         ggtitle(sprintf("%s distribution", label))
 }
 
 pvaluehists <- function(plot_df, stat_cols1, stat_cols2, stat_base1, stat_base2, bin_count) {
 
-    plt1 <- ggplot(plot_df, aes_string(x=stat_cols1$P.Value, fill="pass_threshold_data")) + 
-        geom_histogram(bins=bin_count, na.rm=TRUE) + 
-        scale_fill_manual(values=two_level_colors) + 
+    plt1 <- ggplot(plot_df, aes(x=.data[[stat_cols1$P.Value]], fill=.data[["pass_threshold_data"]])) +
+        geom_histogram(bins=bin_count, na.rm=TRUE) +
+        scale_fill_manual(values=two_level_colors) +
         ggtitle(paste(stat_base1, " p-value histogram"))
-    
-    plt2 <- ggplot(plot_df, aes_string(x=stat_cols2$P.Value, fill="pass_threshold_data")) + 
-        geom_histogram(bins=bin_count, na.rm=TRUE) + 
-        scale_fill_manual(values=two_level_colors) + 
+
+    plt2 <- ggplot(plot_df, aes(x=.data[[stat_cols2$P.Value]], fill=.data[["pass_threshold_data"]])) +
+        geom_histogram(bins=bin_count, na.rm=TRUE) +
+        scale_fill_manual(values=two_level_colors) +
         ggtitle(paste(stat_base2, " p-value histogram"))
     
     ggarrange(plt1, plt2, nrow=2, ncol=1)
@@ -72,14 +72,14 @@ scatterplots <- function(plot_df, stat_cols1, stat_cols2, stat_base1, stat_base2
         stop("Unknown mode: ", mode)
     }
 
-    plt1 <- ggplot(plot_df, aes_string(x=x_expr(stat_cols1), y=y_expr(stat_cols1), color="pass_threshold_data")) + 
-        geom_point(na.rm = TRUE) + 
-        scale_color_manual(values=two_level_colors) + 
+    plt1 <- ggplot(plot_df, aes(x=.data[[x_expr(stat_cols1)]], y=.data[[y_expr(stat_cols1)]], color=.data[["pass_threshold_data"]])) +
+        geom_point(na.rm = TRUE) +
+        scale_color_manual(values=two_level_colors) +
         ggtitle(paste(stat_base1, mode))
-    
-    plt2 <- ggplot(plot_df, aes_string(x=x_expr(stat_cols2), y=y_expr(stat_cols2), color="pass_threshold_data")) + 
-        geom_point(na.rm = TRUE) + 
-        scale_color_manual(values=two_level_colors) + 
+
+    plt2 <- ggplot(plot_df, aes(x=.data[[x_expr(stat_cols2)]], y=.data[[y_expr(stat_cols2)]], color=.data[["pass_threshold_data"]])) +
+        geom_point(na.rm = TRUE) +
+        scale_color_manual(values=two_level_colors) +
         ggtitle(paste(stat_base2, mode))
     
     return(list(plt1, plt2))
@@ -92,15 +92,15 @@ custom_comp_plot <- function(rdf, stat_cols1, stat_cols2, pvalue_type, pvalue_cu
     rdf$fold_diff <- rdf[[stat_cols1$logFC]] - rdf[[stat_cols2$logFC]]
     rdf$is_contra <- sign(rdf[[stat_cols1$logFC]]) != sign(rdf[[stat_cols2$logFC]])
     
-    plt1 <- ggplot(rdf, aes_string(x=stat_cols1$P.Value, y="fold_diff", color="is_contra")) + 
-        geom_point(na.rm=TRUE) + 
-        ggtitle("Fold diffs, full dataset") + 
+    plt1 <- ggplot(rdf, aes(x=.data[[stat_cols1$P.Value]], y=.data[["fold_diff"]], color=.data[["is_contra"]])) +
+        geom_point(na.rm=TRUE) +
+        ggtitle("Fold diffs, full dataset") +
         scale_color_manual(values=two_level_colors_other)
-    
-    plt2 <- ggplot(rdf, aes_string(x=stat_cols1[[pvalue_type]], y="fold_diff", color="is_contra")) + 
-        geom_point(na.rm=TRUE) + 
-        xlim(0, pvalue_cutoff) + 
-        ggtitle("Fold diffs, selected significance range") + 
+
+    plt2 <- ggplot(rdf, aes(x=.data[[stat_cols1[[pvalue_type]]]], y=.data[["fold_diff"]], color=.data[["is_contra"]])) +
+        geom_point(na.rm=TRUE) +
+        xlim(0, pvalue_cutoff) +
+        ggtitle("Fold diffs, selected significance range") +
         scale_color_manual(values=two_level_colors_other)
     
     ggarrange(plt1, plt2, nrow=2, ncol=1)
@@ -108,17 +108,17 @@ custom_comp_plot <- function(rdf, stat_cols1, stat_cols2, pvalue_type, pvalue_cu
 
 exact_fold_comp_plot <- function(rdf, group1_cols, group2_cols, stat_target, stat_base1, stat_base2, pvalue_type, pvalue_cutoff) {
 
-    long <- rdf %>% 
-        dplyr::filter(UQ(as.name(group1_cols[[pvalue_type]])) < pvalue_cutoff) %>%
-        mutate(id = paste("ID", row_number(), sep="")) %>% 
+    long <- rdf %>%
+        dplyr::filter(.data[[group1_cols[[pvalue_type]]]] < pvalue_cutoff) %>%
+        mutate(id = paste("ID", row_number(), sep="")) %>%
         dplyr::select(
-            .data$id, 
-            fold1=UQ(as.name(group1_cols$logFC)), 
-            fold2=UQ(as.name(group2_cols$logFC)), 
-            sig_val=UQ(as.name(group1_cols[[pvalue_type]])), 
-            expr=UQ(as.name(group1_cols$AveExpr))
-        ) %>% 
-        gather("fold", "value", -.data$id, -.data$sig_val, -.data$expr)
+            "id",
+            fold1=all_of(group1_cols$logFC),
+            fold2=all_of(group2_cols$logFC),
+            sig_val=all_of(group1_cols[[pvalue_type]]),
+            expr=all_of(group1_cols$AveExpr)
+        ) %>%
+        pivot_longer(cols = c("fold1", "fold2"), names_to = "fold", values_to = "value")
     
     plt <- ggplot(long, aes(x=.data$sig_val, y=.data$value+.data$expr, color=.data$fold, group=.data$id)) + 
         geom_line(color="gray", na.rm=TRUE) + 
