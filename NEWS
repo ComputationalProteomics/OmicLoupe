@@ -71,7 +71,7 @@
 
 * Fix issue with missing tutorial images
 * Minor fixes, including change of name spotcheck -> feature check
-* Include example dataset (data/example_data)
+* Include example dataset (inst/extdata/example_data)
 
 # Version 0.9.7
 

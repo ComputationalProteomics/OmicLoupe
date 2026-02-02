@@ -1,28 +1,26 @@
 Package: OmicLoupe
-Title: OmicLoupe: Taking a closer look at omics
+Title: Taking a Closer Look at Omics Data
 Version: 1.1.7
-Maintainer: Jakob Willforss <jakob.willforss@hotmail.com>
-Author: Jakob Willforss
 Authors@R: c(person("Jakob", "Willforss", email="jakob.willforss@hotmail.com", role=c("aut", "cre")))
-Description: 
-    OmicLoupe inspects your Omics data.
+Description:
+    Interactive Shiny application for exploring and comparing omics datasets,
+    including data quality summaries, principal component analysis, overlap
+    visualization, and correlation-based views.
 Imports:
     dplyr,
     DT,
     forcats,
     GGally,
-    ggdendro,
     ggforce,
-    ggplotify,
+    ggdendro,
     ggpubr,
     ggplot2,
+    ggplotify,
     jsonlite,
-    knitr,
     plotly,
     purrr,
     R6,
     readr,
-    rlang,
     rmarkdown,
     shinythemes,
     shiny,
@@ -31,14 +29,14 @@ Imports:
     shinycssloaders,
     stringi,
     stringr,
-    svglite,
     tidyr,
     UpSetR
 Suggests:
-    testthat
-VignetteBuilder: knitr
+    testthat,
+    knitr,
+    textshaping
 License: MIT + file LICENSE
 Encoding: UTF-8
-RoxygenNote: 7.1.1
-URL: ""
-Depends: R (>= 3.6)
+RoxygenNote: 7.3.3
+URL: https://github.com/ComputationalProteomics/OmicLoupe
+Depends: R (>= 4.1)

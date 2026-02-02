@@ -1,0 +1,10 @@
+^\.github(/|$)
+^\.dockerignore$
+^Dockerfile$
+^docker-compose\.yml$
+^dev(/|$)
+^doc(/|$)
+^AGENTS\.md$
+^\.Rproj\.user(/|$)
+^OmicLoupe\.Rproj$
+^\.vscode(/|$)

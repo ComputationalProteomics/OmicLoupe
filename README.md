@@ -8,7 +8,7 @@ Understanding expression across comparisons and datasets
 
 # Example data
 
-Example data matrices and the corresponding design matrix is present in the folder `data/example_data`.
+Example data matrices and the corresponding design matrix are available under `inst/extdata/example_data` in the source tree (and via `system.file("extdata", "example_data", package = "OmicLoupe")` after installation).
 Upload one or both of the matrices `dia_umpire_data.tsv` and `openswath_data.tsv` together with the `design.tsv` as design matrix.
 If using both, the options `Two datasets` and `Matched samples` should be checked.
 
