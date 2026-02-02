@@ -4,7 +4,57 @@
 \alias{runApp}
 \title{launches the shinyAppDemo app}
 \usage{
-runApp()
+runApp(
+  data = NULL,
+  design = NULL,
+  data1 = NULL,
+  data2 = NULL,
+  design1 = NULL,
+  design2 = NULL,
+  feature_col = NULL,
+  feature_col1 = NULL,
+  feature_col2 = NULL,
+  sample_col = "sample",
+  sample_col1 = NULL,
+  sample_col2 = NULL,
+  matched_samples = FALSE,
+  skip_correlation = FALSE,
+  discard_duplicates = FALSE,
+  auto_load = TRUE
+)
+}
+\arguments{
+\item{data}{Optional data frame for single-dataset mode (alias of \code{data1}).}
+
+\item{design}{Optional design matrix for single-dataset mode (alias of \code{design1}).}
+
+\item{data1}{Optional primary data frame.}
+
+\item{data2}{Optional secondary data frame.}
+
+\item{design1}{Optional primary design matrix.}
+
+\item{design2}{Optional secondary design matrix.}
+
+\item{feature_col}{Optional feature ID column name for single-dataset mode (alias of \code{feature_col1}).}
+
+\item{feature_col1}{Optional feature ID column name for \code{data1}.}
+
+\item{feature_col2}{Optional feature ID column name for \code{data2}.}
+
+\item{sample_col}{Column name in the design matrix identifying samples (used as default for \code{sample_col1} and \code{sample_col2}).}
+
+\item{sample_col1}{Optional sample column name for \code{design1}.}
+
+\item{sample_col2}{Optional sample column name for \code{design2}.}
+
+\item{matched_samples}{Logical; whether samples are matched between datasets.}
+
+\item{skip_correlation}{Logical; whether to skip correlation calculations.}
+
+\item{discard_duplicates}{Logical; whether to discard duplicate feature IDs when mapping.}
+
+\item{auto_load}{Logical; whether to auto-load preloaded data on startup.}
 }
 \value{
 shiny application object

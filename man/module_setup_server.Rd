@@ -4,14 +4,10 @@
 \alias{module_setup_server}
 \title{Server for setup module}
 \usage{
-module_setup_server(input, output, session, module_name)
+module_setup_server(id, module_name)
 }
 \arguments{
-\item{input}{Internally used}
-
-\item{output}{Internally used}
-
-\item{session}{Internally used}
+\item{id}{Internally used}
 
 \item{module_name}{Name of the module}
 }
